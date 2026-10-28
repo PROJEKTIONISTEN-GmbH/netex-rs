@@ -1,0 +1,60 @@
+<!--
+  Values that are not of their schema type, as a delivery may write them by
+  mistake: a time and a duration that are no xs:time and no xs:duration (XML
+  Schema 1.0 Part 2, 3.2.8 and 3.2.6), a validity period of a date without its
+  time, a list of positions that holds no number (gml:posList, a list of
+  doubles), and a transport mode the enumeration does not list, white space
+  around it. Each is kept as written rather than refused, so that the document
+  reads and writes back unchanged; what a value means is read from it on
+  demand.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceFrame id="ex:ServiceFrame:unreadable" version="1">
+  <lines>
+    <Line id="ex:Line:unknown-mode" version="1">
+      <Name>Hafenfähre</Name>
+      <TransportMode> zeppelin </TransportMode>
+    </Line>
+  </lines>
+  <serviceLinks>
+    <ServiceLink id="ex:ServiceLink:blank" version="1">
+      <Distance>480</Distance>
+      <gml:LineString gml:id="ex-ls-blank">
+        <gml:posList>n/a</gml:posList>
+      </gml:LineString>
+      <FromPointRef ref="ex:ScheduledStopPoint:Hafen" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Leuchtturm" version="1"/>
+    </ServiceLink>
+    <ServiceLink id="ex:ServiceLink:fine" version="1">
+      <Distance>95</Distance>
+      <gml:LineString gml:id="ex-ls-fine">
+        <gml:posList>52.3740 9.7380 52.3745 9.7391</gml:posList>
+      </gml:LineString>
+      <FromPointRef ref="ex:ScheduledStopPoint:Hafen" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Mole" version="1"/>
+    </ServiceLink>
+  </serviceLinks>
+</ServiceFrame>
+<TimetableFrame id="ex:TimetableFrame:unreadable" version="1">
+  <vehicleJourneys>
+    <ServiceJourney id="ex:ServiceJourney:unreadable" version="1">
+      <ValidBetween>
+        <FromDate>2026-05-04</FromDate>
+      </ValidBetween>
+      <TransportMode>bus</TransportMode>
+      <DepartureTime>tbd</DepartureTime>
+      <JourneyDuration>P1H</JourneyDuration>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:half" version="1">
+      <TransportMode>bus</TransportMode>
+      <DepartureTime>7:5</DepartureTime>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:half:1" version="1">
+          <ArrivalTime>08:00</ArrivalTime>
+          <DepartureTime>08:01:00</DepartureTime>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+  </vehicleJourneys>
+</TimetableFrame>

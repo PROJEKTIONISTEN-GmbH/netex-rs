@@ -1,0 +1,134 @@
+<!--
+  Planned interchanges between journeys (ServiceJourneyInterchange,
+  netex_interchange_version.xsd), at stop points that a stop place groups: an
+  interchange whose two points are one and the same, where neither journey
+  calls; one between points of two stop places; one marked as crossing a
+  border; one from a journey to itself turning back; and one at a point no
+  stop place holds. Each names its journeys without a version; two carry a
+  private code, with and without the type saying whose it is. Beside them an
+  interchange between the journeys' patterns rather than the journeys
+  (ServiceJourneyPatternInterchange).
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceFrame id="ex:ServiceFrame:interchanges" version="1">
+  <stopAssignments>
+    <PassengerStopAssignment id="ex:PassengerStopAssignment:Hbf:1" version="1" order="1">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Hbf:1"/>
+      <StopPlaceRef ref="ex:StopPlace:Hbf"/>
+    </PassengerStopAssignment>
+    <PassengerStopAssignment id="ex:PassengerStopAssignment:Hbf:2" version="1" order="2">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Hbf:2"/>
+      <StopPlaceRef ref="ex:StopPlace:Hbf"/>
+    </PassengerStopAssignment>
+    <PassengerStopAssignment id="ex:PassengerStopAssignment:Hbf:3" version="1" order="3">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Hbf:3"/>
+      <StopPlaceRef ref="ex:StopPlace:Hbf"/>
+    </PassengerStopAssignment>
+    <PassengerStopAssignment id="ex:PassengerStopAssignment:Hbf:4" version="1" order="4">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Hbf:4"/>
+      <StopPlaceRef ref="ex:StopPlace:Hbf"/>
+    </PassengerStopAssignment>
+    <PassengerStopAssignment id="ex:PassengerStopAssignment:Ost" version="1" order="5">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Ost"/>
+      <StopPlaceRef ref="ex:StopPlace:Ost"/>
+    </PassengerStopAssignment>
+    <PassengerStopAssignment id="ex:PassengerStopAssignment:West" version="1" order="6">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:West"/>
+      <StopPlaceRef ref="ex:StopPlace:West"/>
+    </PassengerStopAssignment>
+    <PassengerStopAssignment id="ex:PassengerStopAssignment:Grenze" version="1" order="7">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Grenze"/>
+      <StopPlaceRef ref="ex:StopPlace:West"/>
+    </PassengerStopAssignment>
+  </stopAssignments>
+  <journeyPatterns>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:east" version="1">
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:east:1" version="1" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Hbf:1" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:east:2" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Ost" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:east:3" version="1" order="3">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Hbf:2" version="1"/>
+        </StopPointInJourneyPattern>
+      </pointsInSequence>
+    </ServiceJourneyPattern>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:west" version="1">
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:west:1" version="1" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Hbf:3" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:west:2" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:West" version="1"/>
+        </StopPointInJourneyPattern>
+      </pointsInSequence>
+    </ServiceJourneyPattern>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:border" version="1">
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:border:1" version="1" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Grenze" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:border:2" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Hbf:3" version="1"/>
+        </StopPointInJourneyPattern>
+      </pointsInSequence>
+    </ServiceJourneyPattern>
+  </journeyPatterns>
+</ServiceFrame>
+<TimetableFrame id="ex:TimetableFrame:interchanges" version="1">
+  <vehicleJourneys>
+    <ServiceJourney id="ex:ServiceJourney:east" version="1">
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:east" version="1"/>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:west" version="1">
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:west" version="1"/>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:border" version="1">
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:border" version="1"/>
+    </ServiceJourney>
+  </vehicleJourneys>
+  <journeyInterchanges>
+    <ServiceJourneyPatternInterchange id="ex:ServiceJourneyPatternInterchange:east-west" version="1">
+      <FromPointRef ref="ex:ScheduledStopPoint:Hbf:2" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Hbf:3" version="1"/>
+      <FromJourneyPatternRef ref="ex:ServiceJourneyPattern:east" version="1"/>
+      <ToJourneyPatternRef ref="ex:ServiceJourneyPattern:west" version="1"/>
+    </ServiceJourneyPatternInterchange>
+    <ServiceJourneyInterchange id="ex:ServiceJourneyInterchange:same-point" version="1">
+      <PrivateCode type="planning">U-12</PrivateCode>
+      <FromPointRef ref="ex:ScheduledStopPoint:Hbf:4" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Hbf:4" version="1"/>
+      <FromJourneyRef ref="ex:ServiceJourney:east"/>
+      <ToJourneyRef ref="ex:ServiceJourney:west"/>
+    </ServiceJourneyInterchange>
+    <ServiceJourneyInterchange id="ex:ServiceJourneyInterchange:two-places" version="1">
+      <PrivateCode>U-13</PrivateCode>
+      <FromPointRef ref="ex:ScheduledStopPoint:Ost" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:West" version="1"/>
+      <FromJourneyRef ref="ex:ServiceJourney:east"/>
+      <ToJourneyRef ref="ex:ServiceJourney:west"/>
+    </ServiceJourneyInterchange>
+    <ServiceJourneyInterchange id="ex:ServiceJourneyInterchange:border" version="1">
+      <CrossBorder>true</CrossBorder>
+      <FromPointRef ref="ex:ScheduledStopPoint:Grenze" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Hbf:3" version="1"/>
+      <FromJourneyRef ref="ex:ServiceJourney:border"/>
+      <ToJourneyRef ref="ex:ServiceJourney:west"/>
+    </ServiceJourneyInterchange>
+    <ServiceJourneyInterchange id="ex:ServiceJourneyInterchange:turning" version="1">
+      <FromPointRef ref="ex:ScheduledStopPoint:Hbf:2" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Hbf:1" version="1"/>
+      <FromJourneyRef ref="ex:ServiceJourney:east"/>
+      <ToJourneyRef ref="ex:ServiceJourney:east"/>
+    </ServiceJourneyInterchange>
+    <ServiceJourneyInterchange id="ex:ServiceJourneyInterchange:nowhere" version="1">
+      <FromPointRef ref="ex:ScheduledStopPoint:West" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Feld" version="1"/>
+      <FromJourneyRef ref="ex:ServiceJourney:west"/>
+      <ToJourneyRef ref="ex:ServiceJourney:east"/>
+    </ServiceJourneyInterchange>
+  </journeyInterchanges>
+</TimetableFrame>

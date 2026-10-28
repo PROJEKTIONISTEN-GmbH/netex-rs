@@ -1,0 +1,52 @@
+[package]
+name = "netex-rs-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+# A workspace of its own: the fuzz targets build with the nightly sanitizers,
+# apart from the crates they fuzz.
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.netex-rs]
+path = ".."
+
+[dependencies.netex2gtfs]
+path = "../crates/netex2gtfs"
+
+[dependencies.tempfile]
+version = "3"
+
+[[bin]]
+name = "read"
+path = "fuzz_targets/read.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "rewrite"
+path = "fuzz_targets/rewrite.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "convert"
+path = "fuzz_targets/convert.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "outline"
+path = "fuzz_targets/outline.rs"
+test = false
+doc = false
+bench = false

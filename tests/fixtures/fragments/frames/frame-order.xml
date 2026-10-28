@@ -1,0 +1,138 @@
+<!--
+  Frames in an order of their own. A CompositeFrame holds frames of any kind
+  in any order (frames_RelStructure, a sequence of CommonFrame,
+  netex_compositeFrame_version.xsd), so the timetable may come before the
+  calendar and the service frame it refers to; references resolve whichever
+  comes first. Beside that, in their places: a journey pattern whose points
+  state an order twice (order is a positive integer; the schema does not
+  require it to be unique), a journey stating passing times and one stating
+  calls, a train number named by a journey, an availability condition as a
+  validity condition of the service frame, and in a second timetable frame an
+  interchange between the two journeys where passengers stay seated.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<TimetableFrame id="ex:TimetableFrame:order:1" version="1">
+  <vehicleJourneys>
+    <ServiceJourney id="ex:ServiceJourney:order:timed" version="1">
+      <Name>4711</Name>
+      <dayTypes>
+        <DayTypeRef ref="ex:DayType:order" version="1"/>
+      </dayTypes>
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:order" version="1"/>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:order:1" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:order:1" version="1"/>
+          <DepartureTime>13:12:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:order:2" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:order:2" version="1"/>
+          <DepartureTime>13:31:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:order:3" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:order:3" version="1"/>
+          <DepartureTime>13:47:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:order:4" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:order:4" version="1"/>
+          <ArrivalTime>14:05:00</ArrivalTime>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:order:calling" version="1">
+      <validityConditions>
+        <AvailabilityConditionRef ref="ex:AvailabilityCondition:order" version="1"/>
+      </validityConditions>
+      <trainNumbers>
+        <TrainNumberRef ref="ex:TrainNumber:4712"/>
+      </trainNumbers>
+      <calls>
+        <Call id="ex:Call:order:1" version="1" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Brink" version="1"/>
+          <Departure>
+            <Time>13:52:00</Time>
+          </Departure>
+        </Call>
+        <Call id="ex:Call:order:2" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Wehr" version="1"/>
+          <Arrival>
+            <Time>14:09:00</Time>
+          </Arrival>
+        </Call>
+      </calls>
+    </ServiceJourney>
+  </vehicleJourneys>
+</TimetableFrame>
+<ServiceCalendarFrame id="ex:ServiceCalendarFrame:order" version="1">
+  <dayTypes>
+    <DayType id="ex:DayType:order" version="1"/>
+  </dayTypes>
+  <operatingPeriods>
+    <UicOperatingPeriod id="ex:UicOperatingPeriod:order" version="1">
+      <FromDate>2026-06-01T00:00:00</FromDate>
+      <ToDate>2026-06-02T00:00:00</ToDate>
+      <ValidDayBits>11</ValidDayBits>
+    </UicOperatingPeriod>
+  </operatingPeriods>
+  <dayTypeAssignments>
+    <DayTypeAssignment id="ex:DayTypeAssignment:order" version="1" order="1">
+      <OperatingPeriodRef ref="ex:UicOperatingPeriod:order" version="1"/>
+      <DayTypeRef ref="ex:DayType:order" version="1"/>
+    </DayTypeAssignment>
+  </dayTypeAssignments>
+</ServiceCalendarFrame>
+<ServiceFrame id="ex:ServiceFrame:order" version="1">
+  <validityConditions>
+    <AvailabilityCondition id="ex:AvailabilityCondition:order" version="1">
+      <FromDate>2026-06-01T00:00:00</FromDate>
+      <ToDate>2026-06-01T00:00:00</ToDate>
+      <ValidDayBits>1</ValidDayBits>
+    </AvailabilityCondition>
+  </validityConditions>
+  <scheduledStopPoints>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Anger" version="1"><Name>Anger</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Brink" version="1"><Name>Brink</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Mitte" version="1"><Name>Mitte</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Wehr" version="1"><Name>Wehr</Name></ScheduledStopPoint>
+  </scheduledStopPoints>
+  <journeyPatterns>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:order" version="1">
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:order:1" version="1" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Anger" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:order:2" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Mitte" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:order:3" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Brink" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:order:4" version="1" order="3">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Wehr" version="1"/>
+        </StopPointInJourneyPattern>
+      </pointsInSequence>
+    </ServiceJourneyPattern>
+  </journeyPatterns>
+</ServiceFrame>
+<ResourceFrame id="ex:ResourceFrame:order" version="1">
+  <vehicleTypes>
+    <VehicleType id="ex:VehicleType:order" version="1">
+      <Name>Gelenkbus</Name>
+      <LowFloor>true</LowFloor>
+    </VehicleType>
+  </vehicleTypes>
+</ResourceFrame>
+<TimetableFrame id="ex:TimetableFrame:order:2" version="1">
+  <trainNumbers>
+    <TrainNumber id="ex:TrainNumber:4712" version="1">
+      <ForAdvertisement>4712</ForAdvertisement>
+    </TrainNumber>
+  </trainNumbers>
+  <journeyInterchanges>
+    <ServiceJourneyInterchange id="ex:ServiceJourneyInterchange:order" version="1">
+      <StaySeated>true</StaySeated>
+      <FromJourneyRef ref="ex:ServiceJourney:order:timed"/>
+      <ToJourneyRef ref="ex:ServiceJourney:order:calling"/>
+    </ServiceJourneyInterchange>
+  </journeyInterchanges>
+</TimetableFrame>

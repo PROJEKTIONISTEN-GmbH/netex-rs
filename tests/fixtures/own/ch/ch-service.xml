@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The shared document of a Swiss-style delivery: the stop points and the
+  lines, and the calendar as availability conditions — a bit per day over the
+  week of 12 October — rather than day types. The journeys stand in another
+  document and name what this one defines.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.10">
+  <PublicationTimestamp>2026-10-01T06:00:00</PublicationTimestamp>
+  <ParticipantRef>EXAMPLE</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="ch:ex:CompositeFrame:service" version="any">
+      <FrameDefaults>
+        <DefaultLocale>
+          <TimeZone>Europe/Zurich</TimeZone>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <ServiceFrame id="ch:ex:ServiceFrame:service" version="any">
+          <lines>
+            <Line id="ch:ex:Line:IR9" version="any">
+              <Name>IR 9</Name>
+              <TransportMode>rail</TransportMode>
+              <PublicCode>IR9</PublicCode>
+            </Line>
+            <Line id="ch:ex:Line:S1" version="any">
+              <Name>Shuttle</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>S1</PublicCode>
+            </Line>
+          </lines>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="ch:ex:ScheduledStopPoint:A" version="any">
+              <keyList>
+                <KeyValue>
+                  <Key>SLOID</Key>
+                  <Value>ch:1:sloid:99001</Value>
+                </KeyValue>
+              </keyList>
+              <Name>Seestadt</Name>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="ch:ex:ScheduledStopPoint:B" version="any">
+              <keyList>
+                <KeyValue>
+                  <Key>SLOID</Key>
+                  <Value>ch:1:sloid:99002</Value>
+                </KeyValue>
+              </keyList>
+              <Name>Bergdorf</Name>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="ch:ex:ScheduledStopPoint:C" version="any">
+              <keyList>
+                <KeyValue>
+                  <Key>SLOID</Key>
+                  <Value>ch:1:sloid:99003</Value>
+                </KeyValue>
+              </keyList>
+              <Name>Talwil</Name>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="ch:ex:ScheduledStopPoint:D" version="any">
+              <keyList>
+                <KeyValue>
+                  <Key>SLOID</Key>
+                  <Value>ch:1:sloid:99004</Value>
+                </KeyValue>
+              </keyList>
+              <Name>Grenzheim</Name>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+        </ServiceFrame>
+        <ServiceCalendarFrame id="ch:ex:ServiceCalendarFrame:service" version="any">
+          <validityConditions>
+            <AvailabilityCondition id="ch:ex:AvailabilityCondition:week" version="any">
+              <FromDate>2026-10-12T00:00:00</FromDate>
+              <ToDate>2026-10-18T23:59:59</ToDate>
+              <ValidDayBits>1111111</ValidDayBits>
+            </AvailabilityCondition>
+            <AvailabilityCondition id="ch:ex:AvailabilityCondition:weekdays" version="any">
+              <FromDate>2026-10-12T00:00:00</FromDate>
+              <ToDate>2026-10-18T23:59:59</ToDate>
+              <ValidDayBits>1111100</ValidDayBits>
+            </AvailabilityCondition>
+          </validityConditions>
+        </ServiceCalendarFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

@@ -1,0 +1,630 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="ntx:1.1">
+
+  <PublicationTimestamp>2026-09-19T15:04:00</PublicationTimestamp>
+
+  <ParticipantRef>DE</ParticipantRef>
+
+  <PublicationRequest>
+    <RequestTimestamp>2026-09-19T15:04:00</RequestTimestamp>
+    <topics>
+      <NetworkFrameTopic>
+        <Current/>
+        <NetworkFilterByValue>
+          <objectReferences>
+            <LineRef ref="DE::Line:6339460::" version="1789823040"/>
+            <TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER" versionRef="1.0"/>
+          </objectReferences>
+        </NetworkFilterByValue>
+      </NetworkFrameTopic>
+    </topics>
+  </PublicationRequest>
+
+  <dataObjects>
+    <CompositeFrame id="DE::CompositeFrame_EU_PI_LINE_OFFER:WEB-WEB_HB-511699" version="1789823040">
+      <ValidBetween>
+        <FromDate>2026-09-05T00:00:00</FromDate>
+        <ToDate>2026-12-12T00:00:00</ToDate>
+      </ValidBetween>
+      <TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER" versionRef="1.0"/>
+      <codespaces>
+        <Codespace id="epip_data">
+          <Xmlns>epd</Xmlns>
+          <XmlnsUrl>http://netex-cen.eu/epip_data</XmlnsUrl>
+          <Description>EPIP data</Description>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultCodespaceRef ref="epip_data"/>
+        <DefaultDataSourceRef ref="epip_data:DataSource:General"/>
+        <DefaultResponsibilitySetRef ref="DE::ResponsibilitySet:22861::" version="1789823040"/>
+        <DefaultLocale>
+          <TimeZone>Europe/Berlin</TimeZone>
+          <DefaultLanguage>de-DE</DefaultLanguage>
+        </DefaultLocale>
+        <DefaultLocationSystem>urn:ogc:def:crs:EPSG::4326</DefaultLocationSystem>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="DE::ResourceFrame_EU_PI_COMMON:WEB-WEB_HB-511699" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_COMMON" versionRef="1.0"/>
+          <dataSources>
+            <DataSource id="epip_data:DataSource:General" version="1789823040">
+              <Name>DE</Name>
+            </DataSource>
+          </dataSources>
+          <responsibilitySets>
+            <ResponsibilitySet id="DE::ResponsibilitySet:22861::" version="1789823040">
+              <roles>
+                <ResponsibilityRoleAssignment id="DE::ResponsibilityRoleAssignment:22861::" version="1789823040">
+                  <DataRoleType>creates</DataRoleType>
+                  <ResponsibleOrganisationRef ref="DE::Authority:784::" version="1789823040"/>
+                </ResponsibilityRoleAssignment>
+              </roles>
+            </ResponsibilitySet>
+          </responsibilitySets>
+          <organisations>
+            <Authority id="DE::Authority:784::" version="1789823040">
+              <PublicCode>WEB</PublicCode>
+              <Name>Nord_WEB Weser-Ems-Bus</Name>
+              <ShortName>WEB</ShortName>
+              <LegalName>Nord_WEB Weser-Ems-Bus</LegalName>
+              <ContactDetails/>
+              <OrganisationType>authority</OrganisationType>
+            </Authority>
+            <Authority id="DE::Authority:761::" version="1789823040">
+              <PublicCode>MASTER</PublicCode>
+              <Name>Nord_MASTER</Name>
+              <ShortName>MASTER</ShortName>
+              <LegalName>Nord_MASTER</LegalName>
+              <ContactDetails/>
+              <OrganisationType>authority</OrganisationType>
+            </Authority>
+            <Authority id="DE::Authority:762::" version="1789823040">
+              <PublicCode>MSTMASTER</PublicCode>
+              <Name>Nord_MASTMASTER</Name>
+              <ShortName>MSTMASTER</ShortName>
+              <LegalName>Nord_MASTMASTER</LegalName>
+              <ContactDetails/>
+              <OrganisationType>authority</OrganisationType>
+            </Authority>
+            <Operator id="DE::Operator:16575::" version="1789823040">
+              <PublicCode>WEB_HB</PublicCode>
+              <Name>WEB Bremen</Name>
+              <ShortName>WEB_HB</ShortName>
+              <LegalName>WEB Bremen</LegalName>
+              <ContactDetails/>
+              <OrganisationType>operator</OrganisationType>
+            </Operator>
+          </organisations>
+          <vehicleTypes>
+            <VehicleType id="DE::VehicleType:3324::" version="1789823040">
+              <Name>Niederflurbus</Name>
+              <ShortName>NordNB</ShortName>
+              <capacities>
+                <PassengerCapacity>
+                  <FareClass>secondClass </FareClass>
+                  <TotalCapacity>0</TotalCapacity>
+                  <SeatingCapacity>0</SeatingCapacity>
+                  <StandingCapacity>0</StandingCapacity>
+                </PassengerCapacity>
+                <PassengerCapacity>
+                  <WheelchairPlaceCapacity>0</WheelchairPlaceCapacity>
+                </PassengerCapacity>
+              </capacities>
+            </VehicleType>
+          </vehicleTypes>
+        </ResourceFrame>
+        <ServiceCalendarFrame id="DE::ServiceCalendarFrame_EU_PI_CALENDAR:WEB-WEB_HB-511699" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_CALENDAR" versionRef="1.0"/>
+          <ServiceCalendar id="DE::ServiceCalendar:22861::" version="1789823040">
+            <FromDate>2026-09-05</FromDate>
+            <ToDate>2026-12-12</ToDate>
+            <dayTypes>
+              <DayType id="DE::DayType:188965::" version="1789823040"/>
+            </dayTypes>
+            <operatingPeriods>
+              <UicOperatingPeriod id="DE::UicOperatingPeriod:188965::" version="1789823040">
+                <FromDate>2026-09-07T00:00:00</FromDate>
+                <ToDate>2026-12-07T00:00:00</ToDate>
+                <ValidDayBits>10000001000000100000010000001000000000000000000001000000100000010000001000000100000010000001</ValidDayBits>
+              </UicOperatingPeriod>
+            </operatingPeriods>
+            <dayTypeAssignments>
+              <DayTypeAssignment id="DE::DayTypeAssignment:188965::" order="1" version="1789823040">
+                <OperatingPeriodRef ref="DE::UicOperatingPeriod:188965::" version="1789823040"/>
+                <DayTypeRef ref="DE::DayType:188965::" version="1789823040"/>
+                <isAvailable>true</isAvailable>
+              </DayTypeAssignment>
+            </dayTypeAssignments>
+          </ServiceCalendar>
+        </ServiceCalendarFrame>
+        <ServiceFrame id="DE::ServiceFrame_EU_PI_NETWORK:WEB-WEB_HB-511699" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_NETWORK" versionRef="1.0"/>
+          <directions>
+            <Direction id="DE::Direction:1::" version="1789823040"/>
+            <Direction id="DE::Direction:2::" version="1789823040"/>
+          </directions>
+          <lines>
+            <Line id="DE::Line:6339460::" version="1789823040">
+              <keyList>
+                <KeyValue>
+                  <Key>GlobalID</Key>
+                  <Value>de:VBN:699:1</Value>
+                </KeyValue>
+              </keyList>
+              <Name>699</Name>
+              <ShortName>511699</ShortName>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>699</PublicCode>
+              <PrivateCode>511699</PrivateCode>
+              <AuthorityRef ref="DE::Authority:784::" version="1789823040"/>
+              <additionalOperators>
+                <OperatorRef ref="DE::Operator:16575::" version="1789823040"/>
+              </additionalOperators>
+              <allowedDirections>
+                <AllowedLineDirection id="DE::AllowedLineDirection:37653::" version="1789823040">
+                  <DirectionRef ref="DE::Direction:1::" version="1789823040"/>
+                </AllowedLineDirection>
+                <AllowedLineDirection id="DE::AllowedLineDirection:37654::" version="1789823040">
+                  <DirectionRef ref="DE::Direction:2::" version="1789823040"/>
+                </AllowedLineDirection>
+              </allowedDirections>
+            </Line>
+          </lines>
+          <destinationDisplays>
+            <DestinationDisplay id="DE::DestinationDisplay:27077::" version="1789823040">
+              <SideText>Schulbus</SideText>
+              <FrontText>Schulbus</FrontText>
+            </DestinationDisplay>
+          </destinationDisplays>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="DE::ScheduledStopPoint:1618801_WEB_::" version="1789823040">
+              <Name>OHZ-Heilshorn, GS Heilshorn, Mast 1</Name>
+              <Location>
+                <Longitude>8.711335</Longitude>
+                <Latitude>53.255101</Latitude>
+              </Location>
+              <PublicCode>H27OHGS1</PublicCode>
+              <StopType>busStation</StopType>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="DE::ScheduledStopPoint:1618901_WEB_::" version="1789823040">
+              <Name>Osterholz-Scharmb., Allwetterbad, Mast 1</Name>
+              <Location>
+                <Longitude>8.78665</Longitude>
+                <Latitude>53.223286</Latitude>
+              </Location>
+              <PublicCode>H27OHAB1</PublicCode>
+              <StopType>busStation</StopType>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="DE::ScheduledStopPoint:1618802_WEB_::" version="1789823040">
+              <Name>OHZ-Heilshorn, GS Heilshorn, Mast 2</Name>
+              <Location>
+                <Longitude>8.71132</Longitude>
+                <Latitude>53.255093</Latitude>
+              </Location>
+              <PublicCode>H27OHGS2</PublicCode>
+              <StopType>busStation</StopType>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+          <serviceLinks>
+            <ServiceLink id="DE::ServiceLink:6408909__7802891_::" version="1789823040">
+              <FromPointRef ref="DE::ScheduledStopPoint:1618801_WEB_::" version="1789823040"/>
+              <ToPointRef ref="DE::ScheduledStopPoint:1618901_WEB_::" version="1789823040"/>
+            </ServiceLink>
+            <ServiceLink id="DE::ServiceLink:7802891__7802890_::" version="1789823040">
+              <FromPointRef ref="DE::ScheduledStopPoint:1618901_WEB_::" version="1789823040"/>
+              <ToPointRef ref="DE::ScheduledStopPoint:1618802_WEB_::" version="1789823040"/>
+            </ServiceLink>
+          </serviceLinks>
+          <connections>
+            <SiteConnection id="DE::SiteConnection:701693::" version="1789823040">
+              <WalkTransferDuration>
+                <DefaultDuration>PT2M</DefaultDuration>
+              </WalkTransferDuration>
+              <BothWays>true</BothWays>
+              <From>
+                <StopPlaceRef ref="DE::StopPlace:9072118_MASTER::" version="1789823040"/>
+                <QuayRef ref="DE::Quay:116188_MSTMASTER::" version="1789823040"/>
+              </From>
+              <To>
+                <StopPlaceRef ref="DE::StopPlace:9072118_MASTER::" version="1789823040"/>
+                <QuayRef ref="DE::Quay:176188_MSTMASTER::" version="1789823040"/>
+              </To>
+            </SiteConnection>
+          </connections>
+          <stopAssignments>
+            <PassengerStopAssignment id="DE::PassengerStopAssignment:850274::" order="1" version="1789823040">
+              <ScheduledStopPointRef ref="DE::ScheduledStopPoint:1618801_WEB_::" version="1789823040"/>
+              <StopPlaceRef ref="DE::StopPlace:9072118_MASTER::" version="1789823040"/>
+              <QuayRef ref="DE::Quay:116188_MSTMASTER::" version="1789823040"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="DE::PassengerStopAssignment:850275::" order="2" version="1789823040">
+              <ScheduledStopPointRef ref="DE::ScheduledStopPoint:1618901_WEB_::" version="1789823040"/>
+              <StopPlaceRef ref="DE::StopPlace:9016189_MASTER::" version="1789823040"/>
+              <QuayRef ref="DE::Quay:116189_MSTMASTER::" version="1789823040"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="DE::PassengerStopAssignment:850276::" order="3" version="1789823040">
+              <ScheduledStopPointRef ref="DE::ScheduledStopPoint:1618802_WEB_::" version="1789823040"/>
+              <StopPlaceRef ref="DE::StopPlace:9072118_MASTER::" version="1789823040"/>
+              <QuayRef ref="DE::Quay:176188_MSTMASTER::" version="1789823040"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="DE::ServiceJourneyPattern:337067061_0::" version="1789823040">
+              <RouteView id="DE::RouteView:337067061_1::">
+                <LineRef ref="DE::Line:6339460::" version="1789823040"/>
+              </RouteView>
+              <DirectionRef ref="DE::Direction:1::" version="1789823040"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="DE::StopPointInJourneyPattern:337067061_1_0::" order="1" version="1789823040">
+                  <ScheduledStopPointRef ref="DE::ScheduledStopPoint:1618801_WEB_::" version="1789823040"/>
+                  <ForAlighting>true</ForAlighting>
+                  <ForBoarding>true</ForBoarding>
+                  <DestinationDisplayRef ref="DE::DestinationDisplay:27077::" version="1789823040"/>
+                  <ChangeOfDestinationDisplay>false</ChangeOfDestinationDisplay>
+                  <noticeAssignments>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024527::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:127770_164886::" version="1789823040">
+                        <Text lang="de-DE">Für HAFAS gesperrt</Text>
+                        <PublicCode>HFGSP</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024528::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:14700_164887::" version="1789823040">
+                        <Text lang="de-DE">Zahl der Stehplätze : 13</Text>
+                        <PublicCode>NSTAND</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024529::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:14701_164888::" version="1789823040">
+                        <Text lang="de-DE">Zahl der Sitzplätze : 22</Text>
+                        <PublicCode>NSEAT</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024530::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:14702_164889::" version="1789823040">
+                        <Text lang="de-DE">Zahl der behindertengerechten Plätze : 0</Text>
+                        <PublicCode>NBEHIN</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024531::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:14705_164890::" version="1789823040">
+                        <Text lang="de-DE">Türbreite des Fahrzeugs in mm : 1350</Text>
+                        <PublicCode>FZGTB</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024532::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:14706_164891::" version="1789823040">
+                        <Text lang="de-DE">Fahrzeugbreite in mm : 2500</Text>
+                        <PublicCode>FZGB</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024533::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:7508_164892::" version="1789823040">
+                        <Text lang="de-DE">behindertengerechtes Fahrzeug</Text>
+                        <PublicCode>BEHIN</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024534::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:12676_164893::" version="1789823040">
+                        <Text lang="de-DE">DELFI-Anreicherungs-URL : https://fahrplaner.vbn.de/delfi-passive/</Text>
+                        <PublicCode>DIPURL</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024535::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:96024_164894::" version="1789823040">
+                        <Text lang="de-DE">Linie von Weser-Ems-Bus Bremen, Info: 0421 43121162</Text>
+                        <PublicCode></PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                  </noticeAssignments>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="DE::StopPointInJourneyPattern:337067061_1_1::" order="2" version="1789823040">
+                  <ScheduledStopPointRef ref="DE::ScheduledStopPoint:1618901_WEB_::" version="1789823040"/>
+                  <ForAlighting>true</ForAlighting>
+                  <ForBoarding>true</ForBoarding>
+                  <DestinationDisplayRef ref="DE::DestinationDisplay:27077::" version="1789823040"/>
+                  <ChangeOfDestinationDisplay>false</ChangeOfDestinationDisplay>
+                  <noticeAssignments>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024536::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:127770_164886::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024537::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14700_164887::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024538::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14701_164888::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024539::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14702_164889::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024540::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14705_164890::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024541::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14706_164891::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024542::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:7508_164892::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024543::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:12676_164893::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024544::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:96024_164894::" version="1789823040"/>
+                    </NoticeAssignment>
+                  </noticeAssignments>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+            <ServiceJourneyPattern id="DE::ServiceJourneyPattern:337067062_0::" version="1789823040">
+              <RouteView id="DE::RouteView:337067062_1::">
+                <LineRef ref="DE::Line:6339460::" version="1789823040"/>
+              </RouteView>
+              <DirectionRef ref="DE::Direction:2::" version="1789823040"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="DE::StopPointInJourneyPattern:337067062_1_0::" order="1" version="1789823040">
+                  <ScheduledStopPointRef ref="DE::ScheduledStopPoint:1618901_WEB_::" version="1789823040"/>
+                  <ForAlighting>true</ForAlighting>
+                  <ForBoarding>true</ForBoarding>
+                  <DestinationDisplayRef ref="DE::DestinationDisplay:27077::" version="1789823040"/>
+                  <ChangeOfDestinationDisplay>false</ChangeOfDestinationDisplay>
+                  <noticeAssignments>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024545::" order="1" version="1789823040">
+                      <NoticeRef ref="DE::Notice:127770_164886::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024546::" order="1" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14700_164887::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024547::" order="1" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14701_164888::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024548::" order="1" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14702_164889::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024549::" order="1" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14705_164890::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024550::" order="1" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14706_164891::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024551::" order="1" version="1789823040">
+                      <NoticeRef ref="DE::Notice:7508_164892::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024552::" order="1" version="1789823040">
+                      <NoticeRef ref="DE::Notice:12676_164893::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024553::" order="1" version="1789823040">
+                      <NoticeRef ref="DE::Notice:96024_164894::" version="1789823040"/>
+                    </NoticeAssignment>
+                  </noticeAssignments>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="DE::StopPointInJourneyPattern:337067062_1_1::" order="2" version="1789823040">
+                  <ScheduledStopPointRef ref="DE::ScheduledStopPoint:1618802_WEB_::" version="1789823040"/>
+                  <ForAlighting>true</ForAlighting>
+                  <ForBoarding>true</ForBoarding>
+                  <DestinationDisplayRef ref="DE::DestinationDisplay:27077::" version="1789823040"/>
+                  <ChangeOfDestinationDisplay>false</ChangeOfDestinationDisplay>
+                  <noticeAssignments>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024554::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:127770_164886::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024555::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14700_164887::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024556::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14701_164888::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024557::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14702_164889::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024558::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14705_164890::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024559::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14706_164891::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024560::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:7508_164892::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024561::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:12676_164893::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:61024562::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:96024_164894::" version="1789823040"/>
+                    </NoticeAssignment>
+                  </noticeAssignments>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <SiteFrame id="DE::SiteFrame_EU_PI_STOP:WEB-WEB_HB-511699" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_STOP" versionRef="1.0"/>
+          <topographicPlaces>
+            <TopographicPlace id="DE::TopographicPlace:71474::" version="1789823040">
+              <Name>Osterholz-Scharmbeck</Name>
+              <IsoCode>03356007</IsoCode>
+              <Descriptor>
+                <Name>Osterholz-Scharmbeck</Name>
+              </Descriptor>
+            </TopographicPlace>
+          </topographicPlaces>
+          <stopPlaces>
+            <StopPlace id="DE::StopPlace:9016189_MASTER::" version="1789823040">
+              <keyList>
+                <KeyValue>
+                  <Key>GlobalID</Key>
+                  <Value>de:03356:16189</Value>
+                </KeyValue>
+              </keyList>
+              <Name>Osterholz-Scharmbeck Allwetterbad</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>8.78665</Longitude>
+                  <Latitude>53.223286</Latitude>
+                </Location>
+              </Centroid>
+              <TopographicPlaceRef ref="DE::TopographicPlace:71474::" version="1789823040"/>
+              <Locale>
+                <TimeZone>Europe/Berlin</TimeZone>
+              </Locale>
+              <AuthorityRef ref="DE::Authority:761::" version="1789823040"/>
+              <levels>
+                <Level id="DE::Level:761_1403_0::" version="1789823040">
+                  <ShortName>0</ShortName>
+                </Level>
+              </levels>
+              <StopPlaceType>other</StopPlaceType>
+              <quays>
+                <Quay id="DE::Quay:116189_MSTMASTER::" version="1789823040">
+                  <keyList>
+                    <KeyValue>
+                      <Key>GlobalID</Key>
+                      <Value>de:03356:16189::1</Value>
+                    </KeyValue>
+                    <KeyValue>
+                      <Key>AreaType</Key>
+                      <Value>Access and PT</Value>
+                    </KeyValue>
+                  </keyList>
+                  <Name>Osterholz-Scharmbeck Allwetterbad</Name>
+                  <Centroid>
+                    <Location>
+                      <Longitude>8.78665</Longitude>
+                      <Latitude>53.223286</Latitude>
+                    </Location>
+                  </Centroid>
+                  <LevelRef ref="DE::Level:761_1403_0::" version="1789823040"/>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="DE::StopPlace:9072118_MASTER::" version="1789823040">
+              <keyList>
+                <KeyValue>
+                  <Key>GlobalID</Key>
+                  <Value>de:03356:72118</Value>
+                </KeyValue>
+              </keyList>
+              <Name>Osterholz-Scharmbeck-Heilshorn Grundschule</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>8.711338</Longitude>
+                  <Latitude>53.255105</Latitude>
+                </Location>
+              </Centroid>
+              <TopographicPlaceRef ref="DE::TopographicPlace:71474::" version="1789823040"/>
+              <AuthorityRef ref="DE::Authority:761::" version="1789823040"/>
+              <levels>
+                <Level id="DE::Level:761_9072118_0::" version="1789823040">
+                  <ShortName>0</ShortName>
+                </Level>
+              </levels>
+              <StopPlaceType>other</StopPlaceType>
+              <quays>
+                <Quay id="DE::Quay:116188_MSTMASTER::" version="1789823040">
+                  <keyList>
+                    <KeyValue>
+                      <Key>GlobalID</Key>
+                      <Value>de:03356:72118::1</Value>
+                    </KeyValue>
+                    <KeyValue>
+                      <Key>AreaType</Key>
+                      <Value>Access and PT</Value>
+                    </KeyValue>
+                  </keyList>
+                  <Name>Osterholz-Scharmbeck-Heilshorn Grundschule</Name>
+                  <Centroid>
+                    <Location>
+                      <Longitude>8.711341</Longitude>
+                      <Latitude>53.255108</Latitude>
+                    </Location>
+                  </Centroid>
+                  <LevelRef ref="DE::Level:761_9072118_0::" version="1789823040"/>
+                </Quay>
+                <Quay id="DE::Quay:176188_MSTMASTER::" version="1789823040">
+                  <keyList>
+                    <KeyValue>
+                      <Key>GlobalID</Key>
+                      <Value>de:03356:72118::2</Value>
+                    </KeyValue>
+                    <KeyValue>
+                      <Key>AreaType</Key>
+                      <Value>Access and PT</Value>
+                    </KeyValue>
+                  </keyList>
+                  <Name>Osterholz-Scharmbeck-Heilshorn Grundschule</Name>
+                  <Centroid>
+                    <Location>
+                      <Longitude>8.711335</Longitude>
+                      <Latitude>53.255102</Latitude>
+                    </Location>
+                  </Centroid>
+                  <LevelRef ref="DE::Level:761_9072118_0::" version="1789823040"/>
+                </Quay>
+              </quays>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+        <TimetableFrame id="DE::TimetableFrame_EU_PI_TIMETABLE:WEB-WEB_HB-511699" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_TIMETABLE" versionRef="1.0"/>
+          <vehicleJourneys>
+            <ServiceJourney id="DE::ServiceJourney:3411197329_0::" version="1789823040">
+              <keyList>
+                <KeyValue>
+                  <Key>TripNr</Key>
+                  <Value>1699001</Value>
+                </KeyValue>
+              </keyList>
+              <TransportMode>bus</TransportMode>
+              <DepartureTime>10:45:00</DepartureTime>
+              <JourneyDuration>PT15M</JourneyDuration>
+              <dayTypes>
+                <DayTypeRef ref="DE::DayType:188965::" version="1789823040"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="DE::ServiceJourneyPattern:337067061_0::" version="1789823040"/>
+              <VehicleTypeRef ref="DE::VehicleType:3324::" version="1789823040"/>
+              <passingTimes>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:77392432::" version="1789823040">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:337067061_1_0::" version="1789823040"/>
+                  <DepartureTime>10:45:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:77392433::" version="1789823040">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:337067061_1_1::" version="1789823040"/>
+                  <ArrivalTime>11:00:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="DE::ServiceJourney:3411197328_0::" version="1789823040">
+              <keyList>
+                <KeyValue>
+                  <Key>TripNr</Key>
+                  <Value>1699002</Value>
+                </KeyValue>
+              </keyList>
+              <TransportMode>bus</TransportMode>
+              <DepartureTime>12:35:00</DepartureTime>
+              <JourneyDuration>PT15M</JourneyDuration>
+              <dayTypes>
+                <DayTypeRef ref="DE::DayType:188965::" version="1789823040"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="DE::ServiceJourneyPattern:337067062_0::" version="1789823040"/>
+              <VehicleTypeRef ref="DE::VehicleType:3324::" version="1789823040"/>
+              <passingTimes>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:77392434::" version="1789823040">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:337067062_1_0::" version="1789823040"/>
+                  <DepartureTime>12:35:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:77392435::" version="1789823040">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:337067062_1_1::" version="1789823040"/>
+                  <ArrivalTime>12:50:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+
+</PublicationDelivery>

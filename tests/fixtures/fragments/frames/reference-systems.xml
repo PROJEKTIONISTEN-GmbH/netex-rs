@@ -1,0 +1,76 @@
+<!--
+  Positions in the reference system they name. A Location holds either
+  longitude and latitude in WGS 84 or a gml:pos in the system its srsName
+  names (LocationStructure, netex_location_types.xsd); a gml:LineString may
+  name its own srsName (GML 3.2, AbstractGeometryType); a frame states the
+  system of the positions it holds that name none (DefaultLocationSystem of
+  FrameDefaults, netex_versionFrame_version.xsd). Here: a frame defaulting to
+  WGS 84 with a point in UTM zone 32N and a link in ETRS89 / UTM 32N, a quay
+  in Gauss-Krüger zone 3, and a second frame naming no default at all.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceFrame id="ex:ServiceFrame:systems" version="1">
+  <FrameDefaults>
+    <DefaultLocationSystem>EPSG:4326</DefaultLocationSystem>
+  </FrameDefaults>
+  <scheduledStopPoints>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:wgs84" version="1">
+      <Name>Kröpcke</Name>
+      <Location>
+        <Longitude>9.7381</Longitude>
+        <Latitude>52.3745</Latitude>
+      </Location>
+    </ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:utm" version="1">
+      <Name>Aegidientorplatz</Name>
+      <Location srsName="EPSG:32632">
+        <gml:pos>550720.0 5802050.0</gml:pos>
+      </Location>
+    </ScheduledStopPoint>
+  </scheduledStopPoints>
+  <serviceLinks>
+    <ServiceLink id="ex:ServiceLink:etrs89" version="1">
+      <Distance>540</Distance>
+      <gml:LineString gml:id="ex-ls-etrs89" srsName="EPSG:25832">
+        <gml:posList>550300.0 5802500.0 550720.0 5802050.0</gml:posList>
+      </gml:LineString>
+      <FromPointRef ref="ex:ScheduledStopPoint:wgs84" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:utm" version="1"/>
+    </ServiceLink>
+    <ServiceLink id="ex:ServiceLink:default" version="1">
+      <Distance>540</Distance>
+      <gml:LineString gml:id="ex-ls-default">
+        <gml:posList>52.3745 9.7381 52.3704 9.7442</gml:posList>
+      </gml:LineString>
+      <FromPointRef ref="ex:ScheduledStopPoint:wgs84" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:undeclared" version="1"/>
+    </ServiceLink>
+  </serviceLinks>
+</ServiceFrame>
+<SiteFrame id="ex:SiteFrame:systems" version="1">
+  <stopPlaces>
+    <StopPlace id="ex:StopPlace:Aegidientorplatz" version="1">
+      <Name>Aegidientorplatz</Name>
+      <quays>
+        <Quay id="ex:Quay:Aegidientorplatz:1" version="1">
+          <Centroid>
+            <Location srsName="EPSG:31467">
+              <gml:pos>3550790.0 5803900.0</gml:pos>
+            </Location>
+          </Centroid>
+        </Quay>
+      </quays>
+    </StopPlace>
+  </stopPlaces>
+</SiteFrame>
+<ServiceFrame id="ex:ServiceFrame:systems:none" version="1">
+  <scheduledStopPoints>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:undeclared" version="1">
+      <Location>
+        <Longitude>9.7442</Longitude>
+        <Latitude>52.3704</Latitude>
+      </Location>
+    </ScheduledStopPoint>
+  </scheduledStopPoints>
+</ServiceFrame>

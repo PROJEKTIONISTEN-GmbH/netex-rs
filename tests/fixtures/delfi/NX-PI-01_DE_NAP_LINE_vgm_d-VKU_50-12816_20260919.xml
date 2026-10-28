@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="ntx:1.1">
+
+  <PublicationTimestamp>2026-09-19T15:04:00</PublicationTimestamp>
+
+  <ParticipantRef>DE</ParticipantRef>
+
+  <PublicationRequest>
+    <RequestTimestamp>2026-09-19T15:04:00</RequestTimestamp>
+    <topics>
+      <NetworkFrameTopic>
+        <Current/>
+        <NetworkFilterByValue>
+          <objectReferences>
+            <LineRef ref="DE::Line:7144749::" version="1789823040"/>
+            <TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER" versionRef="1.0"/>
+          </objectReferences>
+        </NetworkFilterByValue>
+      </NetworkFrameTopic>
+    </topics>
+  </PublicationRequest>
+
+  <dataObjects>
+    <CompositeFrame id="DE::CompositeFrame_EU_PI_LINE_OFFER:vgm_d-VKU_50-12816" version="1789823040">
+      <ValidBetween>
+        <FromDate>2026-09-05T00:00:00</FromDate>
+        <ToDate>2026-12-12T00:00:00</ToDate>
+      </ValidBetween>
+      <TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER" versionRef="1.0"/>
+      <codespaces>
+        <Codespace id="epip_data">
+          <Xmlns>epd</Xmlns>
+          <XmlnsUrl>http://netex-cen.eu/epip_data</XmlnsUrl>
+          <Description>EPIP data</Description>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultCodespaceRef ref="epip_data"/>
+        <DefaultDataSourceRef ref="epip_data:DataSource:General"/>
+        <DefaultResponsibilitySetRef ref="DE::ResponsibilitySet:3957::" version="1789823040"/>
+        <DefaultLocale>
+          <TimeZone>Europe/Berlin</TimeZone>
+          <DefaultLanguage>de-DE</DefaultLanguage>
+        </DefaultLocale>
+        <DefaultLocationSystem>urn:ogc:def:crs:EPSG::4326</DefaultLocationSystem>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="DE::ResourceFrame_EU_PI_COMMON:vgm_d-VKU_50-12816" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_COMMON" versionRef="1.0"/>
+          <dataSources>
+            <DataSource id="epip_data:DataSource:General" version="1789823040">
+              <Name>DE</Name>
+            </DataSource>
+          </dataSources>
+          <responsibilitySets>
+            <ResponsibilitySet id="DE::ResponsibilitySet:3957::" version="1789823040">
+              <roles>
+                <ResponsibilityRoleAssignment id="DE::ResponsibilityRoleAssignment:3957::" version="1789823040">
+                  <DataRoleType>creates</DataRoleType>
+                  <ResponsibleOrganisationRef ref="DE::Authority:252::" version="1789823040"/>
+                </ResponsibilityRoleAssignment>
+              </roles>
+            </ResponsibilitySet>
+          </responsibilitySets>
+          <organisations>
+            <Authority id="DE::Authority:252::" version="1789823040">
+              <PublicCode>vgm_d</PublicCode>
+              <Name>vgm_VGM/VRL</Name>
+              <ShortName>vgm_d</ShortName>
+              <LegalName>vgm_VGM/VRL</LegalName>
+              <ContactDetails/>
+              <OrganisationType>authority</OrganisationType>
+            </Authority>
+            <Operator id="DE::Operator:6778::" version="1789823040">
+              <PublicCode>VKU_50</PublicCode>
+              <Name>Verkehrsgesellschaft Kreis Unna mbH 50</Name>
+              <ShortName>VKU_50</ShortName>
+              <LegalName>Verkehrsgesellschaft Kreis Unna mbH 50</LegalName>
+              <ContactDetails/>
+              <OrganisationType>operator</OrganisationType>
+            </Operator>
+          </organisations>
+          <vehicleTypes>
+            <VehicleType id="DE::VehicleType:3189::" version="1789823040">
+              <Name>Kleinbus</Name>
+              <ShortName>kvvKB</ShortName>
+              <capacities>
+                <PassengerCapacity>
+                  <FareClass>secondClass </FareClass>
+                  <TotalCapacity>22</TotalCapacity>
+                  <SeatingCapacity>10</SeatingCapacity>
+                  <StandingCapacity>12</StandingCapacity>
+                </PassengerCapacity>
+                <PassengerCapacity>
+                  <WheelchairPlaceCapacity>0</WheelchairPlaceCapacity>
+                </PassengerCapacity>
+              </capacities>
+            </VehicleType>
+          </vehicleTypes>
+        </ResourceFrame>
+        <ServiceCalendarFrame id="DE::ServiceCalendarFrame_EU_PI_CALENDAR:vgm_d-VKU_50-12816" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_CALENDAR" versionRef="1.0"/>
+          <ServiceCalendar id="DE::ServiceCalendar:3957::" version="1789823040">
+            <FromDate>2026-09-05</FromDate>
+            <ToDate>2026-12-12</ToDate>
+            <dayTypes>
+              <DayType id="DE::DayType:35110::" version="1789823040"/>
+            </dayTypes>
+            <operatingPeriods>
+              <UicOperatingPeriod id="DE::UicOperatingPeriod:35110::" version="1789823040">
+                <FromDate>2026-09-05T00:00:00</FromDate>
+                <ToDate>2026-12-12T00:00:00</ToDate>
+                <ValidDayBits>110000011000001100000110000011000001100000110000011000001100000110000011000001100000110000011000001</ValidDayBits>
+              </UicOperatingPeriod>
+            </operatingPeriods>
+            <dayTypeAssignments>
+              <DayTypeAssignment id="DE::DayTypeAssignment:35110::" order="1" version="1789823040">
+                <OperatingPeriodRef ref="DE::UicOperatingPeriod:35110::" version="1789823040"/>
+                <DayTypeRef ref="DE::DayType:35110::" version="1789823040"/>
+                <isAvailable>true</isAvailable>
+              </DayTypeAssignment>
+            </dayTypeAssignments>
+          </ServiceCalendar>
+        </ServiceCalendarFrame>
+        <ServiceFrame id="DE::ServiceFrame_EU_PI_NETWORK:vgm_d-VKU_50-12816" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_NETWORK" versionRef="1.0"/>
+          <directions>
+            <Direction id="DE::Direction:1::" version="1789823040"/>
+          </directions>
+          <lines>
+            <Line id="DE::Line:7144749::" version="1789823040">
+              <keyList>
+                <KeyValue>
+                  <Key>GlobalID</Key>
+                  <Value>de:NWL:05978012|Bus|B16:VKU</Value>
+                </KeyValue>
+              </keyList>
+              <Name>B16</Name>
+              <ShortName>12816</ShortName>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>B16</PublicCode>
+              <PrivateCode>12816</PrivateCode>
+              <AuthorityRef ref="DE::Authority:252::" version="1789823040"/>
+              <additionalOperators>
+                <OperatorRef ref="DE::Operator:6778::" version="1789823040"/>
+              </additionalOperators>
+              <allowedDirections>
+                <AllowedLineDirection id="DE::AllowedLineDirection:5777::" version="1789823040">
+                  <DirectionRef ref="DE::Direction:1::" version="1789823040"/>
+                </AllowedLineDirection>
+              </allowedDirections>
+            </Line>
+          </lines>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="DE::ScheduledStopPoint:13290102_vgm_d_::" version="1789823040">
+              <Name>Fröndenberg, Mitte</Name>
+              <Location>
+                <Longitude>7.766034</Longitude>
+                <Latitude>51.472786</Latitude>
+              </Location>
+              <PublicCode>2</PublicCode>
+              <StopType>busStation</StopType>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+          <serviceLinks>
+            <ServiceLink id="DE::ServiceLink:4299407__4299407_::" version="1789823040">
+              <FromPointRef ref="DE::ScheduledStopPoint:13290102_vgm_d_::" version="1789823040"/>
+              <ToPointRef ref="DE::ScheduledStopPoint:13290102_vgm_d_::" version="1789823040"/>
+            </ServiceLink>
+          </serviceLinks>
+          <stopAssignments>
+            <PassengerStopAssignment id="DE::PassengerStopAssignment:119914::" order="1" version="1789823040">
+              <ScheduledStopPointRef ref="DE::ScheduledStopPoint:13290102_vgm_d_::" version="1789823040"/>
+              <StopPlaceRef ref="DE::StopPlace:32901_vgm_d::" version="1789823040"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="DE::ServiceJourneyPattern:313903758_0::" version="1789823040">
+              <RouteView id="DE::RouteView:313903758_1::">
+                <LineRef ref="DE::Line:7144749::" version="1789823040"/>
+              </RouteView>
+              <DirectionRef ref="DE::Direction:1::" version="1789823040"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="DE::StopPointInJourneyPattern:313903758_1_0::" order="1" version="1789823040">
+                  <ScheduledStopPointRef ref="DE::ScheduledStopPoint:13290102_vgm_d_::" version="1789823040"/>
+                  <ForAlighting>true</ForAlighting>
+                  <ForBoarding>true</ForBoarding>
+                  <ChangeOfDestinationDisplay>false</ChangeOfDestinationDisplay>
+                  <noticeAssignments>
+                    <NoticeAssignment id="DE::NoticeAssignment:6445509::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:14700_23745::" version="1789823040">
+                        <Text lang="de-DE">Zahl der Stehplätze : 0</Text>
+                        <PublicCode>NSTAND</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:6445510::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:14701_23746::" version="1789823040">
+                        <Text lang="de-DE">Zahl der Sitzplätze : 0</Text>
+                        <PublicCode>NSEAT</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:6445511::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:14702_23747::" version="1789823040">
+                        <Text lang="de-DE">Zahl der behindertengerechten Plätze : 0</Text>
+                        <PublicCode>NBEHIN</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:6445512::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:12676_23748::" version="1789823040">
+                        <Text lang="de-DE">DELFI-Anreicherungs-URL : http://delfi.nrw-zks.de/delfitrias/trias</Text>
+                        <PublicCode>DIPURL</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                  </noticeAssignments>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="DE::StopPointInJourneyPattern:313903758_1_1::" order="2" version="1789823040">
+                  <ScheduledStopPointRef ref="DE::ScheduledStopPoint:13290102_vgm_d_::" version="1789823040"/>
+                  <ForAlighting>true</ForAlighting>
+                  <ForBoarding>true</ForBoarding>
+                  <ChangeOfDestinationDisplay>false</ChangeOfDestinationDisplay>
+                  <noticeAssignments>
+                    <NoticeAssignment id="DE::NoticeAssignment:6445513::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14700_23745::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:6445514::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14701_23746::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:6445515::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:14702_23747::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:6445516::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:12676_23748::" version="1789823040"/>
+                    </NoticeAssignment>
+                  </noticeAssignments>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <SiteFrame id="DE::SiteFrame_EU_PI_STOP:vgm_d-VKU_50-12816" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_STOP" versionRef="1.0"/>
+          <topographicPlaces>
+            <TopographicPlace id="DE::TopographicPlace:72277::" version="1789823040">
+              <Name>Fröndenberg/Ruhr</Name>
+              <IsoCode>05978012</IsoCode>
+              <Descriptor>
+                <Name>Fröndenberg/Ruhr</Name>
+              </Descriptor>
+            </TopographicPlace>
+          </topographicPlaces>
+          <stopPlaces>
+            <StopPlace id="DE::StopPlace:32901_vgm_d::" version="1789823040">
+              <keyList>
+                <KeyValue>
+                  <Key>GlobalID</Key>
+                  <Value>de:05978:32901</Value>
+                </KeyValue>
+              </keyList>
+              <Name>Fröndenberg, Mitte</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>7.765972</Longitude>
+                  <Latitude>51.47278</Latitude>
+                </Location>
+              </Centroid>
+              <TopographicPlaceRef ref="DE::TopographicPlace:72277::" version="1789823040"/>
+              <Locale>
+                <TimeZone>Europe/Berlin</TimeZone>
+              </Locale>
+              <AuthorityRef ref="DE::Authority:252::" version="1789823040"/>
+              <StopPlaceType>other</StopPlaceType>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+        <TimetableFrame id="DE::TimetableFrame_EU_PI_TIMETABLE:vgm_d-VKU_50-12816" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_TIMETABLE" versionRef="1.0"/>
+          <vehicleJourneys>
+            <ServiceJourney id="DE::ServiceJourney:3186211315_0::" version="1789823040">
+              <TransportMode>bus</TransportMode>
+              <DepartureTime>11:00:00</DepartureTime>
+              <JourneyDuration>PT2H30M</JourneyDuration>
+              <dayTypes>
+                <DayTypeRef ref="DE::DayType:35110::" version="1789823040"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="DE::ServiceJourneyPattern:313903758_0::" version="1789823040"/>
+              <VehicleTypeRef ref="DE::VehicleType:3189::" version="1789823040"/>
+              <passingTimes>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:5681294::" version="1789823040">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:313903758_1_0::" version="1789823040"/>
+                  <DepartureTime>11:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:5681295::" version="1789823040">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:313903758_1_1::" version="1789823040"/>
+                  <ArrivalTime>13:30:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+
+</PublicationDelivery>

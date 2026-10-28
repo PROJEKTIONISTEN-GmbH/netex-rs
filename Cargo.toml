@@ -1,0 +1,110 @@
+# The core crate at the root, and beside it, packages of their own built on it:
+# the NeTEx → GTFS library and the command line.
+[workspace]
+members = [".", "crates/netex2gtfs", "crates/netex-cli"]
+# The fuzz targets are a package with a lock file of its own, built from its
+# directory.
+exclude = ["fuzz"]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.86"
+authors = ["Marcel Kaufmann <kaufmann@projektionisten.de>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/PROJEKTIONISTEN-GmbH/netex-rs"
+
+[workspace.lints.rust]
+missing_docs = "deny"
+missing_debug_implementations = "deny"
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+
+[package]
+name = "netex-rs"
+version = "0.7.1"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "CEN NeTEx (CEN/TS 16614) in Rust: reads and writes NeTEx 1.x and 2.0, resolves references across a dataset, and indexes what a routing engine needs"
+documentation = "https://docs.rs/netex-rs"
+readme = "README.md"
+keywords = ["netex", "transmodel", "public-transport", "timetable", "xml"]
+categories = ["parser-implementations", "encoding"]
+# Test data under a licence of its own is the repository's, not the crate's:
+# the official NeTEx schemas and examples (GPL-3.0, tests/fixtures/netex-*/LICENSE);
+# the tests read them where they are. The tools beside the crate work on the
+# repository (the schema walker reads those schemas); the members under crates/
+# are packages of their own.
+exclude = ["tests/fixtures/netex-1.3/", "tests/fixtures/netex-2.0/", "tools/", ".github/", "crates/"]
+
+# The measurements live in `benches/`; the library is not a benchmark target itself.
+[lib]
+bench = false
+
+# docs.rs documents every feature: the reference systems and the serializable
+# reports.
+[package.metadata.docs.rs]
+all-features = true
+
+[dependencies]
+# The XML tokenizer under everything. Events, not a tree: the reader decides what
+# becomes a typed value and what is carried through as it was written.
+quick-xml = "0.42"
+# Newline counting for error locations, on the error path only.
+memchr = "2"
+# A dataset is many files; they are read on every core.
+rayon = "1.10"
+# The DELFI delivery is one zip archive of 28 000 line files. Only inflate is
+# needed, through the pure-Rust zlib port.
+zip = { version = "7", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+# Identifiers are interned by the million; a keyed hash is the cost that shows.
+rustc-hash = "2"
+# The interner keeps each string once, in a table probed by hash and compared
+# against the string's own storage.
+hashbrown = { version = "0.17", default-features = false }
+# The fingerprint of a document read from a directory, where no central
+# directory carries one; the same CRC-32 a zip archive stores.
+crc32fast = "1"
+# The reports of a merge as JSON, where a caller asks for them (`serde`).
+serde = { version = "1", features = ["derive"], optional = true }
+
+[features]
+# Positions in national reference systems — Swiss, Austrian, Dutch, French,
+# UTM — turned into WGS 84 when read (`netex_rs::crs`), in pure Rust.
+crs = []
+# The reports of a merge and their findings serializable (`netex_rs::merge::Report`).
+serde = ["dep:serde"]
+
+[dev-dependencies]
+criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }
+# The extractor-parity test ports the German accessibility wording patterns of
+# the Python extractor it is checked against.
+regex = "1"
+# The memory guards count what a read allocates; the crate forbids `unsafe`,
+# so the counting allocator comes from outside.
+allocation-counter = "0.8"
+# The merge writes into a directory of its own.
+tempfile = "3"
+
+[[bench]]
+name = "read"
+harness = false
+
+[[bench]]
+name = "write"
+harness = false
+
+[[bench]]
+name = "dataset"
+harness = false
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+
+[lints]
+workspace = true

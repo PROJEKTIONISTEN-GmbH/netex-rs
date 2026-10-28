@@ -1,0 +1,28 @@
+<!--
+  A day type for a holiday, given its day by a single date: a property of day
+  naming the kind of holiday (HolidayTypes), and an assignment of a Date
+  rather than of a period (DayTypeAssignment,
+  netex_serviceCalendar_version.xsd), with an order that is not its position.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceCalendarFrame id="ex:ServiceCalendarFrame:holiday" version="1">
+  <ServiceCalendar id="ex:ServiceCalendar:holiday" version="any">
+    <dayTypes>
+      <DayType id="ex:DayType:Reformationstag" version="any">
+        <Name>Reformationstag</Name>
+        <properties>
+          <PropertyOfDay>
+            <HolidayTypes>NationalHoliday</HolidayTypes>
+          </PropertyOfDay>
+        </properties>
+      </DayType>
+    </dayTypes>
+    <dayTypeAssignments>
+      <DayTypeAssignment id="ex:DayTypeAssignment:Reformationstag" version="any" order="7">
+        <Date>2026-10-31</Date>
+        <DayTypeRef ref="ex:DayType:Reformationstag" version="any"/>
+      </DayTypeAssignment>
+    </dayTypeAssignments>
+  </ServiceCalendar>
+</ServiceCalendarFrame>

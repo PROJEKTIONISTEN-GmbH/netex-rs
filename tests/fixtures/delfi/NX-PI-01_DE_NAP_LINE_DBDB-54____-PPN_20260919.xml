@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="ntx:1.1">
+
+  <PublicationTimestamp>2026-09-19T15:04:00</PublicationTimestamp>
+
+  <ParticipantRef>DE</ParticipantRef>
+
+  <PublicationRequest>
+    <RequestTimestamp>2026-09-19T15:04:00</RequestTimestamp>
+    <topics>
+      <NetworkFrameTopic>
+        <Current/>
+        <NetworkFilterByValue>
+          <objectReferences>
+            <LineRef ref="DE::Line:7149105::" version="1789823040"/>
+            <TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER" versionRef="1.0"/>
+          </objectReferences>
+        </NetworkFilterByValue>
+      </NetworkFrameTopic>
+    </topics>
+  </PublicationRequest>
+
+  <dataObjects>
+    <CompositeFrame id="DE::CompositeFrame_EU_PI_LINE_OFFER:DBDB-54____-PPN" version="1789823040">
+      <ValidBetween>
+        <FromDate>2026-09-05T00:00:00</FromDate>
+        <ToDate>2026-12-12T00:00:00</ToDate>
+      </ValidBetween>
+      <TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER" versionRef="1.0"/>
+      <codespaces>
+        <Codespace id="epip_data">
+          <Xmlns>epd</Xmlns>
+          <XmlnsUrl>http://netex-cen.eu/epip_data</XmlnsUrl>
+          <Description>EPIP data</Description>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultCodespaceRef ref="epip_data"/>
+        <DefaultDataSourceRef ref="epip_data:DataSource:General"/>
+        <DefaultResponsibilitySetRef ref="DE::ResponsibilitySet:714::" version="1789823040"/>
+        <DefaultLocale>
+          <TimeZone>Europe/Berlin</TimeZone>
+          <DefaultLanguage>de-DE</DefaultLanguage>
+        </DefaultLocale>
+        <DefaultLocationSystem>urn:ogc:def:crs:EPSG::4326</DefaultLocationSystem>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="DE::ResourceFrame_EU_PI_COMMON:DBDB-54____-PPN" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_COMMON" versionRef="1.0"/>
+          <dataSources>
+            <DataSource id="epip_data:DataSource:General" version="1789823040">
+              <Name>DE</Name>
+            </DataSource>
+          </dataSources>
+          <responsibilitySets>
+            <ResponsibilitySet id="DE::ResponsibilitySet:714::" version="1789823040">
+              <roles>
+                <ResponsibilityRoleAssignment id="DE::ResponsibilityRoleAssignment:714::" version="1789823040">
+                  <DataRoleType>creates</DataRoleType>
+                  <ResponsibleOrganisationRef ref="DE::Authority:151::" version="1789823040"/>
+                </ResponsibilityRoleAssignment>
+              </roles>
+            </ResponsibilitySet>
+          </responsibilitySets>
+          <organisations>
+            <Authority id="DE::Authority:151::" version="1789823040">
+              <PublicCode>DBDB</PublicCode>
+              <Name>DB_Gesamtnetz der deutschen Bahn</Name>
+              <ShortName>DBDB</ShortName>
+              <LegalName>DB_Gesamtnetz der deutschen Bahn</LegalName>
+              <ContactDetails/>
+              <OrganisationType>authority</OrganisationType>
+            </Authority>
+            <Operator id="DE::Operator:11413::" version="1789823040">
+              <PublicCode>54____</PublicCode>
+              <Name>54____ Ceske Drahy</Name>
+              <ShortName>54____</ShortName>
+              <LegalName>54____ Ceske Drahy</LegalName>
+              <ContactDetails/>
+              <OrganisationType>operator</OrganisationType>
+            </Operator>
+          </organisations>
+          <vehicleTypes>
+            <VehicleType id="DE::VehicleType:3446::" version="1789823040">
+              <Name>Osobowy</Name>
+              <ShortName>DBPPN</ShortName>
+            </VehicleType>
+          </vehicleTypes>
+        </ResourceFrame>
+        <ServiceCalendarFrame id="DE::ServiceCalendarFrame_EU_PI_CALENDAR:DBDB-54____-PPN" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_CALENDAR" versionRef="1.0"/>
+          <ServiceCalendar id="DE::ServiceCalendar:714::" version="1789823040">
+            <FromDate>2026-09-05</FromDate>
+            <ToDate>2026-12-12</ToDate>
+            <dayTypes>
+              <DayType id="DE::DayType:3744::" version="1789823040"/>
+            </dayTypes>
+            <operatingPeriods>
+              <UicOperatingPeriod id="DE::UicOperatingPeriod:3744::" version="1789823040">
+                <FromDate>2026-10-17T00:00:00</FromDate>
+                <ToDate>2026-11-15T00:00:00</ToDate>
+                <ValidDayBits>110000011000001100000110000011</ValidDayBits>
+              </UicOperatingPeriod>
+            </operatingPeriods>
+            <dayTypeAssignments>
+              <DayTypeAssignment id="DE::DayTypeAssignment:3744::" order="1" version="1789823040">
+                <OperatingPeriodRef ref="DE::UicOperatingPeriod:3744::" version="1789823040"/>
+                <DayTypeRef ref="DE::DayType:3744::" version="1789823040"/>
+                <isAvailable>true</isAvailable>
+              </DayTypeAssignment>
+            </dayTypeAssignments>
+          </ServiceCalendar>
+        </ServiceCalendarFrame>
+        <ServiceFrame id="DE::ServiceFrame_EU_PI_NETWORK:DBDB-54____-PPN" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_NETWORK" versionRef="1.0"/>
+          <directions>
+            <Direction id="DE::Direction:1::" version="1789823040"/>
+          </directions>
+          <lines>
+            <Line id="DE::Line:7149105::" version="1789823040">
+              <Name>PPN</Name>
+              <ShortName>PPN</ShortName>
+              <TransportMode>rail</TransportMode>
+              <PublicCode>PPN</PublicCode>
+              <PrivateCode>PPN</PrivateCode>
+              <AuthorityRef ref="DE::Authority:151::" version="1789823040"/>
+              <additionalOperators>
+                <OperatorRef ref="DE::Operator:11413::" version="1789823040"/>
+              </additionalOperators>
+              <allowedDirections>
+                <AllowedLineDirection id="DE::AllowedLineDirection:1027::" version="1789823040">
+                  <DirectionRef ref="DE::Direction:1::" version="1789823040"/>
+                </AllowedLineDirection>
+              </allowedDirections>
+            </Line>
+          </lines>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="DE::ScheduledStopPoint:5400123_DBDB_::" version="1789823040">
+              <Name>Ceska Kubice</Name>
+              <Location>
+                <Longitude>12.865142</Longitude>
+                <Latitude>49.374558</Latitude>
+              </Location>
+              <StopType>railStation</StopType>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="DE::ScheduledStopPoint:5400400_DBDB_::" version="1789823040">
+              <Name>Babylon</Name>
+              <Location>
+                <Longitude>12.869049</Longitude>
+                <Latitude>49.398878</Latitude>
+              </Location>
+              <StopType>railStation</StopType>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="DE::ScheduledStopPoint:5400904_DBDB_::" version="1789823040">
+              <Name>Domazlice mesto</Name>
+              <Location>
+                <Longitude>12.924718</Longitude>
+                <Latitude>49.435678</Latitude>
+              </Location>
+              <StopType>railStation</StopType>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="DE::ScheduledStopPoint:5400196_DBDB_::" version="1789823040">
+              <Name>Domazlice</Name>
+              <Location>
+                <Longitude>12.944582</Longitude>
+                <Latitude>49.434691</Latitude>
+              </Location>
+              <StopType>railStation</StopType>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+          <serviceLinks>
+            <ServiceLink id="DE::ServiceLink:3968722__3968765_::" version="1789823040">
+              <FromPointRef ref="DE::ScheduledStopPoint:5400123_DBDB_::" version="1789823040"/>
+              <ToPointRef ref="DE::ScheduledStopPoint:5400400_DBDB_::" version="1789823040"/>
+            </ServiceLink>
+            <ServiceLink id="DE::ServiceLink:3968765__3968777_::" version="1789823040">
+              <FromPointRef ref="DE::ScheduledStopPoint:5400400_DBDB_::" version="1789823040"/>
+              <ToPointRef ref="DE::ScheduledStopPoint:5400904_DBDB_::" version="1789823040"/>
+            </ServiceLink>
+            <ServiceLink id="DE::ServiceLink:3968777__3968730_::" version="1789823040">
+              <FromPointRef ref="DE::ScheduledStopPoint:5400904_DBDB_::" version="1789823040"/>
+              <ToPointRef ref="DE::ScheduledStopPoint:5400196_DBDB_::" version="1789823040"/>
+            </ServiceLink>
+          </serviceLinks>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="DE::ServiceJourneyPattern:337890012_0::" version="1789823040">
+              <RouteView id="DE::RouteView:337890012_1::">
+                <LineRef ref="DE::Line:7149105::" version="1789823040"/>
+              </RouteView>
+              <DirectionRef ref="DE::Direction:1::" version="1789823040"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="DE::StopPointInJourneyPattern:337890012_1_0::" order="1" version="1789823040">
+                  <ScheduledStopPointRef ref="DE::ScheduledStopPoint:5400123_DBDB_::" version="1789823040"/>
+                  <ForAlighting>true</ForAlighting>
+                  <ForBoarding>true</ForBoarding>
+                  <ChangeOfDestinationDisplay>false</ChangeOfDestinationDisplay>
+                  <noticeAssignments>
+                    <NoticeAssignment id="DE::NoticeAssignment:1124295::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:478_5389::" version="1789823040">
+                        <Text lang="de-DE">Fahrradmitnahme begrenzt möglich</Text>
+                        <PublicCode>F2G</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:1124296::" order="1" version="1789823040">
+                      <Notice id="DE::Notice:9431_5390::" version="1789823040">
+                        <Text lang="de-DE">Gattungscode für Linienzuordnung über Lieferanten : PPN</Text>
+                        <PublicCode>ZUGLIG</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                  </noticeAssignments>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="DE::StopPointInJourneyPattern:337890012_1_1::" order="2" version="1789823040">
+                  <ScheduledStopPointRef ref="DE::ScheduledStopPoint:5400400_DBDB_::" version="1789823040"/>
+                  <ForAlighting>true</ForAlighting>
+                  <ForBoarding>true</ForBoarding>
+                  <ChangeOfDestinationDisplay>false</ChangeOfDestinationDisplay>
+                  <noticeAssignments>
+                    <NoticeAssignment id="DE::NoticeAssignment:1124297::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:478_5389::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:1124298::" order="2" version="1789823040">
+                      <Notice id="DE::Notice:802_5391::" version="1789823040">
+                        <Text lang="de-DE">Halt nur bei Bedarf</Text>
+                        <PublicCode>X</PublicCode>
+                      </Notice>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:1124299::" order="2" version="1789823040">
+                      <NoticeRef ref="DE::Notice:9431_5390::" version="1789823040"/>
+                    </NoticeAssignment>
+                  </noticeAssignments>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="DE::StopPointInJourneyPattern:337890012_1_2::" order="3" version="1789823040">
+                  <ScheduledStopPointRef ref="DE::ScheduledStopPoint:5400904_DBDB_::" version="1789823040"/>
+                  <ForAlighting>true</ForAlighting>
+                  <ForBoarding>true</ForBoarding>
+                  <ChangeOfDestinationDisplay>false</ChangeOfDestinationDisplay>
+                  <noticeAssignments>
+                    <NoticeAssignment id="DE::NoticeAssignment:1124300::" order="3" version="1789823040">
+                      <NoticeRef ref="DE::Notice:478_5389::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:1124301::" order="3" version="1789823040">
+                      <NoticeRef ref="DE::Notice:9431_5390::" version="1789823040"/>
+                    </NoticeAssignment>
+                  </noticeAssignments>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="DE::StopPointInJourneyPattern:337890012_1_3::" order="4" version="1789823040">
+                  <ScheduledStopPointRef ref="DE::ScheduledStopPoint:5400196_DBDB_::" version="1789823040"/>
+                  <ForAlighting>true</ForAlighting>
+                  <ForBoarding>true</ForBoarding>
+                  <ChangeOfDestinationDisplay>false</ChangeOfDestinationDisplay>
+                  <noticeAssignments>
+                    <NoticeAssignment id="DE::NoticeAssignment:1124302::" order="4" version="1789823040">
+                      <NoticeRef ref="DE::Notice:478_5389::" version="1789823040"/>
+                    </NoticeAssignment>
+                    <NoticeAssignment id="DE::NoticeAssignment:1124303::" order="4" version="1789823040">
+                      <NoticeRef ref="DE::Notice:9431_5390::" version="1789823040"/>
+                    </NoticeAssignment>
+                  </noticeAssignments>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <SiteFrame id="DE::SiteFrame_EU_PI_STOP:DBDB-54____-PPN" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_STOP" versionRef="1.0"/>
+        </SiteFrame>
+        <TimetableFrame id="DE::TimetableFrame_EU_PI_TIMETABLE:DBDB-54____-PPN" version="1789823040">
+          <TypeOfFrameRef ref="epip:EU_PI_TIMETABLE" versionRef="1.0"/>
+          <vehicleJourneys>
+            <ServiceJourney id="DE::ServiceJourney:3419343066_0::" version="1789823040">
+              <keyList>
+                <KeyValue>
+                  <Key>TripNr</Key>
+                  <Value>005771</Value>
+                </KeyValue>
+              </keyList>
+              <TransportMode>rail</TransportMode>
+              <DepartureTime>09:10:00</DepartureTime>
+              <JourneyDuration>PT12M</JourneyDuration>
+              <dayTypes>
+                <DayTypeRef ref="DE::DayType:3744::" version="1789823040"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="DE::ServiceJourneyPattern:337890012_0::" version="1789823040"/>
+              <VehicleTypeRef ref="DE::VehicleType:3446::" version="1789823040"/>
+              <passingTimes>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:920556::" version="1789823040">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:337890012_1_0::" version="1789823040"/>
+                  <DepartureTime>09:10:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:920557::" version="1789823040">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:337890012_1_1::" version="1789823040"/>
+                  <ArrivalTime>09:13:00</ArrivalTime>
+                  <DepartureTime>09:13:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:920558::" version="1789823040">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:337890012_1_2::" version="1789823040"/>
+                  <ArrivalTime>09:19:00</ArrivalTime>
+                  <DepartureTime>09:20:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:920559::" version="1789823040">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:337890012_1_3::" version="1789823040"/>
+                  <ArrivalTime>09:22:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="DE::ServiceJourney:3419343065_0::" version="1789823040">
+              <keyList>
+                <KeyValue>
+                  <Key>TripNr</Key>
+                  <Value>005775</Value>
+                </KeyValue>
+              </keyList>
+              <TransportMode>rail</TransportMode>
+              <DepartureTime>18:12:00</DepartureTime>
+              <JourneyDuration>PT12M</JourneyDuration>
+              <dayTypes>
+                <DayTypeRef ref="DE::DayType:3744::" version="1789823040"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="DE::ServiceJourneyPattern:337890012_0::" version="1789823040"/>
+              <VehicleTypeRef ref="DE::VehicleType:3446::" version="1789823040"/>
+              <passingTimes>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:920560::" version="1789823040">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:337890012_1_0::" version="1789823040"/>
+                  <DepartureTime>18:12:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:920561::" version="1789823040">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:337890012_1_1::" version="1789823040"/>
+                  <ArrivalTime>18:15:00</ArrivalTime>
+                  <DepartureTime>18:15:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:920562::" version="1789823040">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:337890012_1_2::" version="1789823040"/>
+                  <ArrivalTime>18:21:00</ArrivalTime>
+                  <DepartureTime>18:22:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:920563::" version="1789823040">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:337890012_1_3::" version="1789823040"/>
+                  <ArrivalTime>18:24:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+
+</PublicationDelivery>

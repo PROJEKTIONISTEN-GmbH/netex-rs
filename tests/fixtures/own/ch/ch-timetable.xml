@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The timetable document of the Swiss-style delivery. The train states its
+  calls rather than a journey pattern with passing times: it passes through
+  Talwil without stopping and reaches Grenzheim after midnight. The shuttle
+  is a template journey run at a headway, every 20 minutes from 06:00 to
+  07:00. Both name the lines, stop points and availability conditions of the
+  shared document.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.10">
+  <PublicationTimestamp>2026-10-01T06:00:00</PublicationTimestamp>
+  <ParticipantRef>EXAMPLE</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="ch:ex:CompositeFrame:timetable" version="any">
+      <frames>
+        <TimetableFrame id="ch:ex:TimetableFrame:timetable" version="any">
+          <vehicleJourneys>
+            <ServiceJourney id="ch:ex:ServiceJourney:IR9-2148" version="any">
+              <validityConditions>
+                <AvailabilityConditionRef ref="ch:ex:AvailabilityCondition:week" version="any"/>
+              </validityConditions>
+              <TransportMode>rail</TransportMode>
+              <LineRef ref="ch:ex:Line:IR9" version="any"/>
+              <calls>
+                <Call id="ch:ex:Call:IR9-2148-1" version="any" order="1">
+                  <ScheduledStopPointRef ref="ch:ex:ScheduledStopPoint:A" version="any"/>
+                  <Departure>
+                    <Time>21:48:00</Time>
+                    <ForBoarding>true</ForBoarding>
+                  </Departure>
+                  <StopUse>access</StopUse>
+                </Call>
+                <Call id="ch:ex:Call:IR9-2148-2" version="any" order="2">
+                  <ScheduledStopPointRef ref="ch:ex:ScheduledStopPoint:B" version="any"/>
+                  <Arrival>
+                    <Time>22:16:00</Time>
+                    <ForAlighting>true</ForAlighting>
+                  </Arrival>
+                  <Departure>
+                    <Time>22:18:00</Time>
+                    <ForBoarding>true</ForBoarding>
+                  </Departure>
+                  <StopUse>access</StopUse>
+                </Call>
+                <Call id="ch:ex:Call:IR9-2148-3" version="any" order="3">
+                  <ScheduledStopPointRef ref="ch:ex:ScheduledStopPoint:C" version="any"/>
+                  <Arrival>
+                    <Time>23:24:00</Time>
+                  </Arrival>
+                  <Departure>
+                    <Time>23:24:00</Time>
+                  </Departure>
+                  <StopUse>passthrough</StopUse>
+                </Call>
+                <Call id="ch:ex:Call:IR9-2148-4" version="any" order="4">
+                  <ScheduledStopPointRef ref="ch:ex:ScheduledStopPoint:D" version="any"/>
+                  <Arrival>
+                    <Time>00:30:00</Time>
+                    <DayOffset>1</DayOffset>
+                    <ForAlighting>true</ForAlighting>
+                  </Arrival>
+                  <StopUse>access</StopUse>
+                </Call>
+              </calls>
+            </ServiceJourney>
+            <TemplateServiceJourney id="ch:ex:ServiceJourney:S1" version="any">
+              <validityConditions>
+                <AvailabilityConditionRef ref="ch:ex:AvailabilityCondition:weekdays" version="any"/>
+              </validityConditions>
+              <TransportMode>bus</TransportMode>
+              <LineRef ref="ch:ex:Line:S1" version="any"/>
+              <calls>
+                <Call id="ch:ex:Call:S1-1" version="any" order="1">
+                  <ScheduledStopPointRef ref="ch:ex:ScheduledStopPoint:B" version="any"/>
+                  <Departure>
+                    <Time>06:00:00</Time>
+                  </Departure>
+                </Call>
+                <Call id="ch:ex:Call:S1-2" version="any" order="2">
+                  <ScheduledStopPointRef ref="ch:ex:ScheduledStopPoint:C" version="any"/>
+                  <Arrival>
+                    <Time>06:12:00</Time>
+                  </Arrival>
+                </Call>
+              </calls>
+              <frequencyGroups>
+                <HeadwayJourneyGroup id="ch:ex:HeadwayJourneyGroup:S1" version="any">
+                  <FirstDepartureTime>06:00:00</FirstDepartureTime>
+                  <LastDepartureTime>07:00:00</LastDepartureTime>
+                  <ScheduledHeadwayInterval>PT20M</ScheduledHeadwayInterval>
+                </HeadwayJourneyGroup>
+              </frequencyGroups>
+            </TemplateServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

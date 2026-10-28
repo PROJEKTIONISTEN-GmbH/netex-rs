@@ -1,0 +1,28 @@
+<!--
+  Planned interchanges alone (ServiceJourneyInterchange,
+  netex_interchange_version.xsd), as a writer states them in full: staying
+  seated, planned, advertised; the points as references with a version and a
+  versionRef, or with a versionRef alone; the journeys naming their class. One
+  interchange is between two points, one at a single point.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceJourneyInterchange xmlns="http://www.netex.org.uk/netex" id="ex:ServiceJourneyInterchange:across" version="1">
+  <StaySeated>false</StaySeated>
+  <Planned>true</Planned>
+  <Advertised>true</Advertised>
+  <FromPointRef version="1" ref="ex:ScheduledStopPoint:Steintor:1"/>
+  <ToPointRef version="1" ref="ex:ScheduledStopPoint:Steintor:2"/>
+  <FromJourneyRef nameOfRefClass="ServiceJourney" version="1" ref="ex:ServiceJourney:10"/>
+  <ToJourneyRef nameOfRefClass="ServiceJourney" version="1" ref="ex:ServiceJourney:17"/>
+</ServiceJourneyInterchange>
+<ServiceJourneyInterchange xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2"
+                           id="ex:ServiceJourneyInterchange:seated" version="1">
+  <StaySeated>true</StaySeated>
+  <Planned>true</Planned>
+  <Advertised>false</Advertised>
+  <FromPointRef versionRef="1" ref="ex:ScheduledStopPoint:Steintor"/>
+  <ToPointRef version="1" versionRef="1" ref="ex:ScheduledStopPoint:Steintor"/>
+  <FromJourneyRef nameOfRefClass="ServiceJourney" version="1" ref="ex:ServiceJourney:10"/>
+  <ToJourneyRef nameOfRefClass="ServiceJourney" version="1" ref="ex:ServiceJourney:11"/>
+</ServiceJourneyInterchange>

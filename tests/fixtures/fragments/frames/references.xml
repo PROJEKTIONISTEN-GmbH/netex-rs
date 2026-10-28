@@ -1,0 +1,67 @@
+<!--
+  References as VersionOfObjectRefStructure states them
+  (netex_relationship_support.xsd): ref names the object, version the version
+  referred to, versionRef the version of an external reference, nameOfRefClass
+  the class; a reference without a version is to the current version. Here: a
+  chain of line, route, direction and journey pattern referring each to the
+  next; a route naming another version of its line than the line has; a line
+  whose operator reference names an authority, an object of another class; a
+  reference to an object no document defines; and the content of a route
+  around its references — a comment and a CDATA section — kept as written.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ResourceFrame id="ex:ResourceFrame:references" version="1">
+  <organisations>
+    <Authority id="ex:Authority:region" version="1">
+      <Name>Region am Deister</Name>
+    </Authority>
+    <Operator id="ex:Operator:deister" version="1">
+      <Name>Deisterbus</Name>
+    </Operator>
+  </organisations>
+</ResourceFrame>
+<ServiceFrame id="ex:ServiceFrame:references" version="1">
+  <directions>
+    <Direction id="ex:Direction:north" version="1">
+      <Name>Richtung Norden</Name>
+    </Direction>
+  </directions>
+  <routes>
+    <Route id="ex:Route:520" version="1">
+      <!-- the route of the line's summer timetable -->
+      <Name><![CDATA[Springe & Bad Münder]]></Name>
+      <LineRef ref="ex:Line:520" version="4"/>
+      <DirectionRef ref="ex:Direction:north" version="1"/>
+    </Route>
+    <Route id="ex:Route:520:old" version="1">
+      <Name>Springe – Bad Münder (alt)</Name>
+      <LineRef ref="ex:Line:520" version="3"/>
+    </Route>
+    <Route id="ex:Route:522" version="1">
+      <Name>Bad Nenndorf</Name>
+      <LineRef ref="ex:Line:522" version="1"/>
+    </Route>
+  </routes>
+  <lines>
+    <Line id="ex:Line:520" version="4">
+      <Name>520</Name>
+      <OperatorRef ref="ex:Operator:deister" version="1"/>
+    </Line>
+    <Line id="ex:Line:521" version="1">
+      <Name>521</Name>
+      <OperatorRef ref="ex:Authority:region" version="1"/>
+    </Line>
+  </lines>
+  <journeyPatterns>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:520" version="1">
+      <RouteRef ref="ex:Route:520" nameOfRefClass="Route" version="1"/>
+    </ServiceJourneyPattern>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:520:any" version="1">
+      <RouteRef ref="ex:Route:520" version="any"/>
+    </ServiceJourneyPattern>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:520:external" version="1">
+      <RouteRef ref="ex:Route:520" versionRef="1"/>
+    </ServiceJourneyPattern>
+  </journeyPatterns>
+</ServiceFrame>

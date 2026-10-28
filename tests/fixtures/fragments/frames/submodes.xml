@@ -1,0 +1,38 @@
+<!--
+  Submodes stated beside a mode (PtSubmodeChoiceGroup in SiteComponentModeGroup,
+  netex_ifopt_site_version.xsd): a stop place, its entrance and its quay each
+  naming the submode of the mode they serve, as bare elements after
+  TransportMode; and a stop place naming its mode without a submode.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<SiteFrame id="ex:SiteFrame:submodes" version="1">
+  <stopPlaces>
+    <StopPlace id="ex:StopPlace:Hafen" version="1">
+      <Name>Hafen</Name>
+      <entrances>
+        <StopPlaceEntrance id="ex:StopPlaceEntrance:Hafen:Kai" version="1">
+          <Name>Eingang Kai</Name>
+          <TransportMode>water</TransportMode>
+          <WaterSubmode>localPassengerFerry</WaterSubmode>
+        </StopPlaceEntrance>
+      </entrances>
+      <TransportMode>water</TransportMode>
+      <WaterSubmode>localPassengerFerry</WaterSubmode>
+      <OtherTransportModes>bus</OtherTransportModes>
+      <StopPlaceType>ferryStop</StopPlaceType>
+      <quays>
+        <Quay id="ex:Quay:Hafen:1" version="1">
+          <Name>Anleger 1</Name>
+          <TransportMode>water</TransportMode>
+          <WaterSubmode>localPassengerFerry</WaterSubmode>
+        </Quay>
+      </quays>
+    </StopPlace>
+    <StopPlace id="ex:StopPlace:Markt" version="1">
+      <Name>Markt</Name>
+      <TransportMode>bus</TransportMode>
+      <StopPlaceType>onstreetBus</StopPlaceType>
+    </StopPlace>
+  </stopPlaces>
+</SiteFrame>

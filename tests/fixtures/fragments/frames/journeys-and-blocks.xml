@@ -1,0 +1,90 @@
+<!--
+  Journeys over one pattern of three points: one naming its vehicle type
+  itself, one whose vehicle type is that of the block it is in (Block,
+  netex_vehicleService_version.xsd, in a VehicleScheduleFrame), both with a
+  time at every point of the pattern; and a journey stating nothing but its
+  identifier, which cannot be ridden.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ResourceFrame id="ex:ResourceFrame:blocks" version="1">
+  <vehicleTypes>
+    <VehicleType id="ex:VehicleType:solo" version="1"/>
+    <VehicleType id="ex:VehicleType:articulated" version="1"/>
+  </vehicleTypes>
+</ResourceFrame>
+<ServiceFrame id="ex:ServiceFrame:blocks" version="1">
+  <scheduledStopPoints>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Rathaus" version="1"><Name>Rathaus</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Schule" version="1"><Name>Schule</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Freibad" version="1"><Name>Freibad</Name></ScheduledStopPoint>
+  </scheduledStopPoints>
+  <journeyPatterns>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:blocks" version="1">
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:blocks:1" version="1" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Rathaus" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:blocks:2" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Schule" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:blocks:3" version="1" order="3">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Freibad" version="1"/>
+        </StopPointInJourneyPattern>
+      </pointsInSequence>
+    </ServiceJourneyPattern>
+  </journeyPatterns>
+</ServiceFrame>
+<TimetableFrame id="ex:TimetableFrame:blocks" version="1">
+  <vehicleJourneys>
+    <ServiceJourney id="ex:ServiceJourney:own-type" version="1">
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:blocks" version="1"/>
+      <VehicleTypeRef ref="ex:VehicleType:solo" version="1"/>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:own-type:1" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:blocks:1" version="1"/>
+          <DepartureTime>07:10:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:own-type:2" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:blocks:2" version="1"/>
+          <ArrivalTime>07:16:00</ArrivalTime>
+          <DepartureTime>07:17:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:own-type:3" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:blocks:3" version="1"/>
+          <ArrivalTime>07:25:00</ArrivalTime>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:block-type" version="1">
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:blocks" version="1"/>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:block-type:1" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:blocks:1" version="1"/>
+          <DepartureTime>07:40:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:block-type:2" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:blocks:2" version="1"/>
+          <ArrivalTime>07:46:00</ArrivalTime>
+          <DepartureTime>07:47:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:block-type:3" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:blocks:3" version="1"/>
+          <ArrivalTime>07:55:00</ArrivalTime>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:nothing" version="1"/>
+  </vehicleJourneys>
+</TimetableFrame>
+<VehicleScheduleFrame id="ex:VehicleScheduleFrame:blocks" version="1">
+  <blocks>
+    <Block id="ex:Block:morning" version="1">
+      <VehicleTypeRef ref="ex:VehicleType:articulated" version="1"/>
+      <journeys>
+        <ServiceJourneyRef ref="ex:ServiceJourney:own-type" version="1"/>
+        <ServiceJourneyRef ref="ex:ServiceJourney:block-type" version="1"/>
+      </journeys>
+    </Block>
+  </blocks>
+</VehicleScheduleFrame>

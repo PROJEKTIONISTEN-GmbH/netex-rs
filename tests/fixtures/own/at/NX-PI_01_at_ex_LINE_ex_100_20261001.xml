@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One line document of an Austrian-style delivery (one document per line, each
+  with its own calendar). Line 100 is stated in two versions: version 1 from
+  12 October on, version 2 on 15 and 16 October only. A journey names the
+  version of its line it belongs to and runs on the days that version governs.
+  The calendar's identifiers are this document's own: the other line document
+  uses the same identifiers for other days.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="ntx:1.1">
+  <PublicationTimestamp>2026-10-01T04:00:00</PublicationTimestamp>
+  <ParticipantRef>EXAMPLE</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="at:ex:CompositeFrame:100" version="1">
+      <FrameDefaults>
+        <DefaultLocale>
+          <TimeZone>Europe/Vienna</TimeZone>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <SiteFrame id="at:ex:SiteFrame:100" version="1">
+          <stopPlaces>
+            <StopPlace id="at:ex:StopPlace:1" version="1">
+              <keyList>
+                <KeyValue>
+                  <Key>GlobalID</Key>
+                  <Value>at:99:1</Value>
+                </KeyValue>
+              </keyList>
+              <Name>Beispieldorf Hauptplatz</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>14.2850</Longitude>
+                  <Latitude>48.3060</Latitude>
+                </Location>
+              </Centroid>
+              <TransportMode>bus</TransportMode>
+              <quays>
+                <Quay id="at:ex:Quay:1:1" version="1">
+                  <keyList>
+                    <KeyValue>
+                      <Key>GlobalID</Key>
+                      <Value>at:99:1:0:1</Value>
+                    </KeyValue>
+                  </keyList>
+                  <Name>Hauptplatz, Steig 1</Name>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="at:ex:StopPlace:2" version="1">
+              <keyList>
+                <KeyValue>
+                  <Key>GlobalID</Key>
+                  <Value>at:99:2</Value>
+                </KeyValue>
+              </keyList>
+              <Name>Beispieldorf Bahnhof</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>14.2920</Longitude>
+                  <Latitude>48.2990</Latitude>
+                </Location>
+              </Centroid>
+              <TransportMode>bus</TransportMode>
+              <quays>
+                <Quay id="at:ex:Quay:2:1" version="1">
+                  <keyList>
+                    <KeyValue>
+                      <Key>GlobalID</Key>
+                      <Value>at:99:2:0:1</Value>
+                    </KeyValue>
+                  </keyList>
+                  <Name>Bahnhof, Steig 1</Name>
+                </Quay>
+              </quays>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+        <ServiceFrame id="at:ex:ServiceFrame:100" version="1">
+          <lines>
+            <Line id="at:ex:Line:100" version="1">
+              <ValidBetween>
+                <FromDate>2026-10-12T00:00:00</FromDate>
+              </ValidBetween>
+              <Name>Hauptplatz – Bahnhof</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>100</PublicCode>
+            </Line>
+            <Line id="at:ex:Line:100" version="2">
+              <ValidBetween>
+                <FromDate>2026-10-15T00:00:00</FromDate>
+                <ToDate>2026-10-16T23:59:59</ToDate>
+              </ValidBetween>
+              <Name>Hauptplatz – Bahnhof (Umleitung)</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>100</PublicCode>
+            </Line>
+          </lines>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="at:ex:ScheduledStopPoint:1" version="1">
+              <Name>Hauptplatz</Name>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="at:ex:ScheduledStopPoint:2" version="1">
+              <Name>Bahnhof</Name>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+          <stopAssignments>
+            <PassengerStopAssignment id="at:ex:PassengerStopAssignment:1" version="1" order="1">
+              <ScheduledStopPointRef ref="at:ex:ScheduledStopPoint:1" version="1"/>
+              <StopPlaceRef ref="at:ex:StopPlace:1" version="1"/>
+              <QuayRef ref="at:ex:Quay:1:1" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="at:ex:PassengerStopAssignment:2" version="1" order="2">
+              <ScheduledStopPointRef ref="at:ex:ScheduledStopPoint:2" version="1"/>
+              <StopPlaceRef ref="at:ex:StopPlace:2" version="1"/>
+              <QuayRef ref="at:ex:Quay:2:1" version="1"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="at:ex:ServiceJourneyPattern:100" version="1">
+              <RouteView>
+                <LineRef ref="at:ex:Line:100" version="1"/>
+              </RouteView>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="at:ex:StopPointInJourneyPattern:100-1" version="1" order="1">
+                  <ScheduledStopPointRef ref="at:ex:ScheduledStopPoint:1" version="1"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="at:ex:StopPointInJourneyPattern:100-2" version="1" order="2">
+                  <ScheduledStopPointRef ref="at:ex:ScheduledStopPoint:2" version="1"/>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <ServiceCalendarFrame id="at:ex:ServiceCalendarFrame:100" version="1">
+          <dayTypes>
+            <DayType id="at:ex:DayType:1" version="1">
+              <Name>Every day</Name>
+            </DayType>
+          </dayTypes>
+          <operatingPeriods>
+            <UicOperatingPeriod id="at:ex:UicOperatingPeriod:1" version="1">
+              <FromDate>2026-10-12T00:00:00</FromDate>
+              <ToDate>2026-10-18T00:00:00</ToDate>
+              <ValidDayBits>1111111</ValidDayBits>
+            </UicOperatingPeriod>
+          </operatingPeriods>
+          <dayTypeAssignments>
+            <DayTypeAssignment id="at:ex:DayTypeAssignment:1" version="1" order="1">
+              <OperatingPeriodRef ref="at:ex:UicOperatingPeriod:1" version="1"/>
+              <DayTypeRef ref="at:ex:DayType:1" version="1"/>
+            </DayTypeAssignment>
+          </dayTypeAssignments>
+        </ServiceCalendarFrame>
+        <TimetableFrame id="at:ex:TimetableFrame:100" version="1">
+          <vehicleJourneys>
+            <ServiceJourney id="at:ex:ServiceJourney:100-v1" version="1">
+              <dayTypes>
+                <DayTypeRef ref="at:ex:DayType:1" version="1"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="at:ex:ServiceJourneyPattern:100" version="1"/>
+              <LineRef ref="at:ex:Line:100" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="at:ex:TimetabledPassingTime:100-v1-1" version="1">
+                  <StopPointInJourneyPatternRef ref="at:ex:StopPointInJourneyPattern:100-1" version="1"/>
+                  <DepartureTime>08:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="at:ex:TimetabledPassingTime:100-v1-2" version="1">
+                  <StopPointInJourneyPatternRef ref="at:ex:StopPointInJourneyPattern:100-2" version="1"/>
+                  <ArrivalTime>08:12:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="at:ex:ServiceJourney:100-v2" version="1">
+              <dayTypes>
+                <DayTypeRef ref="at:ex:DayType:1" version="1"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="at:ex:ServiceJourneyPattern:100" version="1"/>
+              <LineRef ref="at:ex:Line:100" version="2"/>
+              <passingTimes>
+                <TimetabledPassingTime id="at:ex:TimetabledPassingTime:100-v2-1" version="1">
+                  <StopPointInJourneyPatternRef ref="at:ex:StopPointInJourneyPattern:100-1" version="1"/>
+                  <DepartureTime>08:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="at:ex:TimetabledPassingTime:100-v2-2" version="1">
+                  <StopPointInJourneyPatternRef ref="at:ex:StopPointInJourneyPattern:100-2" version="1"/>
+                  <ArrivalTime>08:20:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

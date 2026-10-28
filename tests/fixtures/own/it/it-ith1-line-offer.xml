@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A line offer in the Italian profile of South Tyrol (IT-ITH1), shaped as the
+  national access point publishes it: one document, identifiers of the form
+  IT:ITH1:<class>:<code>:, every name with its language — a stop named in
+  Italian, German and Ladin, a stop named in one language only with a second
+  name leaving out its town —, stop places stating their submodes, a bus line
+  whose pattern names its line through a route view and a train whose pattern
+  names only its route, the route naming the line; a calendar of UIC day bits
+  named through an OperatingPeriodRef, and the train's number for
+  advertisement in the timetable frame. Written for netex-rs's tests
+  (MIT OR Apache-2.0); places, lines, numbers and times are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:siri="http://www.siri.org.uk/siri" version="1.10">
+  <PublicationTimestamp>2026-10-01T08:00:00</PublicationTimestamp>
+  <ParticipantRef>EXAMPLE</ParticipantRef>
+  <Description>IT-ITH1 line offer of bus 201 and train R1</Description>
+  <dataObjects>
+    <CompositeFrame id="IT:ITH1:CompositeFrame:ex:" version="1">
+      <ValidBetween>
+        <FromDate>2026-10-12T00:00:00</FromDate>
+        <ToDate>2026-10-18T23:59:59</ToDate>
+      </ValidBetween>
+      <TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER"/>
+      <codespaces>
+        <Codespace id="ex">
+          <Xmlns>ex</Xmlns>
+          <XmlnsUrl>http://example.org/netex</XmlnsUrl>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultCodespaceRef ref="ex"/>
+        <DefaultLocale>
+          <TimeZone>Europe/Rome</TimeZone>
+          <DefaultLanguage>it</DefaultLanguage>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="IT:ITH1:ResourceFrame:ex:" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_COMMON"/>
+          <organisations>
+            <Operator id="IT:ITH1:Operator:ex-1:" version="1">
+              <Name lang="it">Autolinee d'Esempio</Name>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <SiteFrame id="IT:ITH1:SiteFrame:ex:" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_STOP"/>
+          <stopPlaces>
+            <StopPlace id="IT:ITH1:StopPlace:it-29901-1:" version="1">
+              <keyList>
+                <KeyValue>
+                  <Key>GlobalID</Key>
+                  <Value>it:29901:1</Value>
+                </KeyValue>
+              </keyList>
+              <Name lang="it">Esempio, Piazza Centrale</Name>
+              <ShortName lang="it">PIAZZA</ShortName>
+              <Centroid>
+                <Location>
+                  <Longitude>11.3010</Longitude>
+                  <Latitude>46.5010</Latitude>
+                </Location>
+              </Centroid>
+              <alternativeNames>
+                <AlternativeName id="IT:ITH1:AlternativeName:it-29901-1-de:" version="1">
+                  <Lang>de</Lang>
+                  <NameType>translation</NameType>
+                  <Name lang="de">Beispiel, Zentralplatz</Name>
+                </AlternativeName>
+                <AlternativeName id="IT:ITH1:AlternativeName:it-29901-1-lld:" version="1">
+                  <Lang>lld</Lang>
+                  <NameType>translation</NameType>
+                  <Name lang="lld">Ejëmpl, Plaza Zentrala</Name>
+                </AlternativeName>
+              </alternativeNames>
+              <TransportMode>bus</TransportMode>
+              <BusSubmode>unknown</BusSubmode>
+              <StopPlaceType>onstreetBus</StopPlaceType>
+              <quays>
+                <Quay id="IT:ITH1:Quay:it-29901-1-1:" version="1">
+                  <keyList>
+                    <KeyValue>
+                      <Key>GlobalID</Key>
+                      <Value>it:29901:1:1</Value>
+                    </KeyValue>
+                  </keyList>
+                  <Name lang="it">Direzione Stazione</Name>
+                  <Centroid>
+                    <Location>
+                      <Longitude>11.3011</Longitude>
+                      <Latitude>46.5011</Latitude>
+                    </Location>
+                  </Centroid>
+                  <PublicCode>1</PublicCode>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="IT:ITH1:StopPlace:it-29901-2:" version="1">
+              <keyList>
+                <KeyValue>
+                  <Key>GlobalID</Key>
+                  <Value>it:29901:2</Value>
+                </KeyValue>
+              </keyList>
+              <Name lang="it">Esempio, Stazione</Name>
+              <ShortName lang="it">STAZIO</ShortName>
+              <Centroid>
+                <Location>
+                  <Longitude>11.3060</Longitude>
+                  <Latitude>46.4980</Latitude>
+                </Location>
+              </Centroid>
+              <alternativeNames>
+                <AlternativeName id="IT:ITH1:AlternativeName:it-29901-2-alias:" version="1">
+                  <NameType>alias</NameType>
+                  <Name lang="it">Stazione</Name>
+                </AlternativeName>
+              </alternativeNames>
+              <TransportMode>rail</TransportMode>
+              <RailSubmode>regionalRail</RailSubmode>
+              <StopPlaceType>railStation</StopPlaceType>
+              <quays>
+                <Quay id="IT:ITH1:Quay:it-29901-2-1:" version="1">
+                  <keyList>
+                    <KeyValue>
+                      <Key>GlobalID</Key>
+                      <Value>it:29901:2:1</Value>
+                    </KeyValue>
+                  </keyList>
+                  <Name lang="it">Binario 1</Name>
+                  <Centroid>
+                    <Location>
+                      <Longitude>11.3061</Longitude>
+                      <Latitude>46.4981</Latitude>
+                    </Location>
+                  </Centroid>
+                  <PublicCode>1</PublicCode>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="IT:ITH1:StopPlace:it-29902-1:" version="1">
+              <keyList>
+                <KeyValue>
+                  <Key>GlobalID</Key>
+                  <Value>it:29902:1</Value>
+                </KeyValue>
+              </keyList>
+              <Name lang="it">Altro Paese, Stazione</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>11.3500</Longitude>
+                  <Latitude>46.5400</Latitude>
+                </Location>
+              </Centroid>
+              <TransportMode>rail</TransportMode>
+              <StopPlaceType>railStation</StopPlaceType>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+        <ServiceFrame id="IT:ITH1:ServiceFrame:ex:" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_NETWORK"/>
+          <routes>
+            <Route id="IT:ITH1:Route:R1-H:" version="1">
+              <LineRef ref="IT:ITH1:Line:R1:" version="1"/>
+              <pointsInSequence>
+                <PointOnRoute id="IT:ITH1:PointOnRoute:R1-H-1:" version="1" order="1">
+                  <RoutePointRef ref="IT:ITH1:ScheduledStopPoint:stazione:" version="1"/>
+                </PointOnRoute>
+                <PointOnRoute id="IT:ITH1:PointOnRoute:R1-H-2:" version="1" order="2">
+                  <RoutePointRef ref="IT:ITH1:ScheduledStopPoint:altro-paese:" version="1"/>
+                </PointOnRoute>
+              </pointsInSequence>
+            </Route>
+          </routes>
+          <lines>
+            <Line id="IT:ITH1:Line:201:" version="1">
+              <Name lang="it">201</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>201</PublicCode>
+              <OperatorRef ref="IT:ITH1:Operator:ex-1:" version="1"/>
+            </Line>
+            <Line id="IT:ITH1:Line:R1:" version="1">
+              <Name lang="it">R1</Name>
+              <TransportMode>rail</TransportMode>
+              <PublicCode>R1</PublicCode>
+              <OperatorRef ref="IT:ITH1:Operator:ex-1:" version="1"/>
+            </Line>
+          </lines>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="IT:ITH1:ScheduledStopPoint:piazza:" version="1">
+              <Name lang="it">Esempio, Piazza Centrale</Name>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="IT:ITH1:ScheduledStopPoint:stazione:" version="1">
+              <Name lang="it">Esempio, Stazione</Name>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="IT:ITH1:ScheduledStopPoint:altro-paese:" version="1">
+              <Name lang="it">Altro Paese, Stazione</Name>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+          <stopAssignments>
+            <PassengerStopAssignment id="IT:ITH1:PassengerStopAssignment:piazza:" version="1" order="1">
+              <ScheduledStopPointRef ref="IT:ITH1:ScheduledStopPoint:piazza:" version="1"/>
+              <StopPlaceRef ref="IT:ITH1:StopPlace:it-29901-1:" version="1"/>
+              <QuayRef ref="IT:ITH1:Quay:it-29901-1-1:" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="IT:ITH1:PassengerStopAssignment:stazione:" version="1" order="2">
+              <ScheduledStopPointRef ref="IT:ITH1:ScheduledStopPoint:stazione:" version="1"/>
+              <StopPlaceRef ref="IT:ITH1:StopPlace:it-29901-2:" version="1"/>
+              <QuayRef ref="IT:ITH1:Quay:it-29901-2-1:" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="IT:ITH1:PassengerStopAssignment:altro-paese:" version="1" order="3">
+              <ScheduledStopPointRef ref="IT:ITH1:ScheduledStopPoint:altro-paese:" version="1"/>
+              <StopPlaceRef ref="IT:ITH1:StopPlace:it-29902-1:" version="1"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="IT:ITH1:ServiceJourneyPattern:201-H:" version="1">
+              <RouteView>
+                <LineRef ref="IT:ITH1:Line:201:" version="1"/>
+              </RouteView>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="IT:ITH1:StopPointInJourneyPattern:201-H-1:" version="1" order="1">
+                  <ScheduledStopPointRef ref="IT:ITH1:ScheduledStopPoint:piazza:" version="1"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="IT:ITH1:StopPointInJourneyPattern:201-H-2:" version="1" order="2">
+                  <ScheduledStopPointRef ref="IT:ITH1:ScheduledStopPoint:stazione:" version="1"/>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+            <ServiceJourneyPattern id="IT:ITH1:ServiceJourneyPattern:R1-H:" version="1">
+              <RouteRef ref="IT:ITH1:Route:R1-H:" version="1"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="IT:ITH1:StopPointInJourneyPattern:R1-H-1:" version="1" order="1">
+                  <ScheduledStopPointRef ref="IT:ITH1:ScheduledStopPoint:stazione:" version="1"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="IT:ITH1:StopPointInJourneyPattern:R1-H-2:" version="1" order="2">
+                  <ScheduledStopPointRef ref="IT:ITH1:ScheduledStopPoint:altro-paese:" version="1"/>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <ServiceCalendarFrame id="IT:ITH1:ServiceCalendarFrame:ex:" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_CALENDAR"/>
+          <ServiceCalendar id="IT:ITH1:ServiceCalendar:ex:" version="1">
+            <FromDate>2026-10-12</FromDate>
+            <ToDate>2026-10-18</ToDate>
+            <dayTypes>
+              <DayType id="IT:ITH1:DayType:feriali:" version="1">
+                <Name lang="it">da lunedì a venerdì</Name>
+              </DayType>
+            </dayTypes>
+            <operatingPeriods>
+              <UicOperatingPeriod id="IT:ITH1:UicOperatingPeriod:feriali:" version="1">
+                <FromDate>2026-10-12T00:00:00</FromDate>
+                <ToDate>2026-10-18T23:59:59</ToDate>
+                <ValidDayBits>1111100</ValidDayBits>
+              </UicOperatingPeriod>
+            </operatingPeriods>
+            <dayTypeAssignments>
+              <DayTypeAssignment id="IT:ITH1:DayTypeAssignment:feriali:" version="1" order="1">
+                <OperatingPeriodRef ref="IT:ITH1:UicOperatingPeriod:feriali:" version="1"/>
+                <DayTypeRef ref="IT:ITH1:DayType:feriali:" version="1"/>
+              </DayTypeAssignment>
+            </dayTypeAssignments>
+          </ServiceCalendar>
+        </ServiceCalendarFrame>
+        <TimetableFrame id="IT:ITH1:TimetableFrame:ex:" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_TIMETABLE"/>
+          <vehicleJourneys>
+            <ServiceJourney id="IT:ITH1:ServiceJourney:201-0800:" version="1">
+              <TransportMode>bus</TransportMode>
+              <dayTypes>
+                <DayTypeRef ref="IT:ITH1:DayType:feriali:" version="1"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="IT:ITH1:ServiceJourneyPattern:201-H:" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="IT:ITH1:TimetabledPassingTime:201-0800-1:" version="1">
+                  <StopPointInJourneyPatternRef ref="IT:ITH1:StopPointInJourneyPattern:201-H-1:" version="1"/>
+                  <DepartureTime>08:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="IT:ITH1:TimetabledPassingTime:201-0800-2:" version="1">
+                  <StopPointInJourneyPatternRef ref="IT:ITH1:StopPointInJourneyPattern:201-H-2:" version="1"/>
+                  <ArrivalTime>08:09:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="IT:ITH1:ServiceJourney:R1-0815:" version="1">
+              <TransportMode>rail</TransportMode>
+              <dayTypes>
+                <DayTypeRef ref="IT:ITH1:DayType:feriali:" version="1"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="IT:ITH1:ServiceJourneyPattern:R1-H:" version="1"/>
+              <trainNumbers>
+                <TrainNumberRef ref="IT:ITH1:TrainNumber:29001:" version="1"/>
+              </trainNumbers>
+              <passingTimes>
+                <TimetabledPassingTime id="IT:ITH1:TimetabledPassingTime:R1-0815-1:" version="1">
+                  <StopPointInJourneyPatternRef ref="IT:ITH1:StopPointInJourneyPattern:R1-H-1:" version="1"/>
+                  <DepartureTime>08:15:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="IT:ITH1:TimetabledPassingTime:R1-0815-2:" version="1">
+                  <StopPointInJourneyPatternRef ref="IT:ITH1:StopPointInJourneyPattern:R1-H-2:" version="1"/>
+                  <ArrivalTime>08:31:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+          <trainNumbers>
+            <TrainNumber id="IT:ITH1:TrainNumber:29001:" version="1">
+              <ForAdvertisement>29001</ForAdvertisement>
+            </TrainNumber>
+          </trainNumbers>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

@@ -1,0 +1,38 @@
+<!--
+  A calendar in the form of the European Passenger Information Profile, each
+  entity alone (netex_serviceCalendar_version.xsd): a day type, a UIC
+  operating period of a bit per day, and the assignment of the period to the
+  day type, its reference to the period naming the class (nameOfRefClass) and
+  the assignment stating that the day type is available on the period's days
+  (isAvailable). A second assignment and period give a single day, a holiday.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<DayTypeAssignment xmlns="http://www.netex.org.uk/netex" id="ex:DayTypeAssignment:sundays" version="1" order="1">
+  <OperatingPeriodRef nameOfRefClass="UicOperatingPeriod" version="1" ref="ex:UicOperatingPeriod:march"/>
+  <DayTypeRef version="1" ref="ex:DayType:sunday"/>
+</DayTypeAssignment>
+<UicOperatingPeriod xmlns="http://www.netex.org.uk/netex" id="ex:UicOperatingPeriod:march" version="1">
+  <FromDate>2026-03-01T00:00:00</FromDate>
+  <ToDate>2026-03-29T00:00:00</ToDate>
+  <ValidDayBits>10000001000000100000010000001</ValidDayBits>
+</UicOperatingPeriod>
+<DayType xmlns="http://www.netex.org.uk/netex" id="ex:DayType:sunday" version="1">
+  <properties>
+    <PropertyOfDay>
+      <DaysOfWeek>Sunday</DaysOfWeek>
+    </PropertyOfDay>
+  </properties>
+</DayType>
+<DayTypeAssignment xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2"
+                   id="ex:DayTypeAssignment:Tag-der-Arbeit" version="any" order="1">
+  <Name>Tag der Arbeit</Name>
+  <OperatingPeriodRef nameOfRefClass="UicOperatingPeriod" version="any" ref="ex:UicOperatingPeriod:Tag-der-Arbeit"/>
+  <DayTypeRef version="any" ref="ex:DayType:Tag-der-Arbeit"/>
+  <isAvailable>true</isAvailable>
+</DayTypeAssignment>
+<UicOperatingPeriod xmlns="http://www.netex.org.uk/netex" id="ex:UicOperatingPeriod:Tag-der-Arbeit" version="any">
+  <FromDate>2026-05-01T00:00:00</FromDate>
+  <ToDate>2026-05-01T00:00:00</ToDate>
+  <ValidDayBits>1</ValidDayBits>
+</UicOperatingPeriod>

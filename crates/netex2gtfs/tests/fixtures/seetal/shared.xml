@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.10">
+  <PublicationTimestamp>2026-10-14T08:10:00</PublicationTimestamp>
+  <ParticipantRef>SEETAL</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="ch:st:CompositeFrame:shared" version="any">
+      <FrameDefaults>
+        <DefaultLocale>
+          <TimeZone>Europe/Zurich</TimeZone>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="ch:st:ResourceFrame:shared" version="any">
+          <organisations>
+            <Operator id="ch:st:Operator:SBB" version="any">
+              <Name>Seetalbahnen</Name>
+              <ContactDetails><Url>https://bahnen.seetal.example</Url></ContactDetails>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <ServiceFrame id="ch:st:ServiceFrame:shared" version="any">
+          <lines>
+            <Line id="ch:st:Line:IR9" version="any">
+              <Name>IR 9</Name>
+              <TransportMode>rail</TransportMode>
+              <PublicCode>IR9</PublicCode>
+            </Line>
+          </lines>
+          <destinationDisplays>
+            <DestinationDisplay id="ch:st:DestinationDisplay:grenzheim" version="any"><Name>Grenzheim</Name></DestinationDisplay>
+            <DestinationDisplay id="ch:st:DestinationDisplay:talwil" version="any"><Name>Talwil</Name></DestinationDisplay>
+          </destinationDisplays>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="ch:st:ScheduledStopPoint:A" version="any">
+              <Name>Seestadt</Name>
+              <Location><Longitude>8.30</Longitude><Latitude>47.05</Latitude></Location>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="ch:st:ScheduledStopPoint:B" version="any">
+              <Name>Bergdorf</Name>
+              <Location><Longitude>8.32</Longitude><Latitude>47.06</Latitude></Location>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="ch:st:ScheduledStopPoint:C" version="any">
+              <Name>Talwil</Name>
+              <Location><Longitude>8.34</Longitude><Latitude>47.07</Latitude></Location>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="ch:st:ScheduledStopPoint:D" version="any">
+              <Name>Grenzheim</Name>
+              <Location><Longitude>8.36</Longitude><Latitude>47.08</Latitude></Location>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+        </ServiceFrame>
+        <ServiceCalendarFrame id="ch:st:ServiceCalendarFrame:shared" version="any">
+          <validityConditions>
+            <AvailabilityCondition id="ch:st:AvailabilityCondition:week" version="any">
+              <FromDate>2026-10-12T00:00:00</FromDate>
+              <ToDate>2026-10-18T23:59:59</ToDate>
+              <ValidDayBits>1111111</ValidDayBits>
+            </AvailabilityCondition>
+          </validityConditions>
+        </ServiceCalendarFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

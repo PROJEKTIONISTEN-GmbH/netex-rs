@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.10">
+  <PublicationTimestamp>2026-10-10T06:00:00</PublicationTimestamp>
+  <ParticipantRef>SEEWEG</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="sw:CompositeFrame:other" version="1">
+      <frames>
+        <ServiceFrame id="sw:ServiceFrame:other" version="1">
+          <lines>
+            <FlexibleLine id="sw:FlexibleLine:rufbus" version="1">
+              <Name>Rufbus Seeweg</Name>
+              <TransportMode>bus</TransportMode>
+            </FlexibleLine>
+          </lines>
+        </ServiceFrame>
+        <TimetableFrame id="sw:TimetableFrame:other" version="1">
+          <vehicleJourneys>
+            <ServiceJourney id="sw:ServiceJourney:rufbus-1" version="1">
+              <FlexibleLineRef ref="sw:FlexibleLine:rufbus" version="1"/>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+        <FareFrame id="sw:FareFrame:other" version="1">
+          <Name>Tarif Seeweg</Name>
+        </FareFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

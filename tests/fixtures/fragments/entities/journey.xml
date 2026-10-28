@@ -1,0 +1,25 @@
+<!--
+  A service journey alone, stating its calls (Call, netex_call_version.xsd);
+  one call states the two attributes of an entity in version that have schema
+  defaults, at their defaults (modification="new", status="active",
+  BasicModificationDetailsGroup of netex_version_support.xsd), the other
+  leaves them out.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceJourney xmlns="http://www.netex.org.uk/netex" id="ex:ServiceJourney:alone" version="1">
+  <calls>
+    <Call id="ex:Call:alone:1" version="1" order="1" modification="new" status="active">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Steintor"/>
+      <Departure>
+        <Time>18:30:00</Time>
+      </Departure>
+    </Call>
+    <Call id="ex:Call:alone:2" version="1" order="2">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Clevertor"/>
+      <Arrival>
+        <Time>18:34:00</Time>
+      </Arrival>
+    </Call>
+  </calls>
+</ServiceJourney>

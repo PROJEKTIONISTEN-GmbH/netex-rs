@@ -1,0 +1,87 @@
+<!--
+  Objects stated inside others, and what they carry of their own: a point in a
+  journey pattern without an identifier or a version (the schemas require an
+  identifier of it, 2.0 by its type and 1.x by its key: such a point is read
+  as stated), points with their own and a pattern with attributes of its own
+  (dataSourceRef, responsibilitySetRef of a DataManagedObject), an empty route
+  view and one with an identifier; a stop place holding its levels and quays,
+  a quay with attributes of its own; and the frames' validity and defaults
+  stated once for what they hold (ValidBetween and FrameDefaults of a
+  VersionFrame, netex_versionFrame_version.xsd).
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceFrame id="ex:ServiceFrame:nested" version="7">
+  <ValidBetween>
+    <FromDate>2026-01-01T00:00:00</FromDate>
+    <ToDate>2026-12-31T23:59:59</ToDate>
+  </ValidBetween>
+  <FrameDefaults>
+    <DefaultLocale>
+      <TimeZone>Europe/Berlin</TimeZone>
+      <DefaultLanguage>de</DefaultLanguage>
+    </DefaultLocale>
+  </FrameDefaults>
+  <scheduledStopPoints>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Kirchrode" version="5">
+      <Name>Kirchrode</Name>
+    </ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Bult" version="5">
+      <Name>Bult</Name>
+    </ScheduledStopPoint>
+  </scheduledStopPoints>
+  <journeyPatterns>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:bare" version="3">
+      <RouteView/>
+      <pointsInSequence>
+        <StopPointInJourneyPattern order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Kirchrode"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Bult"/>
+        </StopPointInJourneyPattern>
+      </pointsInSequence>
+    </ServiceJourneyPattern>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:own" version="3"
+                           dataSourceRef="ex:DataSource:planning"
+                           responsibilitySetRef="ex:ResponsibilitySet:city">
+      <RouteView id="ex:RouteView:own"/>
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:own:1" version="12" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Kirchrode" version="5"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:own:2" version="12" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Bult" version="5"/>
+        </StopPointInJourneyPattern>
+      </pointsInSequence>
+    </ServiceJourneyPattern>
+  </journeyPatterns>
+</ServiceFrame>
+<SiteFrame id="ex:SiteFrame:nested" version="7">
+  <ValidBetween>
+    <FromDate>2026-01-01T00:00:00</FromDate>
+  </ValidBetween>
+  <stopPlaces>
+    <StopPlace id="ex:StopPlace:Kirchrode" version="5">
+      <Name>Kirchrode</Name>
+      <Centroid>
+        <Location>
+          <Longitude>9.8205</Longitude>
+          <Latitude>52.3611</Latitude>
+        </Location>
+      </Centroid>
+      <levels>
+        <Level id="ex:Level:Kirchrode:street" version="5">
+          <Name>Straßenebene</Name>
+        </Level>
+      </levels>
+      <quays>
+        <Quay id="ex:Quay:Kirchrode:1" version="5"
+              dataSourceRef="ex:DataSource:survey"
+              responsibilitySetRef="ex:ResponsibilitySet:city">
+          <Name>Steig A</Name>
+        </Quay>
+      </quays>
+    </StopPlace>
+  </stopPlaces>
+</SiteFrame>

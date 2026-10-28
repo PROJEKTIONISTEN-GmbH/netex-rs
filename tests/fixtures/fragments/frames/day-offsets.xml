@@ -1,0 +1,87 @@
+<!--
+  Journeys past midnight, stated both ways deliveries state them: as the
+  standard does, a time of day with the number of days after the journey's
+  first day (ArrivalDayOffset, DepartureDayOffset of a TimetabledPassingTime,
+  netex_passingTimes_version.xsd), and as hours counted past 24. A journey of
+  the day alone beside them.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceFrame id="ex:ServiceFrame:offsets" version="1">
+  <scheduledStopPoints>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Bahnhof" version="1"><Name>Bahnhof</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Altstadt" version="1"><Name>Altstadt</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Heide" version="1"><Name>Heide</Name></ScheduledStopPoint>
+  </scheduledStopPoints>
+  <journeyPatterns>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:midnight" version="1">
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:midnight:1" version="1" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Bahnhof" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:midnight:2" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Altstadt" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:midnight:3" version="1" order="3">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Heide" version="1"/>
+        </StopPointInJourneyPattern>
+      </pointsInSequence>
+    </ServiceJourneyPattern>
+  </journeyPatterns>
+</ServiceFrame>
+<TimetableFrame id="ex:TimetableFrame:offsets" version="1">
+  <vehicleJourneys>
+    <ServiceJourney id="ex:ServiceJourney:offset" version="1">
+      <Name>with day offsets</Name>
+      <DepartureTime>23:35:00</DepartureTime>
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:midnight" version="1"/>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:offset:1" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:midnight:1" version="1"/>
+          <DepartureTime>23:35:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:offset:2" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:midnight:2" version="1"/>
+          <ArrivalTime>23:58:00</ArrivalTime>
+          <DepartureTime>00:03:00</DepartureTime>
+          <DepartureDayOffset>1</DepartureDayOffset>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:offset:3" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:midnight:3" version="1"/>
+          <ArrivalTime>00:44:00</ArrivalTime>
+          <ArrivalDayOffset>1</ArrivalDayOffset>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:counted" version="1">
+      <Name>with hours past 24</Name>
+      <DepartureTime>23:35:00</DepartureTime>
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:midnight" version="1"/>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:counted:1" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:midnight:1" version="1"/>
+          <DepartureTime>23:35:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:counted:2" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:midnight:2" version="1"/>
+          <ArrivalTime>23:58:00</ArrivalTime>
+          <DepartureTime>24:03:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:counted:3" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:midnight:3" version="1"/>
+          <ArrivalTime>24:44:00</ArrivalTime>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:day" version="1">
+      <Name>within the day</Name>
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:midnight" version="1"/>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:day:1" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:midnight:1" version="1"/>
+          <ArrivalTime>14:10:00</ArrivalTime>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+  </vehicleJourneys>
+</TimetableFrame>

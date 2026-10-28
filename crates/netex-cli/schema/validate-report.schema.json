@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:netex-cli:validate-report:1",
+  "title": "netex validate report",
+  "description": "The checking report `netex validate --format json` prints and `--report` writes. Version 1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["report_version", "source", "counts", "refused", "classes"],
+  "properties": {
+    "report_version": { "const": 1, "description": "The version of this layout." },
+    "source": { "type": "string", "description": "The file or directory name of the delivery read." },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What the delivery holds, as the index of netex-rs holds it.",
+      "required": ["documents", "stops", "stop_points", "lines", "journeys", "passing_times", "calendars", "transfers", "interchanges", "objects", "references"],
+      "properties": {
+        "documents": { "type": "integer", "minimum": 0 },
+        "stops": { "type": "integer", "minimum": 0, "description": "Stop places and quays." },
+        "stop_points": { "type": "integer", "minimum": 0 },
+        "lines": { "type": "integer", "minimum": 0 },
+        "journeys": { "type": "integer", "minimum": 0, "description": "Journeys the index keeps." },
+        "passing_times": { "type": "integer", "minimum": 0 },
+        "calendars": { "type": "integer", "minimum": 0, "description": "Distinct sets of days the journeys run on." },
+        "transfers": { "type": "integer", "minimum": 0, "description": "Walks between stops, a two-way walk twice." },
+        "interchanges": { "type": "integer", "minimum": 0 },
+        "objects": { "type": "integer", "minimum": 0, "description": "Objects of the reference graph: definitions and elements that refer." },
+        "references": { "type": "integer", "minimum": 0, "description": "References resolved, each once." }
+      }
+    },
+    "refused": { "type": "boolean", "description": "Whether the policy refuses the delivery: the exit status is 1 if so." },
+    "classes": {
+      "type": "array",
+      "description": "Every class with findings, and every class the policy limits, index concerns first.",
+      "items": { "$ref": "#/$defs/class" }
+    }
+  },
+  "$defs": {
+    "class": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "kind", "says", "count", "affected_journeys", "examples", "limit", "refused"],
+      "properties": {
+        "class": {
+          "type": "string",
+          "description": "The class: a concern of the index or a check of the report.",
+          "enum": [
+            "unresolved", "redefined-otherwise", "passed-through", "untimed-ends", "too-few-timed-calls",
+            "period-without-first-day", "day-bits-length-differs", "journey-without-days",
+            "days-outside-line-version", "journey-outside-line-version", "flexible-line-journey",
+            "headway-group-without-runs", "axis-order-swapped", "axis-order-undecided",
+            "resolved-ignoring-version", "resolved-as-other-class", "unknown-reference-system",
+            "journey-without-travel-time", "time-goes-back", "stop-point-without-place",
+            "stop-point-without-position", "unreferenced"
+          ]
+        },
+        "kind": { "enum": ["index", "check"] },
+        "says": { "type": "string", "description": "What a finding of the class says." },
+        "count": { "type": "integer", "minimum": 0 },
+        "affected_journeys": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Distinct journeys depending on the entities found, followed back through the references; null where the class is about journeys themselves."
+        },
+        "examples": { "type": "array", "items": { "$ref": "#/$defs/example" } },
+        "limit": { "type": ["integer", "null"], "minimum": 0, "description": "How many findings the policy tolerates; null for any number." },
+        "refused": { "type": "boolean" }
+      }
+    },
+    "example": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document", "element", "entity", "about", "affected_journeys", "affected_examples"],
+      "properties": {
+        "document": { "type": ["string", "null"], "description": "The document; null for what the index gathers once across documents." },
+        "element": { "type": "string" },
+        "entity": { "type": "string" },
+        "about": { "type": ["string", "null"], "description": "What else the finding names: the reference, the document kept, the line, …" },
+        "affected_journeys": { "type": "integer", "minimum": 0 },
+        "affected_examples": { "type": "array", "items": { "type": "string" }, "maxItems": 5 }
+      }
+    }
+  }
+}

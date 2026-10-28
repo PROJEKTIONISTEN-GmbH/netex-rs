@@ -1,0 +1,37 @@
+[package]
+name = "netex2gtfs"
+version = "0.1.2"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "NeTEx to GTFS: a NeTEx delivery, read and resolved by netex-rs, written as a GTFS feed, with a report of everything it could not carry over"
+readme = "README.md"
+keywords = ["netex", "gtfs", "transmodel", "public-transport", "timetable"]
+categories = ["parser-implementations", "encoding"]
+
+# docs.rs builds the documentation with every feature, as for netex-rs.
+[package.metadata.docs.rs]
+all-features = true
+
+[dependencies]
+# The reading, the resolution and the index; with positions in national
+# reference systems turned into WGS 84, which GTFS requires.
+netex-rs = { version = "0.7.1", path = "../..", features = ["crs"] }
+rustc-hash = "2"
+# The interner keeps each string once, as netex-rs's does.
+hashbrown = { version = "0.17", default-features = false }
+# The report is written as JSON by the command line.
+serde = { version = "1", features = ["derive"] }
+# A feed is a zip archive of CSV files.
+zip = { version = "7", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+
+[dev-dependencies]
+# The tests read the feeds written back, as a consumer would.
+csv = "1"
+serde_json = "1"
+tempfile = "3"
+
+[lints]
+workspace = true

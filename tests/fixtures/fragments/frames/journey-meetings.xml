@@ -1,0 +1,84 @@
+<!--
+  Journey meetings (JourneyMeeting, netex_interchange_version.xsd, in the
+  timetable frame's journeyMeetings): two journeys meeting at a stop point,
+  the point referred to by versionRef; a meeting with a journey no document
+  defines; and one whose second journey reference names a stop point, an
+  object of another class. The journeys' patterns call at two other stop
+  points assigned to the same stop place as the meeting point, never at the
+  meeting point itself.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceFrame id="ex:ServiceFrame:meetings" version="1">
+  <scheduledStopPoints>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:ZOB" version="1"><Name>ZOB</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:ZOB:A" version="1"><Name>ZOB Bussteig A</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:ZOB:B" version="1"><Name>ZOB Bussteig B</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Feldweg" version="1"><Name>Feldweg</Name></ScheduledStopPoint>
+  </scheduledStopPoints>
+  <stopAssignments>
+    <PassengerStopAssignment id="ex:PassengerStopAssignment:ZOB" version="1" order="1">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:ZOB" version="1"/>
+      <StopPlaceRef ref="ex:StopPlace:ZOB" version="1"/>
+    </PassengerStopAssignment>
+    <PassengerStopAssignment id="ex:PassengerStopAssignment:ZOB:A" version="1" order="2">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:ZOB:A" version="1"/>
+      <StopPlaceRef ref="ex:StopPlace:ZOB" version="1"/>
+    </PassengerStopAssignment>
+    <PassengerStopAssignment id="ex:PassengerStopAssignment:ZOB:B" version="1" order="3">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:ZOB:B" version="1"/>
+      <StopPlaceRef ref="ex:StopPlace:ZOB" version="1"/>
+    </PassengerStopAssignment>
+  </stopAssignments>
+  <journeyPatterns>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:ZOB:A" version="1">
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:ZOB:A:1" version="1" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Feldweg" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:ZOB:A:2" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:ZOB:A" version="1"/>
+        </StopPointInJourneyPattern>
+      </pointsInSequence>
+    </ServiceJourneyPattern>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:ZOB:B" version="1">
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:ZOB:B:1" version="1" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:ZOB:B" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:ZOB:B:2" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Feldweg" version="1"/>
+        </StopPointInJourneyPattern>
+      </pointsInSequence>
+    </ServiceJourneyPattern>
+  </journeyPatterns>
+</ServiceFrame>
+<TimetableFrame id="ex:TimetableFrame:meetings" version="1">
+  <vehicleJourneys>
+    <ServiceJourney id="ex:ServiceJourney:arriving" version="1">
+      <DepartureTime>16:02:00</DepartureTime>
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:ZOB:A" version="1"/>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:leaving" version="1">
+      <DepartureTime>16:10:00</DepartureTime>
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:ZOB:B" version="1"/>
+    </ServiceJourney>
+  </vehicleJourneys>
+  <journeyMeetings>
+    <JourneyMeeting id="ex:JourneyMeeting:ZOB" version="1">
+      <AtStopPointRef ref="ex:ScheduledStopPoint:ZOB" versionRef="1"/>
+      <FromJourneyRef ref="ex:ServiceJourney:arriving" version="1"/>
+      <ToJourneyRef ref="ex:ServiceJourney:leaving" version="1"/>
+    </JourneyMeeting>
+    <JourneyMeeting id="ex:JourneyMeeting:ZOB:missing" version="1">
+      <AtStopPointRef ref="ex:ScheduledStopPoint:ZOB" versionRef="1"/>
+      <FromJourneyRef ref="ex:ServiceJourney:arriving" version="1"/>
+      <ToJourneyRef ref="ex:ServiceJourney:cancelled" version="1"/>
+    </JourneyMeeting>
+    <JourneyMeeting id="ex:JourneyMeeting:ZOB:point" version="1">
+      <AtStopPointRef ref="ex:ScheduledStopPoint:ZOB" versionRef="1"/>
+      <FromJourneyRef ref="ex:ServiceJourney:arriving" version="1"/>
+      <ToJourneyRef ref="ex:ScheduledStopPoint:ZOB" version="1"/>
+    </JourneyMeeting>
+  </journeyMeetings>
+</TimetableFrame>

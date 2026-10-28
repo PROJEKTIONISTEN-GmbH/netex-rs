@@ -1,0 +1,17 @@
+<!--
+  A scheduled stop point alone (netex_servicePattern_version.xsd), with the
+  namespaces of NeTEx and GML declared on it, and one with its position.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ScheduledStopPoint xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2"
+                    id="ex:ScheduledStopPoint:Steintor" version="1">
+  <Name>Steintor</Name>
+</ScheduledStopPoint>
+<ScheduledStopPoint xmlns="http://www.netex.org.uk/netex" id="ex:ScheduledStopPoint:Clevertor" version="1">
+  <Name>Clevertor</Name>
+  <Location>
+    <Longitude>9.7290</Longitude>
+    <Latitude>52.3790</Latitude>
+  </Location>
+</ScheduledStopPoint>

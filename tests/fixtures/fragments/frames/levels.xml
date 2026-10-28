@@ -1,0 +1,100 @@
+<!--
+  Levels and what refers to them (Level, LevelRef,
+  netex_ifopt_site_version.xsd): a stop place whose levels hold a level and a
+  reference to a level no document defines; quays, entrances and an access
+  space on a level their stop place defines and on the one no document
+  defines; a reference to a quay among the quays; a path link whose ends name
+  a place and a level each; a quay of a second stop place on a level of the
+  first; and parkings whose levels refer to a level of the stop place and to
+  one no document defines.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<SiteFrame id="ex:SiteFrame:levels" version="1">
+  <stopPlaces>
+    <StopPlace id="ex:StopPlace:Bahnhof" version="1">
+      <Name>Bahnhof Nordstadt</Name>
+      <levels>
+        <Level id="ex:Level:street" version="1">
+          <Name>Straßenebene</Name>
+        </Level>
+        <Level id="ex:Level:platform" version="1">
+          <Name>Bahnsteigebene</Name>
+        </Level>
+        <LevelRef ref="ex:Level:basement" version="1"/>
+      </levels>
+      <entrances>
+        <Entrance id="ex:Entrance:Bahnhof:north" version="1">
+          <Name>Eingang Nord</Name>
+          <LevelRef ref="ex:Level:street" version="1"/>
+        </Entrance>
+        <Entrance id="ex:Entrance:Bahnhof:garage" version="1">
+          <Name>Eingang Tiefgarage</Name>
+          <LevelRef ref="ex:Level:basement" version="1"/>
+        </Entrance>
+      </entrances>
+      <quays>
+        <Quay id="ex:Quay:Bahnhof:1" version="1">
+          <Name>Gleis 1</Name>
+          <LevelRef ref="ex:Level:platform" version="1"/>
+        </Quay>
+        <Quay id="ex:Quay:Bahnhof:2" version="1">
+          <Name>Gleis 2</Name>
+          <LevelRef ref="ex:Level:basement" version="1"/>
+        </Quay>
+        <QuayRef ref="ex:Quay:Bahnhof:9" version="1"/>
+      </quays>
+      <accessSpaces>
+        <AccessSpace id="ex:AccessSpace:Bahnhof:passage" version="1">
+          <Name>Unterführung</Name>
+          <LevelRef ref="ex:Level:basement" version="1"/>
+        </AccessSpace>
+      </accessSpaces>
+      <pathLinks>
+        <SitePathLink id="ex:SitePathLink:Bahnhof:1" version="1">
+          <From>
+            <PlaceRef ref="ex:Entrance:Bahnhof:north" version="1"/>
+            <LevelRef ref="ex:Level:street" version="1"/>
+          </From>
+          <To>
+            <PlaceRef ref="ex:Quay:Bahnhof:1" version="1"/>
+            <LevelRef ref="ex:Level:platform" version="1"/>
+          </To>
+        </SitePathLink>
+        <SitePathLink id="ex:SitePathLink:Bahnhof:2" version="1">
+          <From>
+            <PlaceRef ref="ex:Quay:Bahnhof:1" version="1"/>
+            <LevelRef ref="ex:Level:platform" version="1"/>
+          </From>
+          <To>
+            <PlaceRef ref="ex:Quay:Bahnhof:2" version="1"/>
+            <LevelRef ref="ex:Level:basement" version="1"/>
+          </To>
+        </SitePathLink>
+      </pathLinks>
+    </StopPlace>
+    <StopPlace id="ex:StopPlace:Busbahnhof" version="1">
+      <Name>Busbahnhof Nordstadt</Name>
+      <quays>
+        <Quay id="ex:Quay:Busbahnhof:1" version="1">
+          <Name>Bussteig 1</Name>
+          <LevelRef ref="ex:Level:street" version="1"/>
+        </Quay>
+      </quays>
+    </StopPlace>
+  </stopPlaces>
+  <parkings>
+    <Parking id="ex:Parking:Bahnhof" version="1">
+      <Name>P+R Nordstadt</Name>
+      <levels>
+        <LevelRef ref="ex:Level:street" version="1"/>
+      </levels>
+    </Parking>
+    <Parking id="ex:Parking:Bahnhof:deck" version="1">
+      <Name>Parkdeck Nordstadt</Name>
+      <levels>
+        <LevelRef ref="ex:Level:deck" version="1"/>
+      </levels>
+    </Parking>
+  </parkings>
+</SiteFrame>

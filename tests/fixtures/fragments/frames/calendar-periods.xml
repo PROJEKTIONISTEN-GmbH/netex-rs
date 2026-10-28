@@ -1,0 +1,50 @@
+<!--
+  Day types given their days by UIC operating periods
+  (netex_serviceCalendar_version.xsd): a bit per day from the period's first
+  day. One period assigned to two day types, one day type assigned two periods
+  — its days are those of both —, and an assignment naming a day type no
+  document defines. The day types, periods and assignments stand inside a
+  ServiceCalendar of the frame.
+  The periods: the week of Monday 2 March 2026 with its Tuesday and its
+  Thursday, and the week after with its Saturday and its Sunday.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceCalendarFrame id="ex:ServiceCalendarFrame:periods" version="1">
+  <ServiceCalendar id="ex:ServiceCalendar:periods" version="1">
+    <dayTypes>
+      <DayType id="ex:DayType:A" version="1"/>
+      <DayType id="ex:DayType:B" version="1"/>
+    </dayTypes>
+    <operatingPeriods>
+      <UicOperatingPeriod id="ex:UicOperatingPeriod:week10" version="1">
+        <FromDate>2026-03-02T00:00:00</FromDate>
+        <ToDate>2026-03-08T00:00:00</ToDate>
+        <ValidDayBits>0101000</ValidDayBits>
+      </UicOperatingPeriod>
+      <UicOperatingPeriod id="ex:UicOperatingPeriod:week11" version="1">
+        <FromDate>2026-03-09T00:00:00</FromDate>
+        <ToDate>2026-03-15T00:00:00</ToDate>
+        <ValidDayBits>0000011</ValidDayBits>
+      </UicOperatingPeriod>
+    </operatingPeriods>
+    <dayTypeAssignments>
+      <DayTypeAssignment id="ex:DayTypeAssignment:A10" version="1" order="1">
+        <OperatingPeriodRef ref="ex:UicOperatingPeriod:week10" version="1"/>
+        <DayTypeRef ref="ex:DayType:A" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="ex:DayTypeAssignment:B10" version="1" order="2">
+        <OperatingPeriodRef ref="ex:UicOperatingPeriod:week10" version="1"/>
+        <DayTypeRef ref="ex:DayType:B" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="ex:DayTypeAssignment:A11" version="1" order="3">
+        <OperatingPeriodRef ref="ex:UicOperatingPeriod:week11" version="1"/>
+        <DayTypeRef ref="ex:DayType:A" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="ex:DayTypeAssignment:gone" version="1" order="4">
+        <OperatingPeriodRef ref="ex:UicOperatingPeriod:week10" version="1"/>
+        <DayTypeRef ref="ex:DayType:gone" version="1"/>
+      </DayTypeAssignment>
+    </dayTypeAssignments>
+  </ServiceCalendar>
+</ServiceCalendarFrame>

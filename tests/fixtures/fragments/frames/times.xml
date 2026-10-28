@@ -1,0 +1,110 @@
+<!--
+  Dates, times and durations in the lexical forms XML Schema allows, and in
+  some it does not that deliveries write; every value is kept as it was
+  written.
+  - xs:dateTime with fractional seconds and a zone offset, and without either
+    (XML Schema 1.0 Part 2, 3.2.7), as validity periods, availability
+    conditions and the created and changed attributes of an entity;
+  - xs:time of 24:00:00, the one hour past 23 the type allows (3.2.8), with a
+    zone offset, and hours past 24 for a time after midnight, which it does
+    not allow (NeTEx states the day with a DayOffset instead);
+  - xs:duration in its full form with zero fields and a fraction, negative,
+    and in its shortest form (3.2.6).
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceCalendarFrame id="ex:ServiceCalendarFrame:times" version="1">
+  <validityConditions>
+    <AvailabilityCondition id="ex:AvailabilityCondition:zoned" version="1">
+      <FromDate>2026-05-04T00:00:00.000+02:00</FromDate>
+      <ToDate>2026-05-10T23:59:59.999+02:00</ToDate>
+      <ValidDayBits>1111100</ValidDayBits>
+    </AvailabilityCondition>
+    <AvailabilityCondition id="ex:AvailabilityCondition:local" version="1">
+      <FromDate>2026-05-04T00:00:00</FromDate>
+      <ToDate>2026-05-10T00:00:00</ToDate>
+      <ValidDayBits>0000011</ValidDayBits>
+    </AvailabilityCondition>
+  </validityConditions>
+</ServiceCalendarFrame>
+<ServiceFrame id="ex:ServiceFrame:times" version="1">
+  <scheduledStopPoints>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Opernplatz" version="1"><Name>Opernplatz</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Kroepcke" version="1"><Name>Kröpcke</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Lister-Platz" version="1"><Name>Lister Platz</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Bothfeld" version="1"><Name>Bothfeld</Name></ScheduledStopPoint>
+  </scheduledStopPoints>
+  <journeyPatterns>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:night" version="1">
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:night:1" version="1" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Opernplatz" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:night:2" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Kroepcke" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:night:3" version="1" order="3">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Lister-Platz" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:night:4" version="1" order="4">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Bothfeld" version="1"/>
+        </StopPointInJourneyPattern>
+      </pointsInSequence>
+    </ServiceJourneyPattern>
+  </journeyPatterns>
+</ServiceFrame>
+<TimetableFrame id="ex:TimetableFrame:times" version="1">
+  <vehicleJourneys>
+    <ServiceJourney id="ex:ServiceJourney:zoned" version="3"
+                    created="2026-04-20T08:15:30.250+02:00"
+                    changed="2026-04-21T17:00:00Z">
+      <ValidBetween>
+        <FromDate>2026-05-04T00:00:00.000+02:00</FromDate>
+        <ToDate>2026-05-31T23:59:59.000+02:00</ToDate>
+      </ValidBetween>
+      <TransportMode>bus</TransportMode>
+      <DepartureTime>05:48:00</DepartureTime>
+      <JourneyDuration>P0Y0M0DT0H52M30.500S</JourneyDuration>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:local" version="3">
+      <ValidBetween>
+        <FromDate>2026-05-04T00:00:00</FromDate>
+        <ToDate>2026-05-31T00:00:00</ToDate>
+      </ValidBetween>
+      <TransportMode>bus</TransportMode>
+      <DepartureTime>06:18:00</DepartureTime>
+      <JourneyDuration>PT45M</JourneyDuration>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:backwards" version="3">
+      <TransportMode>bus</TransportMode>
+      <DepartureTime>07:02:00</DepartureTime>
+      <JourneyDuration>-PT5M</JourneyDuration>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:night" version="3">
+      <TransportMode>bus</TransportMode>
+      <DepartureTime>23:41:00</DepartureTime>
+      <JourneyDuration>P0DT2H1M</JourneyDuration>
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:night" version="1"/>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:night:1" version="3">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:night:1" version="3"/>
+          <DepartureTime>23:41:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:night:2" version="3">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:night:2" version="3"/>
+          <ArrivalTime>24:00:00</ArrivalTime>
+          <DepartureTime>24:00:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:night:3" version="3">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:night:3" version="3"/>
+          <ArrivalTime>00:37:00+02:00</ArrivalTime>
+          <DepartureTime>00:38:00+02:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:night:4" version="3">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:night:4" version="3"/>
+          <ArrivalTime>25:42:00</ArrivalTime>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+  </vehicleJourneys>
+</TimetableFrame>

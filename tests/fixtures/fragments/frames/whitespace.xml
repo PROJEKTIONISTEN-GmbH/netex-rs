@@ -1,0 +1,71 @@
+<!--
+  White space in values, by type. XML Schema compares the transport mode, an
+  xs:NMTOKEN (AllModesEnumeration, netex_mode_support.xsd), and a list type,
+  the days of a week, after collapsing white space, and keeps the white space
+  of an xs:string — a name, a notice, a town — as written, line breaks and
+  non-ASCII letters included (XML Schema Part 2, 4.3.6). The reader keeps
+  every value as it was written, the white space around an enumeration
+  included, so that the document writes back unchanged; what a value denotes
+  once collapsed is the application's to read.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceFrame id="ex:ServiceFrame:spaces" version="1">
+  <lines>
+    <Line id="ex:Line:trailing" version="1">
+      <Name>trailing</Name>
+      <TransportMode>tram </TransportMode>
+    </Line>
+    <Line id="ex:Line:leading" version="1">
+      <Name>leading</Name>
+      <TransportMode>	coach</TransportMode>
+    </Line>
+    <Line id="ex:Line:wrapped" version="1">
+      <Name>wrapped</Name>
+      <TransportMode>
+        ferry
+      </TransportMode>
+    </Line>
+    <Line id="ex:Line:plain" version="1">
+      <Name>plain</Name>
+      <TransportMode>funicular</TransportMode>
+    </Line>
+  </lines>
+  <scheduledStopPoints>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:spaced" version="1">
+      <Name>  Lindener   Marktplatz </Name>
+    </ScheduledStopPoint>
+  </scheduledStopPoints>
+  <notices>
+    <Notice id="ex:Notice:spaced" version="1">
+      <Text>   Bitte   vorne   einsteigen   </Text>
+    </Notice>
+  </notices>
+</ServiceFrame>
+<ServiceCalendarFrame id="ex:ServiceCalendarFrame:spaces" version="1">
+  <dayTypes>
+    <DayType id="ex:DayType:spaced" version="1">
+      <properties>
+        <PropertyOfDay>
+          <DaysOfWeek>  Saturday
+            Sunday  </DaysOfWeek>
+        </PropertyOfDay>
+      </properties>
+    </DayType>
+  </dayTypes>
+</ServiceCalendarFrame>
+<ResourceFrame id="ex:ResourceFrame:spaces" version="1">
+  <organisations>
+    <Operator id="ex:Operator:spaced" version="1">
+      <Name>Überlandbus Süd</Name>
+      <Address>
+        <CountryName>Deutschland</CountryName>
+        <Street>Mühlenweg 4</Street>
+        <Town>Mühlenweg 4
+31785 Hameln-Süd
+Deutschland</Town>
+        <PostCode>31785</PostCode>
+      </Address>
+    </Operator>
+  </organisations>
+</ResourceFrame>

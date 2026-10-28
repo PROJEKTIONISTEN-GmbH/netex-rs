@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.10">
+  <PublicationTimestamp>2026-10-14T08:10:00</PublicationTimestamp>
+  <ParticipantRef>SEETAL</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="ch:st:CompositeFrame:timetable" version="any">
+      <frames>
+        <TimetableFrame id="ch:st:TimetableFrame:timetable" version="any">
+          <vehicleJourneys>
+            <ServiceJourney id="ch:st:ServiceJourney:IR9-2148" version="any">
+              <validityConditions>
+                <AvailabilityConditionRef ref="ch:st:AvailabilityCondition:week" version="any"/>
+              </validityConditions>
+              <TransportMode>rail</TransportMode>
+              <OperatorRef ref="ch:st:Operator:SBB" version="any"/>
+              <LineRef ref="ch:st:Line:IR9" version="any"/>
+              <DirectionType>outbound</DirectionType>
+              <trainNumbers>
+                <TrainNumberRef ref="ch:st:TrainNumber:2148" version="any"/>
+              </trainNumbers>
+              <calls>
+                <Call id="ch:st:Call:2148-1" version="any" order="1">
+                  <ScheduledStopPointRef ref="ch:st:ScheduledStopPoint:A" version="any"/>
+                  <Departure><Time>21:48:00</Time><ForBoarding>true</ForBoarding></Departure>
+                  <DestinationDisplayRef ref="ch:st:DestinationDisplay:grenzheim" version="any"/>
+                  <StopUse>access</StopUse>
+                </Call>
+                <Call id="ch:st:Call:2148-2" version="any" order="2">
+                  <ScheduledStopPointRef ref="ch:st:ScheduledStopPoint:B" version="any"/>
+                  <Arrival><Time>22:16:00</Time><ForAlighting>true</ForAlighting></Arrival>
+                  <Departure><Time>22:18:00</Time><ForBoarding>true</ForBoarding></Departure>
+                  <DestinationDisplayRef ref="ch:st:DestinationDisplay:grenzheim" version="any"/>
+                  <StopUse>access</StopUse>
+                </Call>
+                <Call id="ch:st:Call:2148-3" version="any" order="3">
+                  <ScheduledStopPointRef ref="ch:st:ScheduledStopPoint:C" version="any"/>
+                  <Arrival><Time>23:24:00</Time></Arrival>
+                  <Departure><Time>23:24:00</Time></Departure>
+                  <StopUse>passthrough</StopUse>
+                </Call>
+                <Call id="ch:st:Call:2148-4" version="any" order="4">
+                  <ScheduledStopPointRef ref="ch:st:ScheduledStopPoint:D" version="any"/>
+                  <Arrival><Time>00:30:00</Time><DayOffset>1</DayOffset><ForAlighting>true</ForAlighting></Arrival>
+                  <DestinationDisplayRef ref="ch:st:DestinationDisplay:grenzheim" version="any"/>
+                  <StopUse>access</StopUse>
+                </Call>
+              </calls>
+            </ServiceJourney>
+          </vehicleJourneys>
+          <trainNumbers>
+            <TrainNumber id="ch:st:TrainNumber:2148" version="any">
+              <ForAdvertisement>2148</ForAdvertisement>
+            </TrainNumber>
+          </trainNumbers>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

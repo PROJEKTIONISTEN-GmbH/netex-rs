@@ -1,0 +1,36 @@
+<!--
+  A day type for one day of the week, its days stated as UIC bits
+  (netex_serviceCalendar_version.xsd): the property of day names Wednesday
+  (PropertyOfDay/DaysOfWeek), and the period of four weeks from Wednesday 4
+  February 2026 sets a bit every seventh day. The assignment's reference to
+  the period names no class, as OperatingPeriodRef may refer to a
+  UicOperatingPeriod as well as to a plain OperatingPeriod.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceCalendarFrame id="ex:ServiceCalendarFrame:weekday" version="1">
+  <ServiceCalendar id="ex:ServiceCalendar:weekday" version="1">
+    <dayTypes>
+      <DayType id="ex:DayType:wednesday" version="1">
+        <properties>
+          <PropertyOfDay>
+            <DaysOfWeek>Wednesday</DaysOfWeek>
+          </PropertyOfDay>
+        </properties>
+      </DayType>
+    </dayTypes>
+    <operatingPeriods>
+      <UicOperatingPeriod id="ex:UicOperatingPeriod:february" version="1">
+        <FromDate>2026-02-04T00:00:00</FromDate>
+        <ToDate>2026-02-25T00:00:00</ToDate>
+        <ValidDayBits>1000000100000010000001</ValidDayBits>
+      </UicOperatingPeriod>
+    </operatingPeriods>
+    <dayTypeAssignments>
+      <DayTypeAssignment id="ex:DayTypeAssignment:wednesday" version="1" order="1">
+        <OperatingPeriodRef ref="ex:UicOperatingPeriod:february" version="1"/>
+        <DayTypeRef ref="ex:DayType:wednesday" version="1"/>
+      </DayTypeAssignment>
+    </dayTypeAssignments>
+  </ServiceCalendar>
+</ServiceCalendarFrame>

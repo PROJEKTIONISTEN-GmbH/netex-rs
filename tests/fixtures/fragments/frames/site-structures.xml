@@ -1,0 +1,38 @@
+<!--
+  A site structure of a stop place, new in NeTEx 2.0 (SiteStructure,
+  netex_ifopt_site_version.xsd), with its levels in structure: one on a level
+  its stop place defines, one on a level no document defines.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<SiteFrame id="ex:SiteFrame:structures" version="1">
+  <stopPlaces>
+    <StopPlace id="ex:StopPlace:Messe" version="1">
+      <Name>Messe Ost</Name>
+      <levels>
+        <Level id="ex:Level:Messe:street" version="1">
+          <Name>Straßenebene</Name>
+        </Level>
+      </levels>
+      <siteStructures>
+        <SiteStructure id="ex:SiteStructure:Messe:hall" version="1">
+          <Name>Halle Ost</Name>
+          <levelsInStructure>
+            <LevelInStructure id="ex:LevelInStructure:Messe:hall:0" version="1">
+              <LevelRef ref="ex:Level:Messe:street" version="1"/>
+            </LevelInStructure>
+            <LevelInStructure id="ex:LevelInStructure:Messe:hall:-1" version="1">
+              <LevelRef ref="ex:Level:Messe:basement" version="1"/>
+            </LevelInStructure>
+          </levelsInStructure>
+        </SiteStructure>
+      </siteStructures>
+      <quays>
+        <Quay id="ex:Quay:Messe:1" version="1">
+          <Name>Steig 1</Name>
+          <LevelRef ref="ex:Level:Messe:street" version="1"/>
+        </Quay>
+      </quays>
+    </StopPlace>
+  </stopPlaces>
+</SiteFrame>

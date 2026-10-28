@@ -1,0 +1,36 @@
+<!--
+  Train numbers, the ways deliveries state them: a TrainNumber with the number
+  for advertisement (netex_vehicleJourney_version.xsd), named by a journey
+  through its trainNumbers (netex_serviceJourney_version.xsd), here in a
+  GeneralFrame that holds its members without the frames' structure; and
+  journeys that state a number only as their name — two by the same name, and
+  one named by a word, not a number.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<GeneralFrame id="ex:GeneralFrame:numbers" version="1">
+  <members>
+    <TrainNumber id="ex:TrainNumber:2318" version="1">
+      <ForAdvertisement>2318</ForAdvertisement>
+    </TrainNumber>
+    <ServiceJourney id="ex:ServiceJourney:numbered" version="1">
+      <Name>2318</Name>
+      <trainNumbers>
+        <TrainNumberRef ref="ex:TrainNumber:2318" version="1"/>
+      </trainNumbers>
+    </ServiceJourney>
+  </members>
+</GeneralFrame>
+<TimetableFrame id="ex:TimetableFrame:numbers" version="1">
+  <vehicleJourneys>
+    <ServiceJourney id="ex:ServiceJourney:named:1" version="1">
+      <Name>80417</Name>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:named:2" version="1">
+      <Name>80417</Name>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:worded" version="1">
+      <Name>Heideexpress</Name>
+    </ServiceJourney>
+  </vehicleJourneys>
+</TimetableFrame>

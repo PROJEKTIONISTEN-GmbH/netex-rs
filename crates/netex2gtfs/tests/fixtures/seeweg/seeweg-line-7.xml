@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2" version="1.10">
+  <PublicationTimestamp>2026-10-10T06:00:00</PublicationTimestamp>
+  <ParticipantRef>SEEWEG</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="sw:CompositeFrame:7" version="1">
+      <FrameDefaults>
+        <DefaultLocale>
+          <TimeZone>Europe/Zurich</TimeZone>
+          <DefaultLanguage>de</DefaultLanguage>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="sw:ResourceFrame:7" version="1">
+          <dataSources>
+            <DataSource id="sw:DataSource:1" version="1">
+              <Name>Seeweg Verkehrsverbund</Name>
+              <Url>https://seeweg.example</Url>
+            </DataSource>
+          </dataSources>
+          <organisations>
+            <Operator id="sw:Operator:SWB" version="1">
+              <Name>Seeweg Bahnen</Name>
+              <ContactDetails>
+                <Phone>+41 41 000 00 00</Phone>
+                <Url>https://bahnen.seeweg.example</Url>
+              </ContactDetails>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <SiteFrame id="sw:SiteFrame:7" version="1">
+          <stopPlaces>
+            <StopPlace id="sw:StopPlace:seehof" version="1">
+              <keyList><KeyValue><Key>GlobalID</Key><Value>de:99001:1</Value></KeyValue></keyList>
+              <Name>Seehof</Name>
+              <Centroid><Location><Longitude>8.3000</Longitude><Latitude>47.0500</Latitude></Location></Centroid>
+              <levels>
+                <Level id="sw:Level:seehof-0" version="1"><Name>Strassenebene</Name><PublicCode>0</PublicCode></Level>
+              </levels>
+              <quays>
+                <Quay id="sw:Quay:seehof-1" version="1">
+                  <keyList><KeyValue><Key>GlobalID</Key><Value>de:99001:1:0:1</Value></KeyValue></keyList>
+                  <Name>Seehof</Name>
+                  <Centroid><Location><Longitude>8.3001</Longitude><Latitude>47.0501</Latitude></Location></Centroid>
+                  <AccessibilityAssessment id="sw:AccessibilityAssessment:seehof-1" version="1">
+                    <MobilityImpairedAccess>true</MobilityImpairedAccess>
+                  </AccessibilityAssessment>
+                  <LevelRef ref="sw:Level:seehof-0" version="1"/>
+                  <PublicCode>1</PublicCode>
+                </Quay>
+                <Quay id="sw:Quay:seehof-2" version="1">
+                  <keyList><KeyValue><Key>GlobalID</Key><Value>de:99001:1:0:1</Value></KeyValue></keyList>
+                  <Name>Seehof</Name>
+                  <PublicCode>2</PublicCode>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="sw:StopPlace:bergdorf" version="1">
+              <Name>Bergdorf</Name>
+              <Centroid><Location><Longitude>8.3200</Longitude><Latitude>47.0600</Latitude></Location></Centroid>
+              <AccessibilityAssessment id="sw:AccessibilityAssessment:bergdorf" version="1">
+                <MobilityImpairedAccess>false</MobilityImpairedAccess>
+              </AccessibilityAssessment>
+              <ParentSiteRef ref="sw:StopPlace:bergdorf-ort" version="1"/>
+            </StopPlace>
+            <StopPlace id="sw:StopPlace:bergdorf-ort" version="1">
+              <keyList><KeyValue><Key>GlobalID</Key><Value>de:99001:2</Value></KeyValue></keyList>
+              <Name>Bergdorf Ort</Name>
+              <Centroid><Location><Longitude>8.3202</Longitude><Latitude>47.0601</Latitude></Location></Centroid>
+            </StopPlace>
+            <StopPlace id="sw:StopPlace:talwil" version="1">
+              <keyList><KeyValue><Key>SLOID</Key><Value>ch:1:sloid:99003</Value></KeyValue></keyList>
+              <Name>Talwil</Name>
+              <Centroid><Location><Longitude>8.3400</Longitude><Latitude>47.0700</Latitude></Location></Centroid>
+              <quays>
+                <Quay id="sw:Quay:talwil-1" version="1">
+                  <keyList><KeyValue><Key>GlobalID</Key><Value>de:99001:3</Value></KeyValue></keyList>
+                  <Name>Talwil</Name>
+                  <Centroid><Location><Longitude>8.3401</Longitude><Latitude>47.0701</Latitude></Location></Centroid>
+                </Quay>
+              </quays>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+        <ServiceFrame id="sw:ServiceFrame:7" version="1">
+          <lines>
+            <Line id="sw:Line:7" version="1">
+              <Name>Seeweg</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>7</PublicCode>
+              <OperatorRef ref="sw:Operator:SWB" version="1"/>
+              <Presentation>
+                <Colour>1F6FB2</Colour>
+                <TextColour>FFFFFF</TextColour>
+              </Presentation>
+            </Line>
+          </lines>
+          <destinationDisplays>
+            <DestinationDisplay id="sw:DestinationDisplay:bergdorf" version="1"><FrontText>Bergdorf</FrontText></DestinationDisplay>
+            <DestinationDisplay id="sw:DestinationDisplay:talwil" version="1"><FrontText>Talwil Mitte</FrontText></DestinationDisplay>
+          </destinationDisplays>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="sw:ScheduledStopPoint:seehof" version="1"><Name>Seehof</Name></ScheduledStopPoint>
+            <ScheduledStopPoint id="sw:ScheduledStopPoint:seehof-2" version="1"><Name>Seehof</Name></ScheduledStopPoint>
+            <ScheduledStopPoint id="sw:ScheduledStopPoint:bergdorf" version="1"><Name>Bergdorf</Name></ScheduledStopPoint>
+            <ScheduledStopPoint id="sw:ScheduledStopPoint:talwil" version="1"><Name>Talwil</Name></ScheduledStopPoint>
+            <ScheduledStopPoint id="sw:ScheduledStopPoint:weide" version="1">
+              <Name>Weide</Name>
+              <Location><Longitude>8.3300</Longitude><Latitude>47.0650</Latitude></Location>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="sw:ScheduledStopPoint:nirgends" version="1"><Name>Nirgends</Name></ScheduledStopPoint>
+          </scheduledStopPoints>
+          <serviceLinks>
+            <ServiceLink id="sw:ServiceLink:seehof-bergdorf" version="1">
+              <FromPointRef ref="sw:ScheduledStopPoint:seehof" version="1"/>
+              <ToPointRef ref="sw:ScheduledStopPoint:bergdorf" version="1"/>
+              <gml:LineString gml:id="seehof-bergdorf" srsName="EPSG:2056">
+                <gml:posList>2665450.45 1211355.54 2666204.09 1211919.76 2666957.59 1212484.07</gml:posList>
+              </gml:LineString>
+            </ServiceLink>
+            <ServiceLink id="sw:ServiceLink:bergdorf-talwil" version="1">
+              <FromPointRef ref="sw:ScheduledStopPoint:bergdorf" version="1"/>
+              <ToPointRef ref="sw:ScheduledStopPoint:talwil" version="1"/>
+              <gml:LineString gml:id="bergdorf-talwil" srsName="EPSG:2056">
+                <gml:posList>2666957.59 1212484.07 2667710.94 1213048.48 2668464.16 1213612.99</gml:posList>
+              </gml:LineString>
+            </ServiceLink>
+          </serviceLinks>
+          <connections>
+            <SiteConnection id="sw:SiteConnection:seehof-talwil" version="1">
+              <WalkTransferDuration><DefaultDuration>PT2M</DefaultDuration></WalkTransferDuration>
+              <BothWays>true</BothWays>
+              <From><QuayRef ref="sw:Quay:seehof-1" version="1"/></From>
+              <To><QuayRef ref="sw:Quay:talwil-1" version="1"/></To>
+            </SiteConnection>
+            <SiteConnection id="sw:SiteConnection:seehof-talwil-langsam" version="1">
+              <WalkTransferDuration><DefaultDuration>PT3M</DefaultDuration></WalkTransferDuration>
+              <BothWays>false</BothWays>
+              <From><QuayRef ref="sw:Quay:seehof-1" version="1"/></From>
+              <To><QuayRef ref="sw:Quay:talwil-1" version="1"/></To>
+            </SiteConnection>
+          </connections>
+          <stopAssignments>
+            <PassengerStopAssignment id="sw:PassengerStopAssignment:seehof" version="1" order="1">
+              <ScheduledStopPointRef ref="sw:ScheduledStopPoint:seehof" version="1"/>
+              <QuayRef ref="sw:Quay:seehof-1" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="sw:PassengerStopAssignment:seehof-2" version="1" order="2">
+              <ScheduledStopPointRef ref="sw:ScheduledStopPoint:seehof-2" version="1"/>
+              <QuayRef ref="sw:Quay:seehof-2" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="sw:PassengerStopAssignment:bergdorf" version="1" order="3">
+              <ScheduledStopPointRef ref="sw:ScheduledStopPoint:bergdorf" version="1"/>
+              <StopPlaceRef ref="sw:StopPlace:bergdorf" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="sw:PassengerStopAssignment:talwil" version="1" order="4">
+              <ScheduledStopPointRef ref="sw:ScheduledStopPoint:talwil" version="1"/>
+              <QuayRef ref="sw:Quay:talwil-1" version="1"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="sw:ServiceJourneyPattern:7-out" version="1">
+              <RouteView><LineRef ref="sw:Line:7" version="1"/></RouteView>
+              <DirectionType>outbound</DirectionType>
+              <DestinationDisplayRef ref="sw:DestinationDisplay:bergdorf" version="1"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="sw:StopPointInJourneyPattern:7-out-1" version="1" order="1">
+                  <ScheduledStopPointRef ref="sw:ScheduledStopPoint:seehof" version="1"/>
+                  <ForAlighting>false</ForAlighting>
+                  <DestinationDisplayRef ref="sw:DestinationDisplay:bergdorf" version="1"/>
+                  <noticeAssignments>
+                    <NoticeAssignment id="sw:NoticeAssignment:7-out-1" version="1" order="1">
+                      <Notice id="sw:Notice:steig" version="1"><Text>Einstieg vorne</Text></Notice>
+                    </NoticeAssignment>
+                  </noticeAssignments>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="sw:StopPointInJourneyPattern:7-out-2" version="1" order="2">
+                  <ScheduledStopPointRef ref="sw:ScheduledStopPoint:bergdorf" version="1"/>
+                  <DestinationDisplayRef ref="sw:DestinationDisplay:talwil" version="1"/>
+                  <ChangeOfDestinationDisplay>true</ChangeOfDestinationDisplay>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="sw:StopPointInJourneyPattern:7-out-3" version="1" order="3">
+                  <ScheduledStopPointRef ref="sw:ScheduledStopPoint:talwil" version="1"/>
+                  <ForBoarding>false</ForBoarding>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+            <ServiceJourneyPattern id="sw:ServiceJourneyPattern:7-in" version="1">
+              <RouteView><LineRef ref="sw:Line:7" version="1"/></RouteView>
+              <DirectionType>inbound</DirectionType>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="sw:StopPointInJourneyPattern:7-in-1" version="1" order="1">
+                  <ScheduledStopPointRef ref="sw:ScheduledStopPoint:talwil" version="1"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="sw:StopPointInJourneyPattern:7-in-2" version="1" order="2">
+                  <ScheduledStopPointRef ref="sw:ScheduledStopPoint:weide" version="1"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="sw:StopPointInJourneyPattern:7-in-3" version="1" order="3">
+                  <ScheduledStopPointRef ref="sw:ScheduledStopPoint:nirgends" version="1"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="sw:StopPointInJourneyPattern:7-in-4" version="1" order="4">
+                  <ScheduledStopPointRef ref="sw:ScheduledStopPoint:seehof-2" version="1"/>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <ServiceCalendarFrame id="sw:ServiceCalendarFrame:7" version="1">
+          <dayTypes>
+            <DayType id="sw:DayType:weekdays" version="1"><Name>Weekdays</Name></DayType>
+          </dayTypes>
+          <operatingPeriods>
+            <UicOperatingPeriod id="sw:UicOperatingPeriod:october" version="1">
+              <FromDate>2026-10-12T00:00:00</FromDate>
+              <ToDate>2026-10-25T00:00:00</ToDate>
+              <ValidDayBits>11111001011100</ValidDayBits>
+            </UicOperatingPeriod>
+          </operatingPeriods>
+          <dayTypeAssignments>
+            <DayTypeAssignment id="sw:DayTypeAssignment:weekdays" version="1" order="1">
+              <UicOperatingPeriodRef ref="sw:UicOperatingPeriod:october" version="1"/>
+              <DayTypeRef ref="sw:DayType:weekdays" version="1"/>
+            </DayTypeAssignment>
+          </dayTypeAssignments>
+        </ServiceCalendarFrame>
+        <TimetableFrame id="sw:TimetableFrame:7" version="1">
+          <vehicleJourneys>
+            <ServiceJourney id="sw:ServiceJourney:7-2310" version="1">
+              <dayTypes><DayTypeRef ref="sw:DayType:weekdays" version="1"/></dayTypes>
+              <ServiceJourneyPatternRef ref="sw:ServiceJourneyPattern:7-out" version="1"/>
+              <PublicCode>2310</PublicCode>
+              <LineRef ref="sw:Line:7" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:2310-1" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-out-1" version="1"/>
+                  <DepartureTime>23:50:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:2310-2" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-out-2" version="1"/>
+                  <ArrivalTime>23:58:00</ArrivalTime>
+                  <DepartureTime>00:01:00</DepartureTime>
+                  <DepartureDayOffset>1</DepartureDayOffset>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:2310-3" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-out-3" version="1"/>
+                  <ArrivalTime>00:10:00</ArrivalTime>
+                  <ArrivalDayOffset>1</ArrivalDayOffset>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="sw:ServiceJourney:7-rueckwaerts" version="1">
+              <dayTypes><DayTypeRef ref="sw:DayType:weekdays" version="1"/></dayTypes>
+              <ServiceJourneyPatternRef ref="sw:ServiceJourneyPattern:7-out" version="1"/>
+              <LineRef ref="sw:Line:7" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:rueckwaerts-1" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-out-1" version="1"/>
+                  <DepartureTime>14:10:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:rueckwaerts-2" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-out-2" version="1"/>
+                  <ArrivalTime>14:05:00</ArrivalTime>
+                  <DepartureTime>14:05:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:rueckwaerts-3" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-out-3" version="1"/>
+                  <ArrivalTime>14:20:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="sw:ServiceJourney:7-1200" version="1">
+              <dayTypes><DayTypeRef ref="sw:DayType:weekdays" version="1"/></dayTypes>
+              <ServiceJourneyPatternRef ref="sw:ServiceJourneyPattern:7-in" version="1"/>
+              <LineRef ref="sw:Line:7" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:1200-1" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-in-1" version="1"/>
+                  <DepartureTime>12:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:1200-2" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-in-2" version="1"/>
+                  <ArrivalTime>12:05:00</ArrivalTime>
+                  <DepartureTime>12:05:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:1200-3" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-in-3" version="1"/>
+                  <ArrivalTime>12:08:00</ArrivalTime>
+                  <DepartureTime>12:08:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:1200-4" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-in-4" version="1"/>
+                  <ArrivalTime>12:15:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <TemplateServiceJourney id="sw:ServiceJourney:7-takt" version="1">
+              <dayTypes><DayTypeRef ref="sw:DayType:weekdays" version="1"/></dayTypes>
+              <ServiceJourneyPatternRef ref="sw:ServiceJourneyPattern:7-out" version="1"/>
+              <LineRef ref="sw:Line:7" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:takt-1" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-out-1" version="1"/>
+                  <DepartureTime>06:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:takt-3" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-out-3" version="1"/>
+                  <ArrivalTime>06:15:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+              <frequencyGroups>
+                <HeadwayJourneyGroup id="sw:HeadwayJourneyGroup:morning" version="1">
+                  <FirstDepartureTime>06:00:00</FirstDepartureTime>
+                  <LastDepartureTime>07:00:00</LastDepartureTime>
+                  <ScheduledHeadwayInterval>PT20M</ScheduledHeadwayInterval>
+                </HeadwayJourneyGroup>
+                <HeadwayJourneyGroup id="sw:HeadwayJourneyGroup:evening" version="1">
+                  <FirstDepartureTime>18:00:00</FirstDepartureTime>
+                  <LastDepartureTime>18:50:00</LastDepartureTime>
+                  <ScheduledHeadwayInterval>PT20M</ScheduledHeadwayInterval>
+                </HeadwayJourneyGroup>
+              </frequencyGroups>
+            </TemplateServiceJourney>
+          </vehicleJourneys>
+          <journeyInterchanges>
+            <ServiceJourneyInterchange id="sw:ServiceJourneyInterchange:1" version="1">
+              <Guaranteed>true</Guaranteed>
+              <MaximumWaitTime>PT3M</MaximumWaitTime>
+              <FromPointRef ref="sw:ScheduledStopPoint:talwil" version="1"/>
+              <ToPointRef ref="sw:ScheduledStopPoint:talwil" version="1"/>
+              <FromJourneyRef ref="sw:ServiceJourney:7-2310" version="1"/>
+              <ToJourneyRef ref="sw:ServiceJourney:7-1200" version="1"/>
+            </ServiceJourneyInterchange>
+            <ServiceJourneyInterchange id="sw:ServiceJourneyInterchange:1-again" version="1">
+              <StaySeated>true</StaySeated>
+              <FromPointRef ref="sw:ScheduledStopPoint:talwil" version="1"/>
+              <ToPointRef ref="sw:ScheduledStopPoint:talwil" version="1"/>
+              <FromJourneyRef ref="sw:ServiceJourney:7-2310" version="1"/>
+              <ToJourneyRef ref="sw:ServiceJourney:7-1200" version="1"/>
+            </ServiceJourneyInterchange>
+          </journeyInterchanges>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

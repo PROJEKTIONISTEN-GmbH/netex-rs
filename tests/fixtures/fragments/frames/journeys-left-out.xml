@@ -1,0 +1,125 @@
+<!--
+  A journey a reader can ride, with a time at both points of its pattern, and
+  beside it journeys it cannot (ServiceJourney,
+  netex_serviceJourney_version.xsd), each for another reason: one referring to
+  a pattern no document defines, one stating nothing but its identifier, one
+  with a pattern but its times in a time demand type no document defines, one
+  over a pattern without points, one whose only validity condition is
+  available on no day (ValidDayBits of zeros), one whose validity period has a
+  first day and no last, and one over a pattern stating a route view — each of
+  these with a time at one point at most.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceFrame id="ex:ServiceFrame:leftout" version="1">
+  <validityConditions>
+    <AvailabilityCondition id="ex:AvailabilityCondition:never" version="1">
+      <FromDate>2026-07-06T00:00:00</FromDate>
+      <ToDate>2026-07-07T00:00:00</ToDate>
+      <ValidDayBits>00</ValidDayBits>
+    </AvailabilityCondition>
+  </validityConditions>
+  <scheduledStopPoints>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Teich" version="1"><Name>Teich</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Mühle" version="1"><Name>Mühle</Name></ScheduledStopPoint>
+  </scheduledStopPoints>
+  <journeyPatterns>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:two" version="1">
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:two:1" version="1" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Teich" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:two:2" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Mühle" version="1"/>
+        </StopPointInJourneyPattern>
+      </pointsInSequence>
+    </ServiceJourneyPattern>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:empty" version="1"/>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:viewed" version="1">
+      <RouteView/>
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:viewed:1" version="1" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Teich" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:viewed:2" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Mühle" version="1"/>
+        </StopPointInJourneyPattern>
+      </pointsInSequence>
+    </ServiceJourneyPattern>
+  </journeyPatterns>
+</ServiceFrame>
+<TimetableFrame id="ex:TimetableFrame:leftout" version="1">
+  <vehicleJourneys>
+    <ServiceJourney id="ex:ServiceJourney:rideable" version="1">
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:two" version="1"/>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:rideable:1" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:two:1" version="1"/>
+          <DepartureTime>09:00:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:rideable:2" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:two:2" version="1"/>
+          <ArrivalTime>09:12:00</ArrivalTime>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:no-pattern" version="1">
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:missing" version="1"/>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:no-pattern:1" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:missing:1" version="1"/>
+          <DepartureTime>10:00:00</DepartureTime>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:bare" version="1"/>
+    <ServiceJourney id="ex:ServiceJourney:demand" version="1">
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:two" version="1"/>
+      <TimeDemandTypeRef ref="ex:TimeDemandType:missing" version="1"/>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:pointless" version="1">
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:empty" version="1"/>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:pointless:1" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:empty:1" version="1"/>
+          <DepartureTime>11:00:00</DepartureTime>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:never" version="1">
+      <validityConditions>
+        <AvailabilityConditionRef ref="ex:AvailabilityCondition:never" version="1"/>
+      </validityConditions>
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:two" version="1"/>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:never:1" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:two:1" version="1"/>
+          <DepartureTime>12:00:00</DepartureTime>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:open-ended" version="1">
+      <validityConditions>
+        <ValidBetween>
+          <FromDate>2026-07-06T00:00:00</FromDate>
+        </ValidBetween>
+      </validityConditions>
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:two" version="1"/>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:open-ended:1" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:two:1" version="1"/>
+          <DepartureTime>13:00:00</DepartureTime>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:viewed" version="1">
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:viewed" version="1"/>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:viewed:1" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:viewed:1" version="1"/>
+          <DepartureTime>14:00:00</DepartureTime>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+  </vehicleJourneys>
+</TimetableFrame>

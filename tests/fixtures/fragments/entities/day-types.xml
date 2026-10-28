@@ -1,0 +1,42 @@
+<!--
+  Day types, each alone, as a writer of a single entity emits it with its
+  namespace declared on it. Two attributes of an entity in version have schema
+  defaults (modification="new", status="active", BasicModificationDetailsGroup
+  of netex_version_support.xsd): one day type states both defaults, one states
+  other values, one states one default and leaves the other to the schema; a
+  name with its language; a property of day with an empty list of days, one
+  with two days, and one naming a kind of holiday.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<DayType xmlns="http://www.netex.org.uk/netex" id="ex:DayType:defaults" version="1"
+         modification="new" status="active">
+  <Name>Werktage</Name>
+</DayType>
+<DayType xmlns="http://www.netex.org.uk/netex" id="ex:DayType:revised" version="2"
+         modification="revise" status="inactive">
+  <properties>
+    <PropertyOfDay>
+      <DaysOfWeek>Thursday Friday</DaysOfWeek>
+    </PropertyOfDay>
+  </properties>
+</DayType>
+<DayType xmlns="http://www.netex.org.uk/netex" id="ex:DayType:named" version="1" modification="new">
+  <Name lang="de">Schultage</Name>
+</DayType>
+<DayType xmlns="http://www.netex.org.uk/netex" id="ex:DayType:empty" version="1">
+  <properties>
+    <PropertyOfDay>
+      <DaysOfWeek></DaysOfWeek>
+    </PropertyOfDay>
+  </properties>
+</DayType>
+<DayType xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2"
+         id="ex:DayType:Pfingstmontag" version="any">
+  <Name>Pfingstmontag</Name>
+  <properties>
+    <PropertyOfDay>
+      <HolidayTypes>NationalHoliday</HolidayTypes>
+    </PropertyOfDay>
+  </properties>
+</DayType>

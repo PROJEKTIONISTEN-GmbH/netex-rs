@@ -1,0 +1,136 @@
+# The checks every change of netex-rs, netex2gtfs and netex-cli passes. They
+# need nothing from outside the repository; the whole German delivery is read
+# only where a runner is told where it is.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # The conformance tests validate against the official schemas with xmllint.
+      - run: sudo apt-get update && sudo apt-get install --yes libxml2-utils
+      - run: cargo build --locked --workspace --all-targets
+      - run: cargo test --locked --workspace
+      # The reference systems are a feature of the core; netex2gtfs and netex-cli turn it on.
+      - run: cargo test --locked -p netex-rs --features crs
+
+  msrv:
+    name: minimum supported Rust (1.86)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.86
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo +1.86 check --locked --workspace --all-targets
+
+  lint:
+    name: rustfmt, clippy, rustdoc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+      # The core without its features, as a consumer that needs none builds it.
+      - run: cargo clippy --locked -p netex-rs --all-targets -- -D warnings
+      - run: cargo doc --locked --no-deps --workspace --all-features
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  tables:
+    name: release tables match the schemas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 tools/schema_table.py
+      - run: git diff --exit-code src/version/table.rs docs/VERSIONS.md
+
+  package:
+    name: packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # Until they are published the manifests say `publish = false`, and cargo
+      # packages a member that depends on another only where it may publish
+      # both. So the three are packaged and built as they will be published:
+      # in dependency order, each against the packages before it.
+      - run: sed --in-place '/^publish = false$/d' Cargo.toml crates/*/Cargo.toml
+      - run: cargo package --locked --allow-dirty --workspace
+      # crates.io takes at most 10 MB; the official schemas and examples, the
+      # tools and the other members stay out of the core's package.
+      - name: the packages stay small and carry no third-party schemas
+        run: |
+          for crate in target/package/*.crate; do
+            size=$(stat --format=%s "$crate")
+            echo "$crate: $size bytes"
+            test "$size" -lt 10000000
+          done
+          if cargo package --list --locked --allow-dirty -p netex-rs | grep -E '^(tests/fixtures/netex-|tools/|crates/)'; then
+            echo "the core's package carries what it must not"
+            exit 1
+          fi
+
+  hygiene:
+    name: nothing internal, in files and commit messages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --locked --test publish_hygiene -- --nocapture
+        env:
+          NETEX_COMMITS: HEAD
+
+  corpus:
+    name: the whole German delivery
+    runs-on: ubuntu-latest
+    env:
+      # A repository variable naming the DELFI zip archive on the runner.
+      NETEX_DELFI_ZIP: ${{ vars.NETEX_DELFI_ZIP }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: skipped where no delivery is named
+        if: env.NETEX_DELFI_ZIP == ''
+        run: echo "::notice title=DELFI corpus::skipped, NETEX_DELFI_ZIP is not set"
+      - uses: dtolnay/rust-toolchain@stable
+        if: env.NETEX_DELFI_ZIP != ''
+      - if: env.NETEX_DELFI_ZIP != ''
+        run: cargo test --locked --release --test corpus -- --nocapture
+
+  fuzz:
+    name: fuzz, briefly
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [read, rewrite, convert, outline]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz
+      - run: cargo install cargo-fuzz --locked
+      - run: cargo +nightly fuzz run ${{ matrix.target }} -- -max_total_time=120

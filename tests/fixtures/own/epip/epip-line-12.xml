@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A line offer in the European Passenger Information Profile (EPIP): one bus
+  line between three stop places, two journeys on a weekday calendar written
+  as UIC operating-day bits. Written for netex-rs's tests (MIT OR Apache-2.0);
+  places, line and times are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:siri="http://www.siri.org.uk/siri" version="1.1:EU-PI-LINE-OFFER">
+  <PublicationTimestamp>2026-10-01T08:00:00</PublicationTimestamp>
+  <ParticipantRef>EXAMPLE</ParticipantRef>
+  <Description>EPIP line offer of line 12</Description>
+  <dataObjects>
+    <CompositeFrame id="ex:CompositeFrame:line-12" version="1">
+      <ValidBetween>
+        <FromDate>2026-10-12T00:00:00</FromDate>
+        <ToDate>2026-10-18T23:59:59</ToDate>
+      </ValidBetween>
+      <TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER" versionRef="epip:1.0"/>
+      <codespaces>
+        <Codespace id="ex">
+          <Xmlns>ex</Xmlns>
+          <XmlnsUrl>http://example.org/netex</XmlnsUrl>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultCodespaceRef ref="ex"/>
+        <DefaultLocale>
+          <TimeZone>Europe/Berlin</TimeZone>
+          <DefaultLanguage>de</DefaultLanguage>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="ex:ResourceFrame:line-12" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_COMMON" versionRef="epip:1.0"/>
+          <organisations>
+            <Operator id="ex:Operator:stadtbus" version="1">
+              <Name>Stadtbus Beispielstadt</Name>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <SiteFrame id="ex:SiteFrame:line-12" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_STOP" versionRef="epip:1.0"/>
+          <stopPlaces>
+            <StopPlace id="ex:StopPlace:bahnhof" version="1">
+              <keyList>
+                <KeyValue>
+                  <Key>GlobalID</Key>
+                  <Value>ex:00001:1</Value>
+                </KeyValue>
+              </keyList>
+              <Name>Beispielstadt Bahnhof</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>9.7320</Longitude>
+                  <Latitude>52.3760</Latitude>
+                </Location>
+              </Centroid>
+              <TransportMode>bus</TransportMode>
+              <StopPlaceType>busStation</StopPlaceType>
+              <quays>
+                <Quay id="ex:Quay:bahnhof-a" version="1">
+                  <keyList>
+                    <KeyValue>
+                      <Key>GlobalID</Key>
+                      <Value>ex:00001:1:1</Value>
+                    </KeyValue>
+                  </keyList>
+                  <Name>Bahnhof, Steig A</Name>
+                  <Centroid>
+                    <Location>
+                      <Longitude>9.7322</Longitude>
+                      <Latitude>52.3761</Latitude>
+                    </Location>
+                  </Centroid>
+                  <PublicCode>A</PublicCode>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="ex:StopPlace:markt" version="1">
+              <keyList>
+                <KeyValue>
+                  <Key>GlobalID</Key>
+                  <Value>ex:00002:1</Value>
+                </KeyValue>
+              </keyList>
+              <Name>Beispielstadt Markt</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>9.7380</Longitude>
+                  <Latitude>52.3720</Latitude>
+                </Location>
+              </Centroid>
+              <TransportMode>bus</TransportMode>
+              <StopPlaceType>onstreetBus</StopPlaceType>
+            </StopPlace>
+            <StopPlace id="ex:StopPlace:klinikum" version="1">
+              <keyList>
+                <KeyValue>
+                  <Key>GlobalID</Key>
+                  <Value>ex:00003:1</Value>
+                </KeyValue>
+              </keyList>
+              <Name>Beispielstadt Klinikum</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>9.7510</Longitude>
+                  <Latitude>52.3650</Latitude>
+                </Location>
+              </Centroid>
+              <TransportMode>bus</TransportMode>
+              <StopPlaceType>onstreetBus</StopPlaceType>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+        <ServiceFrame id="ex:ServiceFrame:line-12" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_NETWORK" versionRef="epip:1.0"/>
+          <lines>
+            <Line id="ex:Line:12" version="1">
+              <Name>Bahnhof – Klinikum</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>12</PublicCode>
+              <OperatorRef ref="ex:Operator:stadtbus" version="1"/>
+            </Line>
+          </lines>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="ex:ScheduledStopPoint:bahnhof" version="1">
+              <Name>Bahnhof</Name>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="ex:ScheduledStopPoint:markt" version="1">
+              <Name>Markt</Name>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="ex:ScheduledStopPoint:klinikum" version="1">
+              <Name>Klinikum</Name>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+          <stopAssignments>
+            <PassengerStopAssignment id="ex:PassengerStopAssignment:bahnhof" version="1" order="1">
+              <ScheduledStopPointRef ref="ex:ScheduledStopPoint:bahnhof" version="1"/>
+              <StopPlaceRef ref="ex:StopPlace:bahnhof" version="1"/>
+              <QuayRef ref="ex:Quay:bahnhof-a" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="ex:PassengerStopAssignment:markt" version="1" order="2">
+              <ScheduledStopPointRef ref="ex:ScheduledStopPoint:markt" version="1"/>
+              <StopPlaceRef ref="ex:StopPlace:markt" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="ex:PassengerStopAssignment:klinikum" version="1" order="3">
+              <ScheduledStopPointRef ref="ex:ScheduledStopPoint:klinikum" version="1"/>
+              <StopPlaceRef ref="ex:StopPlace:klinikum" version="1"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="ex:ServiceJourneyPattern:12-out" version="1">
+              <RouteView>
+                <LineRef ref="ex:Line:12" version="1"/>
+              </RouteView>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:12-out-1" version="1" order="1">
+                  <ScheduledStopPointRef ref="ex:ScheduledStopPoint:bahnhof" version="1"/>
+                  <ForAlighting>false</ForAlighting>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:12-out-2" version="1" order="2">
+                  <ScheduledStopPointRef ref="ex:ScheduledStopPoint:markt" version="1"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:12-out-3" version="1" order="3">
+                  <ScheduledStopPointRef ref="ex:ScheduledStopPoint:klinikum" version="1"/>
+                  <ForBoarding>false</ForBoarding>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <ServiceCalendarFrame id="ex:ServiceCalendarFrame:line-12" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_CALENDAR" versionRef="epip:1.0"/>
+          <dayTypes>
+            <DayType id="ex:DayType:weekdays" version="1">
+              <Name>Monday to Friday</Name>
+            </DayType>
+          </dayTypes>
+          <operatingPeriods>
+            <UicOperatingPeriod id="ex:UicOperatingPeriod:weekdays" version="1">
+              <FromDate>2026-10-12T00:00:00</FromDate>
+              <ToDate>2026-10-18T00:00:00</ToDate>
+              <ValidDayBits>1111100</ValidDayBits>
+            </UicOperatingPeriod>
+          </operatingPeriods>
+          <dayTypeAssignments>
+            <DayTypeAssignment id="ex:DayTypeAssignment:weekdays" version="1" order="1">
+              <UicOperatingPeriodRef ref="ex:UicOperatingPeriod:weekdays" version="1"/>
+              <DayTypeRef ref="ex:DayType:weekdays" version="1"/>
+            </DayTypeAssignment>
+          </dayTypeAssignments>
+        </ServiceCalendarFrame>
+        <TimetableFrame id="ex:TimetableFrame:line-12" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_TIMETABLE" versionRef="epip:1.0"/>
+          <vehicleJourneys>
+            <ServiceJourney id="ex:ServiceJourney:12-0700" version="1">
+              <dayTypes>
+                <DayTypeRef ref="ex:DayType:weekdays" version="1"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:12-out" version="1"/>
+              <OperatorRef ref="ex:Operator:stadtbus" version="1"/>
+              <LineRef ref="ex:Line:12" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="ex:TimetabledPassingTime:12-0700-1" version="1">
+                  <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:12-out-1" version="1"/>
+                  <DepartureTime>07:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="ex:TimetabledPassingTime:12-0700-2" version="1">
+                  <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:12-out-2" version="1"/>
+                  <ArrivalTime>07:06:00</ArrivalTime>
+                  <DepartureTime>07:07:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="ex:TimetabledPassingTime:12-0700-3" version="1">
+                  <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:12-out-3" version="1"/>
+                  <ArrivalTime>07:15:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="ex:ServiceJourney:12-2350" version="1">
+              <dayTypes>
+                <DayTypeRef ref="ex:DayType:weekdays" version="1"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:12-out" version="1"/>
+              <OperatorRef ref="ex:Operator:stadtbus" version="1"/>
+              <LineRef ref="ex:Line:12" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="ex:TimetabledPassingTime:12-2350-1" version="1">
+                  <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:12-out-1" version="1"/>
+                  <DepartureTime>23:50:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="ex:TimetabledPassingTime:12-2350-2" version="1">
+                  <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:12-out-2" version="1"/>
+                  <ArrivalTime>23:56:00</ArrivalTime>
+                  <DepartureTime>23:57:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="ex:TimetabledPassingTime:12-2350-3" version="1">
+                  <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:12-out-3" version="1"/>
+                  <ArrivalTime>00:05:00</ArrivalTime>
+                  <ArrivalDayOffset>1</ArrivalDayOffset>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

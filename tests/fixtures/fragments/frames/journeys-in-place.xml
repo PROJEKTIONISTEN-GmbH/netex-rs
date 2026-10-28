@@ -1,0 +1,217 @@
+<!--
+  A small line offer whose journeys state in place what is elsewhere referred
+  to: one journey's day is an availability condition written inside the
+  journey (validityConditions holds the condition itself, not a reference to
+  it, netex_vehicleJourney_version.xsd), another states its calls instead of a
+  pattern with passing times (Call, netex_call_version.xsd). Around them: an
+  authority, two operators and a vehicle type; stop places with quays, one
+  quay positioned in UTM zone 32N, one on a level its stop place defines and
+  one on a level no document defines; lines with an operator and an authority,
+  and with a further operator; stop assignments of a point to a stop place and
+  a quay, and to a quay alone; a day type of Mondays with its UIC period; a
+  journey meeting of the two journeys.
+  The availability condition: Tuesday 9 June to Thursday 11 June 2026.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ResourceFrame id="ex:ResourceFrame:inplace" version="1">
+  <organisations>
+    <Authority id="ex:Authority:weser" version="1">
+      <Name>Zweckverband Weserbergland</Name>
+    </Authority>
+    <Operator id="ex:Operator:weser" version="1">
+      <Name>Weserbus</Name>
+    </Operator>
+    <Operator id="ex:Operator:solling" version="1">
+      <Name>Sollingbahn</Name>
+    </Operator>
+  </organisations>
+  <vehicleTypes>
+    <VehicleType id="ex:VehicleType:midi" version="1">
+      <Name>Midibus</Name>
+    </VehicleType>
+  </vehicleTypes>
+</ResourceFrame>
+<SiteFrame id="ex:SiteFrame:inplace" version="1">
+  <stopPlaces>
+    <StopPlace id="ex:StopPlace:Hoexter" version="1">
+      <Name>Höxter Bahnhof</Name>
+      <quays>
+        <Quay id="ex:Quay:Hoexter:1" version="1">
+          <PublicCode>1</PublicCode>
+        </Quay>
+        <Quay id="ex:Quay:Hoexter:2" version="1">
+          <Centroid>
+            <Location srsName="EPSG:25832">
+              <gml:pos>527400 5734700</gml:pos>
+            </Location>
+          </Centroid>
+          <LevelRef ref="ex:Level:Hoexter:tunnel" version="1"/>
+        </Quay>
+      </quays>
+    </StopPlace>
+    <StopPlace id="ex:StopPlace:Holzminden" version="1">
+      <Name>Holzminden Markt</Name>
+      <Centroid>
+        <Location>
+          <Longitude>9.4560</Longitude>
+          <Latitude>51.8282</Latitude>
+        </Location>
+      </Centroid>
+      <levels>
+        <Level id="ex:Level:Holzminden:street" version="1">
+          <Name>Straße</Name>
+        </Level>
+      </levels>
+      <quays>
+        <Quay id="ex:Quay:Holzminden:1" version="1">
+          <Centroid>
+            <Location>
+              <Longitude>9.4561</Longitude>
+              <Latitude>51.8283</Latitude>
+            </Location>
+          </Centroid>
+          <LevelRef ref="ex:Level:Holzminden:street" version="1"/>
+        </Quay>
+      </quays>
+    </StopPlace>
+  </stopPlaces>
+</SiteFrame>
+<ServiceFrame id="ex:ServiceFrame:inplace" version="1">
+  <lines>
+    <Line id="ex:Line:501" version="1">
+      <Name>501</Name>
+      <AuthorityRef ref="ex:Authority:weser" version="1"/>
+      <OperatorRef ref="ex:Operator:weser" version="1"/>
+    </Line>
+    <Line id="ex:Line:502" version="1">
+      <Name>502</Name>
+      <OperatorRef ref="ex:Operator:solling" version="1"/>
+      <additionalOperators>
+        <OperatorRef ref="ex:Operator:weser" version="1"/>
+      </additionalOperators>
+    </Line>
+  </lines>
+  <scheduledStopPoints>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Hoexter" version="1">
+      <Name>Höxter Bahnhof</Name>
+    </ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Hoexter:2" version="1">
+      <Name>Höxter Bahnhof, Steig 2</Name>
+    </ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Holzminden" version="1">
+      <Name>Holzminden Markt</Name>
+      <Location>
+        <Longitude>9.4561</Longitude>
+        <Latitude>51.8283</Latitude>
+      </Location>
+    </ScheduledStopPoint>
+  </scheduledStopPoints>
+  <stopAssignments>
+    <PassengerStopAssignment id="ex:PassengerStopAssignment:Hoexter" version="1" order="1">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Hoexter"/>
+      <StopPlaceRef ref="ex:StopPlace:Hoexter"/>
+      <QuayRef ref="ex:Quay:Hoexter:2"/>
+    </PassengerStopAssignment>
+    <PassengerStopAssignment id="ex:PassengerStopAssignment:Hoexter:2" version="1" order="2">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Hoexter:2"/>
+      <QuayRef ref="ex:Quay:Hoexter:2"/>
+    </PassengerStopAssignment>
+    <PassengerStopAssignment id="ex:PassengerStopAssignment:Holzminden" version="1" order="3">
+      <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Holzminden"/>
+      <StopPlaceRef ref="ex:StopPlace:Holzminden"/>
+      <QuayRef ref="ex:Quay:Holzminden:1"/>
+    </PassengerStopAssignment>
+  </stopAssignments>
+  <journeyPatterns>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:501" version="1">
+      <DirectionType>inbound</DirectionType>
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:501:1" version="1" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Hoexter" version="1"/>
+        </StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:501:2" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Holzminden" version="1"/>
+        </StopPointInJourneyPattern>
+      </pointsInSequence>
+    </ServiceJourneyPattern>
+  </journeyPatterns>
+</ServiceFrame>
+<ServiceCalendarFrame id="ex:ServiceCalendarFrame:inplace" version="1">
+  <ServiceCalendar id="ex:ServiceCalendar:inplace" version="1">
+    <dayTypes>
+      <DayType id="ex:DayType:monday" version="1">
+        <properties>
+          <PropertyOfDay>
+            <DaysOfWeek>Monday</DaysOfWeek>
+          </PropertyOfDay>
+        </properties>
+      </DayType>
+    </dayTypes>
+    <operatingPeriods>
+      <UicOperatingPeriod id="ex:UicOperatingPeriod:june" version="1">
+        <FromDate>2026-06-01T00:00:00</FromDate>
+        <ToDate>2026-06-15T00:00:00</ToDate>
+        <ValidDayBits>100000010000001</ValidDayBits>
+      </UicOperatingPeriod>
+    </operatingPeriods>
+    <dayTypeAssignments>
+      <DayTypeAssignment id="ex:DayTypeAssignment:monday" version="1" order="1">
+        <OperatingPeriodRef ref="ex:UicOperatingPeriod:june" version="1"/>
+        <DayTypeRef ref="ex:DayType:monday" version="1"/>
+      </DayTypeAssignment>
+    </dayTypeAssignments>
+  </ServiceCalendar>
+</ServiceCalendarFrame>
+<TimetableFrame id="ex:TimetableFrame:inplace" version="1">
+  <vehicleJourneys>
+    <ServiceJourney id="ex:ServiceJourney:conditioned" version="1">
+      <validityConditions>
+        <AvailabilityCondition id="ex:AvailabilityCondition:inplace" version="1">
+          <FromDate>2026-06-09T00:00:00</FromDate>
+          <ToDate>2026-06-11T00:00:00</ToDate>
+          <ValidDayBits>111</ValidDayBits>
+        </AvailabilityCondition>
+      </validityConditions>
+      <ServiceJourneyPatternRef ref="ex:ServiceJourneyPattern:501" version="1"/>
+      <LineRef ref="ex:Line:501" version="1"/>
+      <passingTimes>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:conditioned:1" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:501:1" version="1"/>
+          <DepartureTime>08:20:00</DepartureTime>
+        </TimetabledPassingTime>
+        <TimetabledPassingTime id="ex:TimetabledPassingTime:conditioned:2" version="1">
+          <StopPointInJourneyPatternRef ref="ex:StopPointInJourneyPattern:501:2" version="1"/>
+          <ArrivalTime>08:44:00</ArrivalTime>
+        </TimetabledPassingTime>
+      </passingTimes>
+    </ServiceJourney>
+    <ServiceJourney id="ex:ServiceJourney:calling" version="1">
+      <dayTypes>
+        <DayTypeRef ref="ex:DayType:monday" version="1"/>
+      </dayTypes>
+      <LineRef ref="ex:Line:502" version="1"/>
+      <calls>
+        <Call id="ex:Call:calling:1" version="1" order="1">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Hoexter:2" version="1"/>
+          <Departure>
+            <Time>09:05:00</Time>
+          </Departure>
+        </Call>
+        <Call id="ex:Call:calling:2" version="1" order="2">
+          <ScheduledStopPointRef ref="ex:ScheduledStopPoint:Holzminden" version="1"/>
+          <Arrival>
+            <Time>09:27:00</Time>
+          </Arrival>
+        </Call>
+      </calls>
+    </ServiceJourney>
+  </vehicleJourneys>
+  <journeyMeetings>
+    <JourneyMeeting id="ex:JourneyMeeting:inplace" version="1">
+      <AtStopPointRef ref="ex:ScheduledStopPoint:Hoexter" version="1"/>
+      <FromJourneyRef ref="ex:ServiceJourney:conditioned" version="1"/>
+      <ToJourneyRef ref="ex:ServiceJourney:calling" version="1"/>
+    </JourneyMeeting>
+  </journeyMeetings>
+</TimetableFrame>

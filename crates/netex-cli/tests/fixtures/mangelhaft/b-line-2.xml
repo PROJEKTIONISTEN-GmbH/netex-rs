@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="ntx:1.1">
+  <PublicationTimestamp>2026-10-14T00:00:00</PublicationTimestamp>
+  <ParticipantRef>test</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="m:CompositeFrame:2" version="1">
+      <frames>
+        <SiteFrame id="m:SiteFrame:2" version="1">
+          <stopPlaces>
+            <StopPlace id="m:StopPlace:zwei" version="1">
+              <Name>Zwei, anders genannt</Name>
+              <Centroid><Location><Longitude>9.72</Longitude><Latitude>52.38</Latitude></Location></Centroid>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+        <ServiceFrame id="m:ServiceFrame:2" version="1">
+          <lines>
+            <Line id="m:Line:2" version="1"><Name>2</Name><TransportMode>bus</TransportMode></Line>
+          </lines>
+        </ServiceFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

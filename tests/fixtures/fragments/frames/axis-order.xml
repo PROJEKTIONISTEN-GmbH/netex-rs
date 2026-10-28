@@ -1,0 +1,67 @@
+<!--
+  The axis order of a link's geometry. GML 3.2 writes a position in the order
+  of its reference system's axes, which for WGS 84 (EPSG:4326) is latitude,
+  then longitude; deliveries also write longitude first. Two stop points in
+  the Harz, given as longitude and latitude, and links between them: one
+  written longitude first, one latitude first, one far from both points either
+  way, one from a stop point no document defines — whose start there is
+  nothing to compare with —, and one without a geometry. Two of the line
+  strings declare GML as the default namespace rather than using its prefix.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ServiceFrame id="ex:ServiceFrame:axes" version="1">
+  <scheduledStopPoints>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Goslar" version="1">
+      <Location>
+        <Longitude>10.428430</Longitude>
+        <Latitude>51.909740</Latitude>
+      </Location>
+    </ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Oker" version="1">
+      <Location>
+        <Longitude>10.481950</Longitude>
+        <Latitude>51.903110</Latitude>
+      </Location>
+    </ScheduledStopPoint>
+  </scheduledStopPoints>
+  <serviceLinks>
+    <ServiceLink id="ex:ServiceLink:longitude-first" version="1">
+      <Distance>3900</Distance>
+      <gml:LineString gml:id="ex-ls-longitude-first">
+        <gml:posList srsDimension="2">10.428430 51.909740 10.455000 51.906000 10.481950 51.903110</gml:posList>
+      </gml:LineString>
+      <FromPointRef ref="ex:ScheduledStopPoint:Goslar" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Oker" version="1"/>
+    </ServiceLink>
+    <ServiceLink id="ex:ServiceLink:latitude-first" version="1">
+      <Distance>3900</Distance>
+      <LineString xmlns="http://www.opengis.net/gml/3.2" gml:id="ex-ls-latitude-first">
+        <posList srsDimension="2">51.909740 10.428430 51.906000 10.455000 51.903110 10.481950</posList>
+      </LineString>
+      <FromPointRef ref="ex:ScheduledStopPoint:Goslar" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Oker" version="1"/>
+    </ServiceLink>
+    <ServiceLink id="ex:ServiceLink:far" version="1">
+      <Distance>700</Distance>
+      <gml:LineString gml:id="ex-ls-far">
+        <gml:posList srsDimension="2">-8.611000 41.150000 -8.605000 41.146000</gml:posList>
+      </gml:LineString>
+      <FromPointRef ref="ex:ScheduledStopPoint:Goslar" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Oker" version="1"/>
+    </ServiceLink>
+    <ServiceLink id="ex:ServiceLink:unanchored" version="1">
+      <Distance>3900</Distance>
+      <LineString xmlns="http://www.opengis.net/gml/3.2" gml:id="ex-ls-unanchored">
+        <posList srsDimension="2">51.909740 10.428430 51.903110 10.481950</posList>
+      </LineString>
+      <FromPointRef ref="ex:ScheduledStopPoint:Vienenburg" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Oker" version="1"/>
+    </ServiceLink>
+    <ServiceLink id="ex:ServiceLink:bare" version="1">
+      <Distance>3900</Distance>
+      <FromPointRef ref="ex:ScheduledStopPoint:Goslar" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Oker" version="1"/>
+    </ServiceLink>
+  </serviceLinks>
+</ServiceFrame>

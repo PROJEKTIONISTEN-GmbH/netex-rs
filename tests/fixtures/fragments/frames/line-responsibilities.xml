@@ -1,0 +1,68 @@
+<!--
+  Who is responsible for a line. A Line names its authority, its operator and
+  further operators, each optionally (netex_line_version.xsd: AuthorityRef,
+  OperatorRef, additionalOperators); where it names no authority, a reader has
+  only the codespace of its identifier to go by. Here: lines in two
+  codespaces, one naming its operator alone, the others an authority of their
+  codespace as well; a line with further operators and a branding; a line
+  naming neither; an authority by the same name as an operator; and a
+  codespace with two authorities, so that the codespace alone does not decide.
+  Two lines carry a private code, with and without the type saying whose it
+  is.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<ResourceFrame id="ex:ResourceFrame:responsible" version="1">
+  <organisations>
+    <Authority id="nord:Authority:verbund" version="2">
+      <Name>Verbund Nord</Name>
+    </Authority>
+    <Authority id="sued:Authority:land" version="3">
+      <Name>Landkreis Süd</Name>
+    </Authority>
+    <Authority id="sued:Authority:stadt" version="3">
+      <Name>Stadtwerke Süd</Name>
+    </Authority>
+    <Operator id="nord:Operator:7" version="1">
+      <Name>Küstenbus</Name>
+    </Operator>
+    <Operator id="sued:Operator:3" version="1">
+      <Name>Stadtwerke Süd</Name>
+    </Operator>
+    <Operator id="sued:Operator:4" version="1">
+      <ShortName>RBS</ShortName>
+    </Operator>
+  </organisations>
+</ResourceFrame>
+<ServiceFrame id="ex:ServiceFrame:responsible" version="1">
+  <lines>
+    <Line id="nord:Line:610" version="2">
+      <Name>610</Name>
+      <TransportMode>bus</TransportMode>
+      <PublicCode>610</PublicCode>
+      <PrivateCode type="planning">0610</PrivateCode>
+      <OperatorRef ref="nord:Operator:7"/>
+    </Line>
+    <Line id="sued:Line:3" version="2">
+      <BrandingRef ref="sued:Branding:metro"/>
+      <Name>3</Name>
+      <TransportMode>bus</TransportMode>
+      <AuthorityRef ref="sued:Authority:stadt" version="3"/>
+      <OperatorRef ref="sued:Operator:3" version="1"/>
+      <additionalOperators>
+        <OperatorRef ref="sued:Operator:4" version="1"/>
+      </additionalOperators>
+    </Line>
+    <Line id="sued:Line:4" version="2">
+      <Name>4</Name>
+      <TransportMode>bus</TransportMode>
+      <AuthorityRef ref="sued:Authority:land" version="3"/>
+      <OperatorRef ref="sued:Operator:4" version="1"/>
+    </Line>
+    <Line id="sued:Line:5" version="2">
+      <Name>5</Name>
+      <TransportMode>bus</TransportMode>
+      <PrivateCode>L5</PrivateCode>
+    </Line>
+  </lines>
+</ServiceFrame>
