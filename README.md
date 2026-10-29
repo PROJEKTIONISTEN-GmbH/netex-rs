@@ -1,18 +1,69 @@
 # netex-rs
 
-CEN **NeTEx** — *Network Timetable Exchange*, CEN/TS 16614 — in Rust. Reads and
-writes NeTEx documents of both schema releases, **1.x** (1.0 to 1.3) and **2.0**,
-into one typed model without losing anything; tells the releases apart and
-writes a document for either, reporting what the other release cannot hold;
-and reads whole national deliveries — tens of thousands of files — on every
-core into an index of stops, lines, journeys and their days, with every
-decision it takes on the way reported as a finding.
+[![crates.io](https://img.shields.io/crates/v/netex-rs.svg)](https://crates.io/crates/netex-rs)
+[![docs.rs](https://docs.rs/netex-rs/badge.svg)](https://docs.rs/netex-rs)
+
+Read, check, index and write **NeTEx** — the European standard for exchanging
+public transport timetables and networks, CEN/TS 16614 — in Rust, from a single
+document up to a whole national delivery.
+
+## Why you might need it
+
+Official timetable data in Europe is published as NeTEx: across the EU, the
+national access points are to provide timetables in it (Delegated Regulation
+(EU) 2017/1926). Germany's complete national timetable comes from DELFI as
+NeTEx, and so do the timetables of Austria, Switzerland and South Tyrol.
+Building on that data means getting past three things:
+
+- **Size.** A national delivery is tens of thousands of XML files — Germany's
+  is 28 176 files, 76 GB of XML.
+- **Interpretation.** References cross files, one stop place is defined in
+  hundreds of them, the days a journey runs follow rules spread over several
+  elements, and every country uses a profile of its own.
+- **Two releases.** NeTEx 1.x and 2.0 share one namespace, and the version a
+  document declares cannot be relied on.
+
+netex-rs handles that, so that you can:
+
+- **build a journey planner, a departure board or a stop finder** on official
+  data — stops with their quays and levels, lines, journeys with their calls
+  and passing times, the days each journey runs, walks between stops and
+  planned interchanges; Germany's whole delivery is indexed in about a minute
+  and a half on eight threads;
+- **turn a delivery into GTFS** for software that reads only GTFS, with
+  [netex2gtfs](crates/netex2gtfs/README.md) or `netex convert`;
+- **check a delivery** before you publish or import it: every reference to
+  nothing, every contradiction and every decision the reader takes is reported
+  as a finding that names the file and the object (`netex validate`);
+- **cut out and combine** — a region or an operator out of a national
+  delivery, several deliveries into one (`netex extract`, `netex merge`);
+- **write NeTEx** for release 1.x or 2.0, or rewrite a document for the other
+  release with a report of everything it cannot hold;
+- **follow the regular updates**: a manifest says which files of a delivery are
+  new, changed or gone since the last one.
+
+## Getting started
+
+As a library:
+
+```sh
+cargo add netex-rs
+```
+
+As a command, without writing any Rust:
+
+```sh
+cargo install netex-cli
+netex validate netex.zip                     # the checking report: what is missing or contradicts
+netex stats netex.zip                        # what the delivery holds
+netex convert netex.zip --to gtfs gtfs.zip   # the delivery as a GTFS feed
+netex extract netex.zip --bbox 9.35,52.2,10.15,52.65 --to region
+```
 
 - Licence: MIT OR Apache-2.0 · MSRV: Rust 1.86 · no `unsafe`
-- Beside it in this repository: [netex2gtfs](crates/netex2gtfs/README.md), a
-  delivery as a GTFS feed, and [netex-cli](crates/netex-cli/README.md), the
-  `netex` command — a checking report, statistics, conversion to GTFS, a part
-  of a delivery cut out, several deliveries merged.
+- In this repository: **netex-rs**, the library;
+  [netex2gtfs](crates/netex2gtfs/README.md), a delivery as a GTFS feed;
+  [netex-cli](crates/netex-cli/README.md), the `netex` command.
 
 ## Example
 

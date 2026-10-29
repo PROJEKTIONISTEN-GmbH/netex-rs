@@ -1,5 +1,8 @@
 # netex2gtfs
 
+[![crates.io](https://img.shields.io/crates/v/netex2gtfs.svg)](https://crates.io/crates/netex2gtfs)
+[![docs.rs](https://docs.rs/netex2gtfs/badge.svg)](https://docs.rs/netex2gtfs)
+
 NeTEx to GTFS in Rust: a NeTEx delivery — a zip archive or a directory of
 documents, read and resolved by [netex-rs](../../README.md) — written as a GTFS
 feed, with a report of every decision the conversion took and of everything in

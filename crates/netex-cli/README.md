@@ -1,11 +1,13 @@
 # netex-cli
 
+[![crates.io](https://img.shields.io/crates/v/netex-cli.svg)](https://crates.io/crates/netex-cli)
+
 The `netex` command: a checking report for NeTEx deliveries, their statistics,
 their conversion to GTFS, regional cuts of them and the merge of several into
 one — built on [netex-rs](../../README.md) and [netex2gtfs](../netex2gtfs/README.md).
 
 - Licence: MIT OR Apache-2.0 · MSRV: Rust 1.86 · no `unsafe`
-- Install from the repository: `cargo install --path crates/netex-cli`
+- Install: `cargo install netex-cli` (or from the repository: `cargo install --path crates/netex-cli`)
 
 A delivery is a zip archive or a directory of NeTEx documents, read on every
 core (`--threads N` to use fewer).
