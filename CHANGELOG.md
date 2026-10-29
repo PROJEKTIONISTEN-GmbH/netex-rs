@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.2 — 2026-10-29
+
+The README says what the crates are for: why official timetable data comes as
+NeTEx, what makes a national delivery hard to read, what one builds with the
+crate, and how to start with the library and with the `netex` command; it
+carries the badges of crates.io and docs.rs. The code is that of 0.7.1.
+netex2gtfs 0.1.3 and netex-cli 0.1.3 are published alongside, on netex-rs
+0.7.2, with the same badges; netex-cli's README installs it from crates.io.
+
 ## 0.7.1 — 2026-10-29
 
 The first published release. The code is that of 0.7.0; added are the
