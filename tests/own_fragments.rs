@@ -457,7 +457,8 @@ fn a_submode_stated_beside_a_mode_is_read_where_it_stands() {
 /// its `SiteRef` names. A second claim — a second stop place naming it, or its
 /// `SiteRef` naming another than the one that does — leaves it where it is and
 /// is a finding; a `QuayRef` to nothing is a reference to nothing, and one
-/// naming a stop place resolves to another class than it names.
+/// naming a stop place, like a `SiteRef` naming a quay, resolves to another
+/// class than it names.
 #[test]
 fn a_quay_defined_beside_its_stop_place_belongs_to_the_one_naming_it() {
     let name = "quays-beside-their-stop-place.xml";
@@ -470,6 +471,7 @@ fn a_quay_defined_beside_its_stop_place_belongs_to_the_one_naming_it() {
         assert_eq!(place_of(quay), Some("ex:StopPlace:A"), "{quay}");
     }
     assert_eq!(place_of("ex:Quay:5"), None);
+    assert_eq!(place_of("ex:Quay:6"), None);
     let findings = |concern: Concern| -> Vec<String> {
         index
             .findings()
@@ -486,7 +488,10 @@ fn a_quay_defined_beside_its_stop_place_belongs_to_the_one_naming_it() {
     );
     assert_eq!(
         findings(Concern::ResolvedAsOtherClass),
-        ["reference resolved to another class than it names: QuayRef ex:StopPlace:A in quays-beside-their-stop-place.xml (StopPlace)"]
+        [
+            "reference resolved to another class than it names: QuayRef ex:StopPlace:A in quays-beside-their-stop-place.xml (StopPlace)",
+            "reference resolved to another class than it names: SiteRef ex:Quay:1 in quays-beside-their-stop-place.xml (Quay)"
+        ]
     );
     let unresolved: Vec<String> = index.unresolved().iter().map(ToString::to_string).collect();
     assert_eq!(unresolved.len(), 1, "{unresolved:?}");

@@ -5,9 +5,10 @@
   names its stop place as its site (SiteRef, netex_site_version.xsd). Stop
   place A names quays 1, 3 and 4; quay 2 names A by its SiteRef alone; B
   names quay 3 as well, and quay 4 names B as its site; quay 5 names no stop
-  place and none names it. One reference of A's names a quay no document
-  defines, one of B's a stop place; both name the version by versionRef, as
-  a reference into another document does.
+  place and none names it, quay 6 names quay 1 as its site. One reference of
+  A's names a quay no document defines, one of B's a stop place; those and
+  quay 6's name the version by versionRef, as a reference into another
+  document does.
   Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
   are invented.
 -->
@@ -47,6 +48,10 @@
     </Quay>
     <Quay id="ex:Quay:5" version="1">
       <Name>Alone</Name>
+    </Quay>
+    <Quay id="ex:Quay:6" version="1">
+      <Name>On a quay</Name>
+      <SiteRef ref="ex:Quay:1" versionRef="1"/>
     </Quay>
   </members>
 </GeneralFrame>

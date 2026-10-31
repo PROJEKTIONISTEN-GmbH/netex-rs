@@ -4,7 +4,7 @@ Five kinds of test data:
 
 | Directory | What | Licence | In the crate's package |
 |---|---|---|---|
-| `own/` | small deliveries written for these tests (EPIP, IT-ITH1, Austrian-style, Swiss-style; see its `README.md`) | MIT OR Apache-2.0, as the crate | yes |
+| `own/` | small deliveries written for these tests (EPIP, IT-ITH1, Austrian-style, Swiss-style, NeTEx France; see its `README.md`) | MIT OR Apache-2.0, as the crate | yes |
 | `fragments/` | sets of frames and entities standing alone written for these tests, each pinning one kind of thing a delivery states (see its `README.md`) | MIT OR Apache-2.0, as the crate | yes |
 | `delfi/` | five line files of the German national NeTEx delivery | CC BY 4.0, DELFI e.V. | yes |
 | `crs/` | reference points of the feature `crs`, generated from two stop registers and PROJ | see below | yes |

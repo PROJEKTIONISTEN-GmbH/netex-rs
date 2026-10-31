@@ -8,6 +8,7 @@
 //! document it stands in first. A definition repeated alike is one entity;
 //! repeated with other content, it is the document's own, and a finding.
 
+use std::borrow::Cow;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
@@ -257,7 +258,7 @@ enum AssignmentDays {
 /// The days of the calendar's span from `from` to `to`, both included.
 fn span_bits(first_day: i64, span: usize, from: i64, to: i64) -> DayBits {
     let mut bits = DayBits::new(span);
-    let last = first_day + i64::try_from(span).unwrap_or(i64::MAX) - 1;
+    let last = first_day + span as i64 - 1;
     for day in from.max(first_day)..=to.min(last) {
         bits.set((day - first_day) as usize, true);
     }
@@ -590,7 +591,9 @@ impl Finish {
 
     /// The stop place of every quay defined beside it: the stop place naming
     /// it among its quays, else the one its `SiteRef` names. Each reference
-    /// resolves as any other, a `QuayRef` to nothing a reference to nothing.
+    /// resolves as any other, a `QuayRef` to nothing a reference to nothing; a
+    /// `QuayRef` naming a stop place, or a `SiteRef` naming a quay, resolves to
+    /// another class than it names.
     fn resolve_quay_places(&mut self) {
         for (place, pending) in std::mem::take(&mut self.b.quay_listings) {
             if let Some(quay) = self.resolve_stop(&pending) {
@@ -601,11 +604,11 @@ impl Finish {
             }
         }
         for (quay, pending) in std::mem::take(&mut self.b.quay_sites) {
-            let Some(site) = self.resolve_stop(&pending) else {
-                continue;
-            };
-            if self.b.stops[site as usize].kind == StopKind::StopPlace {
-                self.claim(quay.0, StopId(site));
+            if let Some(site) = self.resolve_stop(&pending) {
+                match self.b.stops[site as usize].kind {
+                    StopKind::StopPlace => self.claim(quay.0, StopId(site)),
+                    StopKind::Quay => self.check_class(&pending, "Quay"),
+                }
             }
         }
     }
@@ -1035,19 +1038,30 @@ impl Finish {
             .collect();
         for assignment in &assignments {
             let day_type = assignment.day_type as usize;
-            let days = match assignment.days {
-                AssignmentDays::Day(day) => span_bits(first_day, span, day, day),
-                AssignmentDays::Period(period) => {
-                    let mut days = periods[period as usize].clone();
-                    // A plain period gives the days of the week the day type names.
-                    if self.b.periods[period as usize].bits.is_none() {
-                        if let Properties::DaysOfWeek(named) = self.b.day_types[day_type].properties
-                        {
-                            days.intersect(week.of(named));
-                        }
+            let period = match assignment.days {
+                AssignmentDays::Day(day) => {
+                    if let Ok(offset) = usize::try_from(day - first_day) {
+                        bits[day_type].set(offset, assignment.available);
                     }
-                    days
+                    continue;
                 }
+                AssignmentDays::Period(period) => period as usize,
+            };
+            // A plain period gives the days of the week the day type names.
+            let named = match (
+                &self.b.periods[period].bits,
+                self.b.day_types[day_type].properties,
+            ) {
+                (None, Properties::DaysOfWeek(named)) => Some(named),
+                _ => None,
+            };
+            let days = match named {
+                Some(named) => {
+                    let mut days = periods[period].clone();
+                    days.intersect(week.of(named));
+                    Cow::Owned(days)
+                }
+                None => Cow::Borrowed(&periods[period]),
             };
             if assignment.available {
                 bits[day_type].union(&days);
