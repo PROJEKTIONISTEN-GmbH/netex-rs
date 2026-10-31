@@ -1733,6 +1733,14 @@ impl Visit<'_> {
             .and_then(|d| d.default_duration.as_ref())
             .and_then(|d| d.seconds())
         else {
+            let entity = self.referrer("SiteConnection", &connection.id).id;
+            self.builder.gathered.push(FindingRecord {
+                concern: Concern::WalkWithoutDuration,
+                element: "SiteConnection",
+                document: self.origin,
+                entity,
+                about: None,
+            });
             return;
         };
         let (Some(from), Some(to)) = (&connection.from, &connection.to) else {

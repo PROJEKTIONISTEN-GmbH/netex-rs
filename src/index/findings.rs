@@ -106,6 +106,11 @@ pub enum Concern {
     /// the month), which the crate does not read: it runs on the days of its
     /// assignments alone.
     PropertiesOfDayUnread,
+    /// A walk between two sites (`SiteConnection`) stating no duration — the
+    /// French deliveries state its distance alone —: no transfer of the
+    /// index, which holds a walk by the time it takes and does not choose a
+    /// walking speed.
+    WalkWithoutDuration,
 }
 
 impl Concern {
@@ -131,6 +136,7 @@ impl Concern {
         Concern::QuayOfTwoStopPlaces,
         Concern::PassingTimesOtherThanPoints,
         Concern::PropertiesOfDayUnread,
+        Concern::WalkWithoutDuration,
     ];
 
     /// The concern's name in reports and on command lines, in lower case with
@@ -157,6 +163,7 @@ impl Concern {
             Concern::QuayOfTwoStopPlaces => "quay-of-two-stop-places",
             Concern::PassingTimesOtherThanPoints => "passing-times-other-than-points",
             Concern::PropertiesOfDayUnread => "properties-of-day-unread",
+            Concern::WalkWithoutDuration => "walk-without-duration",
         }
     }
 
@@ -207,6 +214,7 @@ impl Concern {
             Concern::PropertiesOfDayUnread => {
                 "day type whose properties name more than days of the week, its assignments' days alone"
             }
+            Concern::WalkWithoutDuration => "walk stating no duration, no transfer",
         }
     }
 }

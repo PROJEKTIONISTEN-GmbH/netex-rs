@@ -614,7 +614,8 @@ fn the_swiss_shuttle_runs_every_twenty_minutes_on_weekdays() {
 
 /// The French stops: three stop places, each naming its quays by reference,
 /// and four quays defined beside them, each naming its stop place. Every quay
-/// is a quay of its stop place, and the stop points are assigned to quays.
+/// is a quay of its stop place, the stop points are assigned to quays, and of
+/// the two walks the one stating how long it takes is a transfer.
 #[test]
 fn a_french_quay_defined_beside_its_stop_place_is_one_of_its_quays() {
     let index = index("fr");
@@ -667,7 +668,11 @@ fn a_french_quay_defined_beside_its_stop_place_is_one_of_its_quays() {
     );
     assert!(index.unresolved().is_empty(), "{:?}", index.unresolved());
     let findings: Vec<String> = index.findings().map(|f| f.to_string()).collect();
-    assert_eq!(findings, Vec::<String>::new());
+    assert_eq!(
+        findings,
+        ["walk stating no duration, no transfer: SiteConnection EX:SiteConnection:mairie-eglise:LOC in resource.xml"],
+        "the walk stating its distance alone"
+    );
 }
 
 /// The lean stream yields the quays defined on their own as entities of

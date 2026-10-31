@@ -51,6 +51,7 @@
             "headway-group-without-runs", "axis-order-swapped", "axis-order-undecided",
             "resolved-ignoring-version", "resolved-as-other-class", "unknown-reference-system",
             "quay-of-two-stop-places", "passing-times-other-than-points", "properties-of-day-unread",
+            "walk-without-duration",
             "journey-without-travel-time", "time-goes-back", "stop-point-without-place",
             "stop-point-without-position", "unreferenced"
           ]

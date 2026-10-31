@@ -3,7 +3,9 @@
   The common part and the calendar of a delivery in the French profile
   (NeTEx France), as the profile's resource.xml: a composite frame of the type
   NETEX_FRANCE holding a general frame NETEX_COMMUN — the operator, a walk
-  between two quays — and a general frame NETEX_CALENDRIER with the day types
+  between two quays stating its duration and one stating its distance alone,
+  as most walks of the French deliveries do — and a general frame
+  NETEX_CALENDRIER with the day types
   in the three forms the French deliveries write:
   - school days, a validity and days of the week whose assignments list each
     day it runs on: the properties describe, the dates decide;
@@ -46,6 +48,18 @@
               <To>
                 <StopPlaceRef ref="FR:00001:LMO:gare:LOC" versionRef="1"/>
                 <QuayRef ref="FR:00001:ZE:gare-r:LOC" versionRef="1"/>
+              </To>
+            </SiteConnection>
+            <SiteConnection id="EX:SiteConnection:mairie-eglise:LOC" version="1">
+              <Distance>900</Distance>
+              <BothWays>true</BothWays>
+              <From>
+                <StopPlaceRef ref="FR:00001:LMO:mairie:LOC" versionRef="1"/>
+                <QuayRef ref="FR:00001:ZE:mairie:LOC" versionRef="1"/>
+              </From>
+              <To>
+                <StopPlaceRef ref="FR:00002:LMO:eglise:LOC" versionRef="1"/>
+                <QuayRef ref="FR:00002:ZE:eglise:LOC" versionRef="1"/>
               </To>
             </SiteConnection>
           </members>
