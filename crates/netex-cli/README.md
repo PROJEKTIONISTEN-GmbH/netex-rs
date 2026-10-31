@@ -94,7 +94,8 @@ decision taken and what the feed does not carry, and writes the conversion's
 report as JSON with `--report`. `--stop-ids global` gives stops their `GlobalID`
 (DHID) or, without one, their Swiss `SLOID`, numbered `#2`, `#3` where stops
 share one; `--time-zone` names the agencies' time zone where no document of the
-delivery does.
+delivery does — as French deliveries may not, and France has more than one time
+zone: `--time-zone Europe/Paris` for one of metropolitan France.
 
 ## `netex extract` — a part of a delivery
 

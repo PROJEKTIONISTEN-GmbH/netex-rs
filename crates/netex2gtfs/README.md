@@ -86,7 +86,7 @@ holding one. Nothing is left out silently.
 | `interchange-repeated` | an interchange between the same trips at the same stops stated again — in another document —: one transfer, the first |
 | `shape-incomplete` | a trip with a pair of calls no link with a geometry joins: no shape |
 | `shape-in-unknown-system` | a link geometry in a reference system netex-rs does not know: its stretch left out |
-| `time-zone-of-profile` | no document names a time zone and none is given: the zone of the delivery's profile's country (DELFI Europe/Berlin, Austria Europe/Vienna, Switzerland Europe/Zurich) |
+| `time-zone-of-profile` | no document names a time zone and none is given: the zone of the delivery's profile's country (DELFI Europe/Berlin, Austria Europe/Vienna, Switzerland Europe/Zurich); a French delivery takes none, France having more than one |
 | `feed-info-without-publisher` | no publisher and no data source with a web address: no `feed_info.txt` |
 
 ## Licence

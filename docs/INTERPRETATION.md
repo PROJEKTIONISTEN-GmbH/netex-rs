@@ -21,7 +21,10 @@ what the standard says; what an importer built on this crate does today; what
   five shared documents and the timetable documents 1 to 20), and South Tyrol's
   in the Italian profile from the Italian national access point, fetched
   2026-10-20 (`IT-ITH1_L1.xml.gz`, one document, published 2025-08-14;
-  `docs/IT-ITH1-PROFILE.md`).
+  `docs/IT-ITH1-PROFILE.md`); and five deliveries in the French profile from
+  the French national access point, fetched 2026-10-31: Fluo Grand Est in the
+  Bas-Rhin, Naolib (Nantes), TBM (Bordeaux), the aggregate of Normandy's
+  networks and SNCF's trains (`docs/FR-PROFILE.md`).
 - *The importer*: the NeTEx importer of a journey planner, built on this crate
   and not published; it is cited for what it does with the same deliveries.
 - The standard: the NeTEx XML schema (CEN/TS 16614, the `xsd/` of the NeTEx
@@ -759,6 +762,175 @@ patterns name are mostly of short versions, 272 of the 600 of a version valid
 on one day —, and 58 run on the days their version governs. Checked against a
 reading of the document of its own (`IT-ITH1-PROFILE.md`).
 
+## 23. Frames that hold everything
+
+**Problem.** The French profile writes every part of a delivery — stops,
+network, calendar, timetable — in `GeneralFrame`s, naming the part by the
+frame's `TypeOfFrameRef` (`FR:TypeOfFrame:NETEX_ARRET`, `…NETEX_HORAIRE`, …).
+Fluo Grand Est in the Bas-Rhin states 103 general frames in its 53 documents,
+Naolib 198, Normandy's aggregate 1 276; each holds its entities side by side in
+`members`.
+
+**Standard.** A general frame is "a General purpose frame that can be used to
+exchange any NeTEx element. Does not impose any structure."
+(`netex_framework/netex_frames/netex_generalFrame_version.xsd`, `GeneralFrame`);
+its `members` hold the entities. The profile chooses it for every part, typed by
+the part ("Éléments communs", on version frames: "un GeneralFrame qui peut
+contenir n'importe quel type d'ENTITY IN VERSION").
+
+**The importer.** Not run on a French delivery.
+
+**netex-rs.** Up to 0.7.2 a general frame was carried through untyped, as
+anything the model does not name: 99.66 % of Fluo's elements, 99.99 % of
+Naolib's and 99.91 % of Normandy's, and the index held no stop, line or journey
+of them.
+
+**Proposal: adopt.** Effort **S**.
+
+**Built (unreleased, after 0.7.2).** `GeneralFrame` is typed, its `members` hold
+every kind of entity the specific frames hold that the model types, and a quay
+standing on its own (§ 24); the lean stream reads them in document order
+(`FrameKind::General`), and the index takes each as it takes the same entity in a
+specific frame. Untyped after the read: 7.23 % of Fluo's elements, 0.76 % of
+Naolib's, 3.51 % of Normandy's — postal addresses, kinds of place,
+suitabilities, route links, networks (`docs/FR-PROFILE.md`).
+
+## 24. Quays defined beside their stop place
+
+**Problem.** The French profile defines a quay (*zone d'embarquement*) on its
+own, among the members of the stops' frame, and the stop place names it among
+its quays by reference: "le profil fait le choix de définir les ZONEs
+D'EMBARQUEMENT indépendamment et de les référencer" ("Description des arrêts",
+`StopPlace`, `quays`). The quay names its stop place by its `SiteRef` as well.
+Fluo states 1 035 quays so, Naolib 2 939, Normandy's aggregate 12 604; each is
+named by exactly one stop place and names the same one by its `SiteRef`.
+
+**Standard.** A stop place's `quays` hold a `Quay` or a `QuayRef`
+(`netex_part_1/part1_ifopt/netex_ifopt_stopPlace_version.xsd`,
+`quays_RelStructure`); a quay's `SiteRef` names the site it is part of. Which
+wins where the two disagree the schema does not say.
+
+**The importer.** Not run on a French delivery.
+
+**netex-rs.** Up to 0.7.2 a `QuayRef` among a stop place's quays was carried
+through, and a quay outside a stop place was not read.
+
+**Proposal: adopt** a quay's stop place from both references. Effort **S**.
+
+**Built (unreleased, after 0.7.2).** A quay standing on its own is an entity of
+its own (`stream::Kind::Quay`), a quay of the stop place naming it among its
+quays, else of the one its `SiteRef` names; each reference resolves as any other,
+a `QuayRef` to nothing is a reference to nothing. A quay two stop places claim
+stays with the first and is a finding (`Concern::QuayOfTwoStopPlaces`; none in
+the five deliveries). The stop place naming its quay and the quay naming its
+stop place are references of the graph (§ 21), but no use of either: a stop
+nothing places a stop point at is still listed as unreferenced.
+
+## 25. Passing times naming no point
+
+**Problem.** Fluo, Naolib and Normandy write a journey's passing times without
+the point of the pattern each is at — 1 771, 124 908 and 85 356 journeys, every
+one of theirs —, in the order of the pattern's points: each journey has as many
+passing times as its pattern has points. TBM and SNCF name the point.
+
+**Standard.** In NeTEx 1.x a passing time's `PointInJourneyPatternRef` is
+optional (`netex_part_2/part2_journeyTimes/netex_passingTimes_version.xsd`,
+`PassingTimeGroup`); 2.0 requires it, and an identifier of the passing time.
+The French profile writes 1.x and keeps the reference optional ("Horaires",
+`PassingTime`). That passing times then stand in the order of the points the
+schema does not say; it is the only reading under which these deliveries are
+timetables.
+
+**The importer.** Not run on a French delivery.
+
+**netex-rs.** Up to 0.7.2 a passing time naming no point was left out, and a
+journey with none left was left out with it.
+
+**Proposal: adopt** the reading by position. Effort **S**.
+
+**Built (unreleased, after 0.7.2).** A passing time naming no point is at the
+point of its position, in the order the pattern states its points; one naming a
+point is read as before. Times other in number than the points are read as far
+as both go, and are a finding (`Concern::PassingTimesOtherThanPoints`; none in
+the five deliveries).
+
+## 26. A day type's properties
+
+**Problem.** Three forms of day type in the French deliveries:
+
+- a validity, days of the week (`PropertyOfDay/DaysOfWeek`) and an assignment
+  of each day it runs on: Fluo's 30 day types, every one of Normandy's — the
+  properties summarise the days, they do not decide them: Fluo's school days are
+  Monday to Friday from 2 November 2026 to 2 July 2027 by their properties,
+  without the holidays by their dates;
+- a validity and days of the week, the assignments its exceptions — days taken
+  away (`isAvailable` false), days added on other days of the week: TBM's
+  (Mecatran's export), 147 of its 283 day types with no assignment at all, 72
+  with removals only, 62 adding a day on another day of the week;
+- days of the week and an assignment to an operating period without day bits:
+  Naolib's 139 day types, the period giving its days only on those days of the
+  week.
+
+Read by their assignments alone, 32 331 of TBM's 39 749 journeys run on no day,
+and a Naolib journey on every day of its periods, whatever its days of the
+week.
+
+**Standard.** A property of day names what makes a day one of the type, a
+day type assignment gives the type days (`netex_framework/netex_reusableComponents/netex_dayType_version.xsd`,
+`netex_serviceCalendar_version.xsd`). The profile makes the validity a limit
+of the day type ("si le TYPE DE JOUR n'est valable que pour une période de
+temps limitée, on le précisera grâce au ValidBetween"), the properties of day
+alternatives ("sous un même PropertyOfDay les caractéristiques s'associent par
+un ET, sinon … par un OU"), the assignments exceptions where the properties do
+not suffice ("Éléments communs", day types). How a day type's properties and its
+assignments combine the schema does not say.
+
+**The importer.** Not run on a French delivery; it gives day types the days of
+their assignments (§ 3).
+
+**netex-rs.** Up to 0.7.2 the index read assignments alone (§ 3).
+
+**Proposal: adopt**, as a rule every reader of the crate applies. Effort **S**.
+
+**Built (unreleased, after 0.7.2)** (`calendar`, the index). Properties are read
+where they name days of the week and nothing else: an assignment to a period
+without day bits gives the period's days on those days of the week; a day type
+with a validity of a first and a last day, none of whose assignments gives it a
+day of its own — a period, or a date within its validity on one of its days of
+the week —, runs on the days of its validity on its days of the week, its
+assignments adding and taking away in their order. A day type whose assignments
+do give it such a day runs on their days alone, as before — every day type an
+available period is assigned to among them, UIC day bits or not. The two French forms are told apart by that alone:
+each of Fluo's and Normandy's day types adds a day of its own, none of TBM's
+does. Properties naming more than days of the week (holidays, seasons) are not
+read; where they would decide the days, that is a finding
+(`Concern::PropertiesOfDayUnread`). Checked against the GTFS feeds the same
+producers publish: TBM's 555 768 journey days and Naolib's 682 559, each
+journey's days and stop times one for one; Fluo's 209 362 within the period of
+its NeTEx (`docs/FR-PROFILE.md`).
+
+## 27. Walks stating a distance alone
+
+**Problem.** Fluo states 826 walks between quays (`SiteConnection`), Normandy's
+aggregate 16 600; all of Fluo's and 16 565 of Normandy's state a distance and
+no duration.
+
+**Standard.** A site connection states its `Distance` and its durations
+(`WalkTransferDuration`, `TransferDuration`) independently
+(`netex_part_1/part1_tacticalPlanning/netex_siteConnection_version.xsd`);
+neither is required.
+
+**The importer.** Not run on a French delivery.
+
+**netex-rs.** The index holds a walk by the time it takes and left a walk
+without a duration out without a word.
+
+**Proposal: count it**; turning a distance into a time needs a walking speed,
+which is the reader's choice, not the delivery's. Effort **S**.
+
+**Built (unreleased, after 0.7.2).** A walk without a duration is a finding
+(`Concern::WalkWithoutDuration`), and still no transfer of the index.
+
 ---
 
 ## Summary
@@ -787,3 +959,8 @@ reading of the document of its own (`IT-ITH1-PROFILE.md`).
 | 20 | On-demand services | better: flexible lines into a planner of on-demand services | M | left out, counted |
 | 21 | Who refers to an object | adopt the reverse adjacency, only when asked for | S | ✓ (0.5.0) |
 | 22 | A line named through a route | adopt: the line stated nearest the journey first | S | ✓ (0.6.0) |
+| 23 | Frames that hold everything | adopt: general frames typed, read as the specific frames | S | ✓ (unreleased) |
+| 24 | Quays beside their stop place | adopt: the stop place naming the quay, else the quay's `SiteRef` | S | ✓ (unreleased) |
+| 25 | Passing times naming no point | adopt: by position in the pattern | S | ✓ (unreleased) |
+| 26 | A day type's properties | adopt: days of the week within the validity where no assignment gives a day of its own; plain periods by days of the week | S | ✓ (unreleased) |
+| 27 | Walks stating a distance alone | count them; no walking speed chosen | S | counted (unreleased) |

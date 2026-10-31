@@ -12,7 +12,8 @@ document up to a whole national delivery.
 Official timetable data in Europe is published as NeTEx: across the EU, the
 national access points are to provide timetables in it (Delegated Regulation
 (EU) 2017/1926). Germany's complete national timetable comes from DELFI as
-NeTEx, and so do the timetables of Austria, Switzerland and South Tyrol.
+NeTEx, and so do the timetables of Austria, Switzerland, South Tyrol and
+France.
 Building on that data means getting past three things:
 
 - **Size.** A national delivery is tens of thousands of XML files — Germany's
@@ -230,6 +231,7 @@ profile relies on.
 | **Switzerland** | shared documents (stop points, lines, calendar) and timetable documents naming them | journeys stating their `Call`s, `StopUse` pass-throughs, availability conditions as the calendar, template journeys with headway groups | yes, a part of the national delivery (five shared and 20 timetable documents) |
 | **EPIP** (European Passenger Information Profile) | composite frames of typed frames (`epip:EU_PI_*`) | read as any NeTEx; the index as for the others | the official EPIP example and the crate's own |
 | **IT-ITH1** (Italy, South Tyrol; the Italian national access point) | one document of EPIP frames (`IT:ITH1:…` identifiers), lines in versions | every name with the language it states; patterns naming their line only through a route; stop places stating a submode beside their mode; train numbers in the timetable frame; `OperatingPeriodRef`s naming UIC periods | yes, levels 1 and 3 of the delivery |
+| **NeTEx France** (the French national access point) | per network: stops, calendar, network and one document per line, everything in general frames typed by the part (`FR:TypeOfFrame:NETEX_ARRET`, …); or specific frames typed so; SNCF's trains in one document of 647 MB | general frames; quays defined beside their stop place, which names them by `QuayRef`; passing times naming no point, by position; day types given their days by a validity and days of the week, the assignments their exceptions; plain periods by the days of the week of their day type | yes, five deliveries: Fluo Grand Est (Bas-Rhin), Naolib, TBM, Normandy's aggregate, SNCF |
 
 `tests/fixtures/own/` has a small delivery of each kind but DELFI, written for
 the tests; `tests/fixtures/fragments/` has small sets of frames and entities,
@@ -239,7 +241,8 @@ each pinning what the reader makes of one kind of thing a delivery states
 `docs/DELFI-PROFILE.md` lists what the German delivery uses of NeTEx: 193
 distinct elements, of which the typed model covers all but four, which are
 carried through. `docs/IT-ITH1-PROFILE.md` does the same for South Tyrol's,
-with what it states and how the crate reads it.
+with what it states and how the crate reads it, and `docs/FR-PROFILE.md` for
+five French deliveries, checked against the GTFS feeds their producers publish.
 
 ## How conformant
 
@@ -314,8 +317,8 @@ were measured.
 NeTEx leaves open how a reader turns what a delivery states into a timetable — a
 reference to nothing, a stop place defined in three hundred documents, a line
 in versions, a point a train passes through. `docs/INTERPRETATION.md` lists
-these questions as the German, Austrian, Swiss and South Tyrolean deliveries
-pose them, with what the standard says and what this crate does, and why;
+these questions as the German, Austrian, Swiss, South Tyrolean and French
+deliveries pose them, with what the standard says and what this crate does, and why;
 `docs/PROFILE-UEBERFUEHRUNG.md` says what is gained and lost turning one
 profile into another.
 
@@ -431,8 +434,13 @@ e.V.'s national NeTEx delivery for Germany (`NX-PI-01_DE_NAP_LINE`,
 nine Austrian Verkehrsverbünde at the Austrian national access point; the
 Swiss national NeTEx timetable; the European Passenger Information Profile
 (EPIP, CEN/TS 16614-4) through its official example in the NeTEx repository;
-and South Tyrol's timetable in the Italian profile IT-ITH1 at the Italian
-national access point. `docs/INTERPRETATION.md` and the profile pages name the
+South Tyrol's timetable in the Italian profile IT-ITH1 at the Italian
+national access point; and in the French profile, at the French national access
+point ([transport.data.gouv.fr](https://transport.data.gouv.fr/)), the
+timetables of Fluo Grand Est in the Bas-Rhin (Région Grand Est), Naolib
+(Nantes Métropole) and Normandy's networks (Région Normandie) under the Licence
+Ouverte 2.0, TBM's (Bordeaux Métropole) under the Licence Ouverte 1.0, and
+SNCF's under the ODbL. `docs/INTERPRETATION.md` and the profile pages name the
 deliveries each figure was counted on. None of these deliveries is in the
 repository beyond the five DELFI files above.
 

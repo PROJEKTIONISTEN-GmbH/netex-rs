@@ -1,5 +1,49 @@
 # Changelog
 
+## Unreleased
+
+The French profile, NeTEx France (`docs/FR-PROFILE.md`): deliveries that write
+everything in general frames, define quays beside their stop place, state
+passing times without the point they are at and give day types their days by a
+validity and days of the week are read in full. Five deliveries of the French
+national access point were read before and after; the three whose producers
+publish GTFS beside their NeTEx give the same trips, days and stop times
+(`docs/INTERPRETATION.md` §§ 23–27). Not compatible with 0.7: `Frame` and
+`QuayItem`, which are exhaustive, have a variant more.
+
+- **model**: `GeneralFrame`, its `members` (`GeneralFrameMembers`,
+  `GeneralFrameMember`) and `Frame::General`; `QuayItem::QuayRef`, a quay a stop
+  place names by reference.
+- **stream**: `FrameKind::General`; `Kind::Quay`, a quay standing on its own,
+  in `Selection::routing`.
+- **index**: a quay defined on its own belongs to the stop place naming it among
+  its quays, else to the one its `SiteRef` names; a passing time naming no point
+  is at the point of its position; an operating period without day bits gives the
+  days of the week its day type names, and a day type with a validity none of
+  whose assignments gives it a day of its own runs on its validity's days of the
+  week, its assignments adding and taking away. New findings:
+  `QuayOfTwoStopPlaces`, `PassingTimesOtherThanPoints`, `PropertiesOfDayUnread`,
+  `WalkWithoutDuration` (a walk without a duration, before left out without a
+  word). A stop place and its quay naming each other are no use of either in
+  `Referrers::unreferenced`.
+- **calendar**: `DaysOfWeek`, `Properties` and `properties`, the rule for every
+  reader.
+- Own example `tests/fixtures/own/fr/`, the fragment
+  `quays-beside-their-stop-place.xml`.
+
+### netex2gtfs
+
+A quay defined beside its stop place gives its platform code, level and
+accessibility to its stop; train numbers are read wherever they stand, among a
+general frame's members as well. A French delivery naming no time zone takes
+none from its profile: France has more than one.
+
+### netex-cli
+
+`netex validate` reports the four new findings (`quay-of-two-stop-places`,
+`passing-times-other-than-points`, `properties-of-day-unread`,
+`walk-without-duration`), in its JSON schema too.
+
 ## 0.7.2 — 2026-10-29
 
 The README says what the crates are for: why official timetable data comes as
