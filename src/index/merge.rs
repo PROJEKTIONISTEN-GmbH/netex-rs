@@ -174,7 +174,7 @@ impl IndexBuilder {
         let time_offset = offset_of(&self.raw_times);
         self.raw_times
             .extend(other.raw_times.into_iter().map(|mut raw| {
-                raw.point = renumbered.key(raw.point);
+                raw.point = raw.point.map(|point| renumbered.key(point));
                 raw
             }));
         let call_offset = offset_of(&self.raw_calls);
@@ -289,7 +289,8 @@ impl IndexBuilder {
     /// stop it kept, whose record `other`'s replaces if it comes from a
     /// document named first. The quays taken in are then pointed at their
     /// places' indexes here, and the contents `other` noted for its stops
-    /// are noted for the stops they are here.
+    /// are noted for the stops they are here; so are the stop places naming
+    /// quays defined beside them, and the quays naming their stop place.
     fn merge_stops(&mut self, other: &mut IndexBuilder, renumbered: &Renumbered) {
         let mut moved: Vec<StopId> = Vec::with_capacity(other.stops.len());
         let mut taken_in: Vec<usize> = Vec::with_capacity(other.stops.len());
@@ -336,6 +337,15 @@ impl IndexBuilder {
             let contents = renumbered.contents(contents);
             self.stop_variants
                 .absorb(&self.strings, moved[stop as usize].0, contents);
+        }
+        for (place, pending) in std::mem::take(&mut other.quay_listings) {
+            let place = moved[place.0 as usize];
+            self.quay_listings
+                .push((place, renumbered.pending(pending)));
+        }
+        for (quay, pending) in std::mem::take(&mut other.quay_sites) {
+            let quay = moved[quay.0 as usize];
+            self.quay_sites.push((quay, renumbered.pending(pending)));
         }
     }
 

@@ -1,9 +1,14 @@
 //! The publication: the root element and the frames it delivers.
 
 use super::{
-    Codespaces, DateTime, Duration, FrameDefaults, Id, KeyList, MultilingualString, Ref,
-    ResourceFrame, ServiceCalendarFrame, ServiceFrame, SiteFrame, TimetableFrame, ValidBetween,
-    ValidityConditions, Version,
+    AvailabilityCondition, Codespaces, DataSource, DateTime, DayType, DayTypeAssignment,
+    DestinationDisplay, Direction, Duration, FrameDefaults, GroupOfStopPlaces, Id, InterchangeRule,
+    KeyList, Line, MultilingualString, Notice, NoticeAssignment, OperatingDay, OperatingPeriod,
+    Organisation, PassengerStopAssignment, Quay, Ref, ResourceFrame, ResponsibilitySet, Route,
+    RoutePoint, ScheduledStopPoint, ServiceCalendarFrame, ServiceFrame, ServiceJourney,
+    ServiceJourneyInterchange, ServiceJourneyPattern, ServiceLink, SiteConnection, SiteFrame,
+    StopPlace, TimetableFrame, TopographicPlace, TrainNumber, ValidBetween, ValidityConditions,
+    VehicleType, Version,
 };
 
 netex_element! {
@@ -48,6 +53,9 @@ netex_container! {
         ServiceCalendar(ServiceCalendarFrame) = "ServiceCalendarFrame",
         /// Journeys and passing times.
         Timetable(TimetableFrame) = "TimetableFrame",
+        /// Entities of any kind, side by side: the frame the French profile
+        /// writes everything in.
+        General(GeneralFrame) = "GeneralFrame",
     }
 }
 
@@ -84,6 +92,121 @@ netex_element! {
             /// The frames held.
             pub frames: Option<Frames> = "frames",
         }
+    }
+}
+
+netex_element! {
+    /// A frame holding entities of any kind in one list, its `members`. The
+    /// French profile (NeTEx France) writes every part of a delivery so — its
+    /// stops, its network, its calendar, its timetable —, naming the part by
+    /// the frame's `TypeOfFrameRef`: `FR:TypeOfFrame:NETEX_ARRET`, …
+    pub struct GeneralFrame {
+        attributes {
+            /// The `id` attribute.
+            pub id: Option<Id> = "id",
+            /// The `version` attribute.
+            pub version: Option<Version> = "version",
+        }
+        children {
+            /// The frame's validity conditions, or the conditions it defines.
+            pub validity_conditions: Option<ValidityConditions> = "validityConditions",
+            /// When the frame is valid.
+            pub valid_between: Vec<ValidBetween> = "ValidBetween",
+            /// Key-value pairs.
+            pub key_list: Option<KeyList> = "keyList",
+            /// The frame's branding.
+            pub branding_ref: Option<Ref> = "BrandingRef",
+            /// Name of the frame.
+            pub name: Option<MultilingualString> = "Name",
+            /// What the frame holds.
+            pub description: Option<MultilingualString> = "Description",
+            /// The part of the profile the frame holds: `FR:TypeOfFrame:NETEX_HORAIRE`, …
+            pub type_of_frame_ref: Option<Ref> = "TypeOfFrameRef",
+            /// The version frame this one derives from.
+            pub baseline_version_frame_ref: Option<Ref> = "BaselineVersionFrameRef",
+            /// Codespaces of the identifiers.
+            pub codespaces: Option<Codespaces> = "codespaces",
+            /// What the entities assume unless they say otherwise.
+            pub frame_defaults: Option<FrameDefaults> = "FrameDefaults",
+            /// The entities, in document order.
+            pub members: Option<GeneralFrameMembers> = "members",
+        }
+    }
+}
+
+netex_container! {
+    /// The entities of a general frame: every kind the specific frames hold
+    /// that the model types, and a quay standing on its own.
+    pub struct GeneralFrameMembers of GeneralFrameMember {
+        /// A town, district or region.
+        TopographicPlace(TopographicPlace) = "TopographicPlace",
+        /// A group of stop places.
+        GroupOfStopPlaces(GroupOfStopPlaces) = "GroupOfStopPlaces",
+        /// A stop place.
+        StopPlace(StopPlace) = "StopPlace",
+        /// A quay defined beside its stop place, which names it by a
+        /// `QuayRef` among its quays.
+        Quay(Quay) = "Quay",
+        /// A data source.
+        DataSource(DataSource) = "DataSource",
+        /// A responsibility set.
+        ResponsibilitySet(ResponsibilitySet) = "ResponsibilitySet",
+        /// An operator.
+        Operator(Organisation) = "Operator",
+        /// An authority.
+        Authority(Organisation) = "Authority",
+        /// A vehicle type.
+        VehicleType(VehicleType) = "VehicleType",
+        /// A direction of travel.
+        Direction(Direction) = "Direction",
+        /// A point a route goes through.
+        RoutePoint(RoutePoint) = "RoutePoint",
+        /// A route.
+        Route(Route) = "Route",
+        /// A line.
+        Line(Line) = "Line",
+        /// A destination display.
+        DestinationDisplay(DestinationDisplay) = "DestinationDisplay",
+        /// A scheduled stop point.
+        ScheduledStopPoint(ScheduledStopPoint) = "ScheduledStopPoint",
+        /// A link between stop points.
+        ServiceLink(ServiceLink) = "ServiceLink",
+        /// A walk between sites.
+        SiteConnection(SiteConnection) = "SiteConnection",
+        /// Which stop place or quay a stop point is.
+        PassengerStopAssignment(PassengerStopAssignment) = "PassengerStopAssignment",
+        /// A service journey pattern.
+        ServiceJourneyPattern(ServiceJourneyPattern) = "ServiceJourneyPattern",
+        /// A journey pattern.
+        JourneyPattern(ServiceJourneyPattern) = "JourneyPattern",
+        /// A notice.
+        Notice(Notice) = "Notice",
+        /// Where a notice applies.
+        NoticeAssignment(NoticeAssignment) = "NoticeAssignment",
+        /// A day type.
+        DayType(DayType) = "DayType",
+        /// An operating day.
+        OperatingDay(OperatingDay) = "OperatingDay",
+        /// An operating period.
+        OperatingPeriod(OperatingPeriod) = "OperatingPeriod",
+        /// An operating period with a bit per day.
+        UicOperatingPeriod(OperatingPeriod) = "UicOperatingPeriod",
+        /// Which day type a day is.
+        DayTypeAssignment(DayTypeAssignment) = "DayTypeAssignment",
+        /// The days an entity is available on.
+        AvailabilityCondition(AvailabilityCondition) = "AvailabilityCondition",
+        /// A journey.
+        ServiceJourney(ServiceJourney) = "ServiceJourney",
+        /// A journey on one day.
+        DatedServiceJourney(ServiceJourney) = "DatedServiceJourney",
+        /// A journey standing for runs at a headway.
+        TemplateServiceJourney(ServiceJourney) = "TemplateServiceJourney",
+        /// A train number.
+        TrainNumber(TrainNumber) = "TrainNumber",
+        /// A planned interchange between journeys.
+        ServiceJourneyInterchange(ServiceJourneyInterchange) = "ServiceJourneyInterchange",
+        /// A rule for interchanges.
+        InterchangeRule(InterchangeRule) = "InterchangeRule",
     }
 }
 

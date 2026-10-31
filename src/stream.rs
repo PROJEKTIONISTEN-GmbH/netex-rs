@@ -84,6 +84,8 @@ entities! {
     GroupOfStopPlaces(model::GroupOfStopPlaces) = "GroupOfStopPlaces",
     /// A stop place, with its quays, levels and entrances.
     StopPlace(model::StopPlace) = "StopPlace",
+    /// A quay defined beside its stop place, among a general frame's members.
+    Quay(model::Quay) = "Quay",
     /// A data source.
     DataSource(model::DataSource) = "DataSource",
     /// A responsibility set.
@@ -171,13 +173,14 @@ impl Selection {
             .fold(Selection::none(), |selection, &kind| selection.with(kind))
     }
 
-    /// What a routing importer reads: stops with their quays, routes and
-    /// lines, stop points and their assignments, journey patterns, journeys
+    /// What a routing importer reads: stops with their quays — and the quays
+    /// defined beside them —, routes and lines, stop points and their assignments, journey patterns, journeys
     /// with their passing times or calls, template journeys, the calendar with
     /// its availability conditions, walks, interchanges, and notices.
     pub fn routing() -> Self {
         [
             Kind::StopPlace,
+            Kind::Quay,
             Kind::Route,
             Kind::Line,
             Kind::ScheduledStopPoint,
@@ -275,6 +278,8 @@ pub enum FrameKind {
     ServiceCalendar,
     /// A `<TimetableFrame>`.
     Timetable,
+    /// A `<GeneralFrame>`.
+    General,
 }
 
 impl FrameKind {
@@ -286,6 +291,7 @@ impl FrameKind {
             "ServiceFrame" => FrameKind::Service,
             "ServiceCalendarFrame" => FrameKind::ServiceCalendar,
             "TimetableFrame" => FrameKind::Timetable,
+            "GeneralFrame" => FrameKind::General,
             _ => return None,
         })
     }
@@ -391,6 +397,9 @@ const TIMETABLE: Containers = &[
     ("vehicleTypes", &[Kind::VehicleType]),
 ];
 
+/// A general frame's one container: its `members`, of every kind.
+const GENERAL: Containers = &[CONDITIONS, ("members", Kind::ALL)];
+
 /// Where the walk of [`read_with`] met an element it does not read itself.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
@@ -399,8 +408,8 @@ pub enum Skipped<'a> {
     /// timestamp, its participant, its description.
     Delivery,
     /// A child of a list of frames — the root's `dataObjects`, a composite
-    /// frame's `frames` — that is no frame the walk reads: a `GeneralFrame`, a
-    /// `FareFrame`, an element of another namespace.
+    /// frame's `frames` — that is no frame the walk reads: a `FareFrame`, an
+    /// element of another namespace.
     Frames,
     /// A child of a frame of this kind that the walk does not read: anything
     /// but the frame's `ValidBetween`, a composite frame's `frames`, a calendar
@@ -624,6 +633,7 @@ impl<'i, S: Sink<'i>> Walker<'i, '_, S> {
                     (FrameKind::Service, _) => self.container(&child, SERVICE, place)?,
                     (FrameKind::ServiceCalendar, _) => self.container(&child, CALENDAR, place)?,
                     (FrameKind::Timetable, _) => self.container(&child, TIMETABLE, place)?,
+                    (FrameKind::General, _) => self.container(&child, GENERAL, place)?,
                     (FrameKind::Composite, _) => self.container(&child, COMPOSITE, place)?,
                 }
             }

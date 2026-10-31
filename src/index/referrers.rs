@@ -69,6 +69,7 @@ const ELEMENTS: &[&str] = &[
     "LevelRef",
     "ScheduledStopPointRef",
     "QuayRef",
+    "SiteRef",
     "StopPlaceRef",
     "RouteRef",
     "LineRef",
@@ -450,12 +451,28 @@ impl<'a> Referrers<'a> {
     /// stop places none of whose quays is referred to either, quays, stop
     /// points, levels, routes, lines, journey patterns, day types, operating
     /// periods, availability conditions and operating days. Journeys are not
-    /// among them; nothing has to refer to a journey.
+    /// among them; nothing has to refer to a journey. A stop place naming its
+    /// quay (`QuayRef`) and a quay naming its stop place (`SiteRef`) state
+    /// what the stop is made of, not a use: neither counts.
     pub fn unreferenced(&self) -> impl Iterator<Item = ObjectId> + 'a {
         let graph = self.graph;
         let index = self.index;
         let stops = graph.first[Kind::Stop as usize];
-        let referred = move |object: u32| !graph.inverse.of_object(object).is_empty();
+        let stop_at = move |object: u32| index.stops.get(object.wrapping_sub(stops) as usize);
+        // Whether `a` and `b` are a stop place and one of its quays.
+        let parts_of_one = move |a: u32, b: u32| match (stop_at(a), stop_at(b)) {
+            (Some(first), Some(second)) => {
+                first.parent.map(|p| p.0 + stops) == Some(b)
+                    || second.parent.map(|p| p.0 + stops) == Some(a)
+            }
+            _ => false,
+        };
+        let referred = move |object: u32| {
+            graph
+                .inverse
+                .of_object(object)
+                .any(|at| !parts_of_one(object, graph.inverse.others[at]))
+        };
         // A stop place counts as referred to where one of its quays is.
         let mut place_used = vec![false; index.stops.len()];
         for (position, stop) in index.stops.iter().enumerate() {

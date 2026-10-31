@@ -77,7 +77,7 @@ fn an_undefined_entity_is_refused_and_never_expanded() {
         }
     );
     // Inside a carried-through fragment as well.
-    let xml = document("<GeneralFrame><members><Thing>&bomb;</Thing></members></GeneralFrame>");
+    let xml = document("<FareFrame><fareZones><Thing>&bomb;</Thing></fareZones></FareFrame>");
     let error =
         netex_rs::read(&xml).expect_err("an undefined entity in a fragment is an error too");
     assert_eq!(
@@ -152,7 +152,7 @@ fn a_fragment_larger_than_the_limit_is_refused() {
         ..Limits::default()
     };
     let xml = document(&format!(
-        "<GeneralFrame><Name>{}</Name></GeneralFrame>",
+        "<FareFrame><Name>{}</Name></FareFrame>",
         "x".repeat(300)
     ));
     let error =

@@ -374,10 +374,13 @@ netex_element! {
 }
 
 netex_container! {
-    /// The quays of a stop place.
+    /// The quays of a stop place: defined in place, or — as the French
+    /// profile writes them — defined beside it and named here.
     pub struct Quays of QuayItem {
         /// A quay.
         Quay(Quay) = "Quay",
+        /// A quay defined elsewhere.
+        QuayRef(Ref) = "QuayRef",
     }
 }
 

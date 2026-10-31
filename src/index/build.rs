@@ -11,14 +11,14 @@ use super::positions::{self, FrameSystems};
 use super::scope::Table;
 use super::strings::{Strings, Sym};
 use super::{CallUse, Index, PassingTime, StopId, StopKind, Unresolved};
-use crate::calendar::{assignment_rank, period_days, PeriodDays, Span};
+use crate::calendar::{assignment_rank, period_days, PeriodDays, Properties, Span};
 use crate::geometry::first_position;
 use crate::model::{
     AssignedDayType, AssignedDays, AvailabilityCondition, Date, DateTime, DayType, Frame,
-    JourneyPatternItem, JourneyPatternRef, LineRef, OperatingDay, OperatingPeriod,
-    OperatingPeriodItem, PointInPatternRef, Quay, Ref, RouteRefOrView, ServiceJourney,
-    ServiceJourneyPattern, SiteConnectionEnd, StopPlace, StopPointRef, StopUse, Time, ValidBetween,
-    ValidityConditionItem, VehicleJourney,
+    GeneralFrameMember, JourneyPatternItem, JourneyPatternRef, LineRef, OperatingDay,
+    OperatingPeriod, OperatingPeriodItem, PointInPatternRef, Quay, QuayItem, Ref, RouteRefOrView,
+    ServiceJourney, ServiceJourneyPattern, SiteConnectionEnd, StopPlace, StopPointRef, StopUse,
+    Time, ValidBetween, ValidityConditionItem, VehicleJourney,
 };
 use crate::stream::{self, Entity, ReadOptions, Scope, Sink, Skipped};
 use crate::xml::{Child, Cursor};
@@ -269,7 +269,9 @@ pub(crate) struct JourneyRecord {
 /// so nothing else rides along; a finding about one is made from its journey.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct RawTime {
-    pub(crate) point: Key,
+    /// The point of the pattern it names; none where it names none, and
+    /// stands for the point at its position.
+    pub(crate) point: Option<Key>,
     pub(crate) time: PassingTime,
 }
 
@@ -298,6 +300,10 @@ pub(crate) struct RawHeadway {
 pub(crate) struct DayTypeRecord {
     pub(crate) key: Key,
     pub(crate) origin: Sym,
+    /// What its properties say of its days.
+    pub(crate) properties: Properties,
+    /// Its own validity, first and last day, where it states both.
+    pub(crate) validity: Option<(i64, i64)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -515,6 +521,11 @@ pub struct IndexBuilder {
     pub(crate) stop_point_table: Table,
     pub(crate) stop_point_variants: Variants<u32>,
     pub(crate) assignments: Vec<(Pending, Option<Pending>, Option<Pending>)>,
+    /// The quays a stop place names by reference among its quays, with the
+    /// stop place: the quays defined beside it, as the French profile writes them.
+    pub(crate) quay_listings: Vec<(StopId, Pending)>,
+    /// The stop place a quay defined on its own names as its site.
+    pub(crate) quay_sites: Vec<(StopId, Pending)>,
     pub(crate) routes: Vec<RouteRecord>,
     pub(crate) lines: Vec<LineRecord>,
     pub(crate) patterns: Vec<PatternRecord>,
@@ -856,6 +867,15 @@ impl Visit<'_> {
                 Frame::Resource(resource) => {
                     self.conditions(resource.validity_conditions.as_ref());
                 }
+                // The members in document order, which is the order the lean
+                // mode meets them in.
+                Frame::General(general) => {
+                    let validity = Validity::of(&general.valid_between, inherited);
+                    self.conditions(general.validity_conditions.as_ref());
+                    for member in general.members.iter().flat_map(|m| &m.items) {
+                        self.member(member, validity);
+                    }
+                }
                 Frame::Unprocessed(_) => {}
             }
             self.default_system = inherited_system;
@@ -896,6 +916,7 @@ impl Visit<'_> {
     fn entity(&mut self, entity: &Entity, validity: Validity) {
         match entity {
             Entity::StopPlace(place) => self.stop_place(place, validity),
+            Entity::Quay(quay) => self.quay_on_its_own(quay, validity),
             Entity::Route(route) => self.route(route, validity),
             Entity::Line(line) => self.line(line, validity),
             Entity::ScheduledStopPoint(point) => self.stop_point(point, validity),
@@ -917,6 +938,45 @@ impl Visit<'_> {
             | Entity::DatedServiceJourney(journey)
             | Entity::TemplateServiceJourney(journey) => self.journey(journey, validity),
             Entity::ServiceJourneyInterchange(interchange) => self.interchange(interchange),
+            _ => {}
+        }
+    }
+
+    /// One member of a general frame of the full model, valid within
+    /// `validity`: taken as [`entity`](Self::entity) takes the same entity of
+    /// the lean stream.
+    fn member(&mut self, member: &GeneralFrameMember, validity: Validity) {
+        match member {
+            GeneralFrameMember::StopPlace(place) => self.stop_place(place, validity),
+            GeneralFrameMember::Quay(quay) => self.quay_on_its_own(quay, validity),
+            GeneralFrameMember::Route(route) => self.route(route, validity),
+            GeneralFrameMember::Line(line) => self.line(line, validity),
+            GeneralFrameMember::ScheduledStopPoint(point) => self.stop_point(point, validity),
+            GeneralFrameMember::ServiceLink(link) => self.service_link(link),
+            GeneralFrameMember::SiteConnection(connection) => self.connection(connection),
+            GeneralFrameMember::PassengerStopAssignment(assignment) => self.assignment(assignment),
+            GeneralFrameMember::ServiceJourneyPattern(pattern)
+            | GeneralFrameMember::JourneyPattern(pattern) => self.pattern(pattern, validity),
+            GeneralFrameMember::DayType(day_type) => self.day_type(day_type),
+            GeneralFrameMember::OperatingDay(day) => self.operating_day(day),
+            GeneralFrameMember::OperatingPeriod(period) => self.period(period, "OperatingPeriod"),
+            GeneralFrameMember::UicOperatingPeriod(period) => {
+                self.period(period, "UicOperatingPeriod")
+            }
+            GeneralFrameMember::DayTypeAssignment(assignment) => {
+                self.day_type_assignment(assignment)
+            }
+            GeneralFrameMember::AvailabilityCondition(condition) => {
+                self.condition(condition);
+            }
+            GeneralFrameMember::ServiceJourney(journey)
+            | GeneralFrameMember::DatedServiceJourney(journey)
+            | GeneralFrameMember::TemplateServiceJourney(journey) => {
+                self.journey(journey, validity)
+            }
+            GeneralFrameMember::ServiceJourneyInterchange(interchange) => {
+                self.interchange(interchange)
+            }
             _ => {}
         }
     }
@@ -1040,13 +1100,46 @@ impl Visit<'_> {
             }
         }
         for item in place.quays.iter().flat_map(|q| &q.items) {
-            if let crate::model::QuayItem::Quay(quay) = item {
-                self.quay(quay, parent, place, validity);
+            match item {
+                QuayItem::Quay(quay) => {
+                    let place_id = place.id.as_ref().map(|id| id.as_str());
+                    self.quay(quay, Some(parent), place_id, validity);
+                }
+                QuayItem::QuayRef(reference) => {
+                    let referrer = self.referrer("StopPlace", &place.id);
+                    let pending = self
+                        .builder
+                        .pending(reference, "QuayRef", referrer, self.origin);
+                    self.builder.quay_listings.push((parent, pending));
+                }
+                QuayItem::Unprocessed(_) => {}
             }
         }
     }
 
-    fn quay(&mut self, quay: &Quay, parent: StopId, place: &StopPlace, inherited: Validity) {
+    /// A quay defined beside its stop place: its stop place is found once
+    /// every document is in, as the one naming it among its quays, else the
+    /// one its `SiteRef` names.
+    fn quay_on_its_own(&mut self, quay: &Quay, inherited: Validity) {
+        let site = quay.site_ref.as_ref();
+        let site_id = site.and_then(|r| r.r#ref.as_ref()).map(|id| id.as_str());
+        let stop = self.quay(quay, None, site_id, inherited);
+        if let Some(site) = site {
+            let referrer = self.referrer("Quay", &quay.id);
+            let pending = self.builder.pending(site, "SiteRef", referrer, self.origin);
+            self.builder.quay_sites.push((stop, pending));
+        }
+    }
+
+    /// A quay of the stop place `place_id`, `parent` where the stop place is
+    /// known as it is read; the quay as the index numbers it.
+    fn quay(
+        &mut self,
+        quay: &Quay,
+        parent: Option<StopId>,
+        place_id: Option<&str>,
+        inherited: Validity,
+    ) -> StopId {
         let validity = Validity::of(&quay.valid_between, inherited);
         let key = self.builder.key(&quay.id, &quay.version);
         let location = quay.centroid.as_ref().and_then(|c| c.location.as_ref());
@@ -1067,7 +1160,7 @@ impl Visit<'_> {
                 dhid,
                 latitude.map(f64::to_bits),
                 longitude.map(f64::to_bits),
-                place.id.as_ref().map(|id| id.as_str()),
+                place_id,
                 quay.level_ref
                     .as_ref()
                     .and_then(|r| r.r#ref.as_ref())
@@ -1078,12 +1171,12 @@ impl Visit<'_> {
             kind: StopKind::Quay,
             latitude,
             longitude,
-            parent: Some(parent),
+            parent,
             level_ref,
             level: None,
             validity,
         };
-        self.gather_stop(record);
+        self.gather_stop(record)
     }
 
     fn route(&mut self, route: &crate::model::Route, inherited: Validity) {
@@ -1305,7 +1398,7 @@ impl Visit<'_> {
                     | PointInPatternRef::PointInJourneyPattern(r)
                     | PointInPatternRef::FarePointInPattern(r)
                     | PointInPatternRef::PointInSingleJourneyPath(r),
-                ) => Key {
+                ) => Some(Key {
                     id: self
                         .builder
                         .strings
@@ -1314,8 +1407,8 @@ impl Visit<'_> {
                         .version
                         .as_ref()
                         .map(|v| self.builder.strings.intern(v.as_str())),
-                },
-                None => continue,
+                }),
+                None => None,
             };
             let time = PassingTime {
                 arrival: seconds(&passing.arrival_time, passing.arrival_day_offset),
@@ -1510,9 +1603,16 @@ impl Visit<'_> {
 
     fn day_type(&mut self, day_type: &DayType) {
         let key = self.builder.key(&day_type.id, &day_type.version);
+        let properties = day_type
+            .properties
+            .as_ref()
+            .map_or(&[][..], |p| &p.properties);
+        let span = Span::of(&day_type.valid_between);
         self.builder.day_types.push(DayTypeRecord {
             key,
             origin: self.origin,
+            properties: crate::calendar::properties(properties),
+            validity: span.from.zip(span.to),
         });
     }
 
@@ -1726,6 +1826,7 @@ fn frame_defaults(frame: &Frame) -> Option<&crate::model::FrameDefaults> {
         Frame::Service(frame) => frame.frame_defaults.as_ref(),
         Frame::ServiceCalendar(frame) => frame.frame_defaults.as_ref(),
         Frame::Timetable(frame) => frame.frame_defaults.as_ref(),
+        Frame::General(frame) => frame.frame_defaults.as_ref(),
         Frame::Unprocessed(_) => None,
     }
 }

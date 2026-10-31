@@ -26,7 +26,7 @@ use super::{
     CallUse, Headway, Index, IndexedJourney, IndexedPattern, Interchange, JourneyId, LineId,
     PassingTime, StopId, StopKind, StopPointId, Transfer, Unresolved,
 };
-use crate::calendar::{governed, Governed, PeriodDays, PeriodIssue, Span};
+use crate::calendar::{governed, DaysOfWeek, Governed, PeriodDays, PeriodIssue, Properties, Span};
 use crate::geometry::{reading_order, AxisOrder};
 
 /// Builds the index; see [`IndexBuilder::finish`].
@@ -46,6 +46,7 @@ pub(super) fn finish(builder: IndexBuilder) -> Index {
         work.recorder = Some(work.definitions());
     }
     work.resolve_levels();
+    work.resolve_quay_places();
     work.resolve_assignments();
     work.check_links();
     work.variant_findings();
@@ -72,7 +73,7 @@ pub(super) fn finish(builder: IndexBuilder) -> Index {
     // own document first.
     let graph = recorder.map(|recorder| {
         recorder.finish(|element, id, document| match element {
-            "Quay" => b.stop_table.latest_of(id).map(|stop| (Kind::Stop, stop)),
+            "StopPlace" | "Quay" => b.stop_table.latest_of(id).map(|stop| (Kind::Stop, stop)),
             "Route" => scopes
                 .routes
                 .table
@@ -234,6 +235,64 @@ impl CallLists {
             }
         };
         (start, start + position_of(calls.len()))
+    }
+}
+
+/// A day type assignment as it applies: the day type and the days it names
+/// resolved, and whether it gives them or takes them away.
+struct ResolvedAssignment {
+    day_type: u32,
+    days: AssignmentDays,
+    available: bool,
+}
+
+/// The days an assignment names: one day — a date or an operating day's —,
+/// or an operating period's, by position.
+#[derive(Clone, Copy)]
+enum AssignmentDays {
+    Day(i64),
+    Period(u32),
+}
+
+/// The days of the calendar's span from `from` to `to`, both included.
+fn span_bits(first_day: i64, span: usize, from: i64, to: i64) -> DayBits {
+    let mut bits = DayBits::new(span);
+    let last = first_day + i64::try_from(span).unwrap_or(i64::MAX) - 1;
+    for day in from.max(first_day)..=to.min(last) {
+        bits.set((day - first_day) as usize, true);
+    }
+    bits
+}
+
+/// The days of the calendar's span falling on given days of the week, made
+/// once for each set of days of the week asked for.
+struct WeekBits {
+    first_day: i64,
+    span: usize,
+    made: FxHashMap<DaysOfWeek, DayBits>,
+}
+
+impl WeekBits {
+    fn new(first_day: i64, span: usize) -> Self {
+        WeekBits {
+            first_day,
+            span,
+            made: FxHashMap::default(),
+        }
+    }
+
+    /// The days of the span on `days`.
+    fn of(&mut self, days: DaysOfWeek) -> &DayBits {
+        let (first_day, span) = (self.first_day, self.span);
+        self.made.entry(days).or_insert_with(|| {
+            let mut bits = DayBits::new(span);
+            for offset in 0..span {
+                if days.contains(first_day + offset as i64) {
+                    bits.set(offset, true);
+                }
+            }
+            bits
+        })
     }
 }
 
@@ -529,6 +588,48 @@ impl Finish {
         }
     }
 
+    /// The stop place of every quay defined beside it: the stop place naming
+    /// it among its quays, else the one its `SiteRef` names. Each reference
+    /// resolves as any other, a `QuayRef` to nothing a reference to nothing.
+    fn resolve_quay_places(&mut self) {
+        for (place, pending) in std::mem::take(&mut self.b.quay_listings) {
+            if let Some(quay) = self.resolve_stop(&pending) {
+                match self.b.stops[quay as usize].kind {
+                    StopKind::Quay => self.claim(quay, place),
+                    StopKind::StopPlace => self.check_class(&pending, "StopPlace"),
+                }
+            }
+        }
+        for (quay, pending) in std::mem::take(&mut self.b.quay_sites) {
+            let Some(site) = self.resolve_stop(&pending) else {
+                continue;
+            };
+            if self.b.stops[site as usize].kind == StopKind::StopPlace {
+                self.claim(quay.0, StopId(site));
+            }
+        }
+    }
+
+    /// Makes `place` the stop place of `quay`, unless another one claimed it
+    /// first: a finding then, naming `place`.
+    fn claim(&mut self, quay: u32, place: StopId) {
+        let record = &mut self.b.stops[quay as usize];
+        match record.parent {
+            None => record.parent = Some(place),
+            Some(kept) if kept == place => {}
+            Some(_) => {
+                let (id, origin) = (record.key.id, record.origin);
+                let other = self.b.stops[place.0 as usize].key.id;
+                self.found(
+                    Concern::QuayOfTwoStopPlaces,
+                    "Quay",
+                    (origin, id),
+                    Some(other),
+                );
+            }
+        }
+    }
+
     /// Stop points → stops, quay before stop place. A stop point assigned in
     /// several documents takes the assignment of the document named first;
     /// within one document, the last.
@@ -601,6 +702,8 @@ impl Finish {
         ranks.sort(&mut self.b.periods, |r| r.origin);
         ranks.sort(&mut self.b.conditions, |r| r.origin);
         ranks.sort(&mut self.b.operating_days, |r| r.origin);
+        ranks.sort(&mut self.b.quay_listings, |(_, pending)| pending.origin);
+        ranks.sort(&mut self.b.quay_sites, |(_, pending)| pending.origin);
         // Assignments apply in the order of their documents' names, within a
         // document in their order.
         self.b
@@ -900,59 +1003,56 @@ impl Finish {
         patterns
     }
 
-    /// The days of every day type definition: each assignment, in the order
-    /// of its document's name, gives the day type it names — in its own
-    /// document first — the days of the period, operating day or date it
-    /// names, or takes them away; and the days of every availability
-    /// condition. A period, condition, operating day or day type stated
-    /// otherwise by another document is a finding.
+    /// The days of every day type definition: those its assignments give it
+    /// — each resolved in the assignment's document first — and, where its
+    /// properties decide its days ([`crate::calendar`]), the days of its
+    /// validity on its days of the week, the assignments adding to them and
+    /// taking away; and the days of every availability condition. A period,
+    /// condition, operating day or day type stated otherwise by another
+    /// document is a finding.
     fn calendar(&mut self, scopes: &Scopes) -> Calendar {
-        let (first_day, span) = self.span_of_days();
+        let assignments = self.resolved_assignments(scopes);
+        let by_properties = self.decided_by_properties(&assignments);
+        let (first_day, span) = self.span_of_days(&assignments, &by_properties);
         let periods = bits_of_periods(&self.b.periods, (first_day, span), &mut self.findings);
         let conditions = bits_of_periods(&self.b.conditions, (first_day, span), &mut self.findings);
-        let mut bits: Vec<DayBits> = vec![DayBits::new(span); self.b.day_types.len()];
-        let assignments = std::mem::take(&mut self.b.day_type_assignments);
+        let mut week = WeekBits::new(first_day, span);
+        let mut bits: Vec<DayBits> = self
+            .b
+            .day_types
+            .iter()
+            .zip(&by_properties)
+            .map(
+                |(record, &decided)| match (decided, record.properties, record.validity) {
+                    (true, Properties::DaysOfWeek(days), Some((from, to))) => {
+                        let mut own = week.of(days).clone();
+                        own.intersect(&span_bits(first_day, span, from, to));
+                        own
+                    }
+                    _ => DayBits::new(span),
+                },
+            )
+            .collect();
         for assignment in &assignments {
-            let Some(day_type) = self.resolve_in(&scopes.day_types, &assignment.day_type) else {
-                continue;
-            };
-            let one_day = |day: i64| {
-                let mut days = DayBits::new(span);
-                if let Ok(offset) = usize::try_from(day - first_day) {
-                    days.set(offset, true);
-                }
-                days
-            };
-            let single;
-            let days = match &assignment.days {
-                AssignedDaysRecord::Date(day) => {
-                    single = one_day(*day);
-                    &single
-                }
-                AssignedDaysRecord::OperatingDay(pending) => {
-                    match self.resolve_in(&scopes.operating_days, pending) {
-                        Some(index) => {
-                            single = one_day(self.b.operating_days[index as usize].day);
-                            &single
+            let day_type = assignment.day_type as usize;
+            let days = match assignment.days {
+                AssignmentDays::Day(day) => span_bits(first_day, span, day, day),
+                AssignmentDays::Period(period) => {
+                    let mut days = periods[period as usize].clone();
+                    // A plain period gives the days of the week the day type names.
+                    if self.b.periods[period as usize].bits.is_none() {
+                        if let Properties::DaysOfWeek(named) = self.b.day_types[day_type].properties
+                        {
+                            days.intersect(week.of(named));
                         }
-                        None => continue,
                     }
-                }
-                AssignedDaysRecord::Period(pending) => {
-                    match self.resolve_in(&scopes.periods, pending) {
-                        Some(index) => {
-                            self.check_class(pending, self.b.periods[index as usize].element);
-                            &periods[index as usize]
-                        }
-                        None => continue,
-                    }
+                    days
                 }
             };
-            let target = &mut bits[day_type as usize];
             if assignment.available {
-                target.union(days);
+                bits[day_type].union(&days);
             } else {
-                target.subtract(days);
+                bits[day_type].subtract(&days);
             }
         }
         // Definitions another document states otherwise.
@@ -988,10 +1088,109 @@ impl Finish {
         }
     }
 
+    /// The day type assignments, in the order they apply, their references
+    /// resolved — the day type first, then the period or operating day —;
+    /// one whose references do not resolve gives no day.
+    fn resolved_assignments(&mut self, scopes: &Scopes) -> Vec<ResolvedAssignment> {
+        let assignments = std::mem::take(&mut self.b.day_type_assignments);
+        let mut resolved = Vec::with_capacity(assignments.len());
+        for assignment in &assignments {
+            let Some(day_type) = self.resolve_in(&scopes.day_types, &assignment.day_type) else {
+                continue;
+            };
+            let days = match &assignment.days {
+                AssignedDaysRecord::Date(day) => AssignmentDays::Day(*day),
+                AssignedDaysRecord::OperatingDay(pending) => {
+                    match self.resolve_in(&scopes.operating_days, pending) {
+                        Some(index) => {
+                            AssignmentDays::Day(self.b.operating_days[index as usize].day)
+                        }
+                        None => continue,
+                    }
+                }
+                AssignedDaysRecord::Period(pending) => {
+                    match self.resolve_in(&scopes.periods, pending) {
+                        Some(index) => {
+                            self.check_class(pending, self.b.periods[index as usize].element);
+                            AssignmentDays::Period(index)
+                        }
+                        None => continue,
+                    }
+                }
+            };
+            resolved.push(ResolvedAssignment {
+                day_type,
+                days,
+                available: assignment.available,
+            });
+        }
+        resolved
+    }
+
+    /// Whether the properties of each day type definition decide its days: a
+    /// validity of a first and a last day and days of the week, and no
+    /// assignment giving it a period or a day of its validity on one of those
+    /// days. A day type whose properties would decide its days but name more
+    /// than days of the week — a validity, and no assignment giving it a day —,
+    /// or that is assigned a period without day bits, is a finding: its
+    /// assignments' days stand as they are.
+    fn decided_by_properties(&mut self, assignments: &[ResolvedAssignment]) -> Vec<bool> {
+        let day_types = &self.b.day_types;
+        let mut given_own_day = vec![false; day_types.len()];
+        let mut given_any_day = vec![false; day_types.len()];
+        let mut assigned_plain_period = vec![false; day_types.len()];
+        for assignment in assignments {
+            let day_type = assignment.day_type as usize;
+            let record = &day_types[day_type];
+            if let AssignmentDays::Period(period) = assignment.days {
+                if self.b.periods[period as usize].bits.is_none() {
+                    assigned_plain_period[day_type] = true;
+                }
+            }
+            if !assignment.available {
+                continue;
+            }
+            given_any_day[day_type] = true;
+            given_own_day[day_type] |= match assignment.days {
+                AssignmentDays::Period(_) => true,
+                AssignmentDays::Day(day) => match (record.properties, record.validity) {
+                    (Properties::DaysOfWeek(named), Some((from, to))) => {
+                        (from..=to).contains(&day) && named.contains(day)
+                    }
+                    _ => false,
+                },
+            };
+        }
+        let mut decided = Vec::with_capacity(day_types.len());
+        let mut unread = Vec::new();
+        for (position, record) in day_types.iter().enumerate() {
+            decided.push(match record.properties {
+                Properties::DaysOfWeek(_) => record.validity.is_some() && !given_own_day[position],
+                Properties::Unread => {
+                    let relied_on = record.validity.is_some() && !given_any_day[position];
+                    if relied_on || assigned_plain_period[position] {
+                        unread.push((record.origin, record.key.id));
+                    }
+                    false
+                }
+                Properties::Absent => false,
+            });
+        }
+        for entity in unread {
+            self.found(Concern::PropertiesOfDayUnread, "DayType", entity, None);
+        }
+        decided
+    }
+
     /// The first day of the dataset's calendar and how many days it spans:
-    /// from the first to the last day any period, condition, operating day
-    /// or date assigned states.
-    fn span_of_days(&self) -> (i64, usize) {
+    /// from the first to the last day any period, condition, operating day,
+    /// day assigned or validity of a day type its properties decide
+    /// (`by_properties`, by position) states.
+    fn span_of_days(
+        &self,
+        assignments: &[ResolvedAssignment],
+        by_properties: &[bool],
+    ) -> (i64, usize) {
         let mut first_day = i64::MAX;
         let mut last_day = i64::MIN;
         let mut extend = |first: i64, last: i64| {
@@ -1003,13 +1202,18 @@ impl Finish {
                 extend(first, last);
             }
         }
-        for assignment in &self.b.day_type_assignments {
-            if let AssignedDaysRecord::Date(day) = assignment.days {
+        for assignment in assignments {
+            if let AssignmentDays::Day(day) = assignment.days {
                 extend(day, day);
             }
         }
         for day in &self.b.operating_days {
             extend(day.day, day.day);
+        }
+        for (record, &decided) in self.b.day_types.iter().zip(by_properties) {
+            if let (true, Some((first, last))) = (decided, record.validity) {
+                extend(first, last);
+            }
         }
         if first_day <= last_day {
             let span = usize::try_from(last_day - first_day + 1).unwrap_or(0);
@@ -1306,7 +1510,10 @@ impl Finish {
 
     /// The calls of a journey's pattern with the journey's passing times at
     /// each, into `laid_out`: none where it states none. A passing time at a
-    /// point the pattern does not have is a finding.
+    /// point the pattern does not have is a finding. A passing time naming no
+    /// point is at the point of its position, in the order the pattern states
+    /// its points; where such times are other in number than the points, that
+    /// is a finding too.
     fn lay_out_pattern(
         &mut self,
         record: &JourneyRecord,
@@ -1330,25 +1537,36 @@ impl Finish {
             // the fallback when they are not.
             let time = raw
                 .get(position)
-                .filter(|r| r.point.id == key.id)
-                .or_else(|| raw.iter().find(|r| r.point.id == key.id))
+                .filter(|r| r.point.is_none_or(|point| point.id == key.id))
+                .or_else(|| raw.iter().find(|r| r.point.is_some_and(|p| p.id == key.id)))
                 .map_or(PassingTime::NONE, |r| r.time);
             laid_out.times.push(time);
         }
+        let points = keys.len();
         for raw_time in raw {
-            if !keys.iter().any(|k| k.id == raw_time.point.id) {
+            let Some(point) = raw_time.point else {
+                continue;
+            };
+            if !keys.iter().any(|k| k.id == point.id) {
                 let strings = &self.b.strings;
                 self.b.unresolved.push(Unresolved {
                     origin: strings.resolve(record.origin).to_owned(),
                     referrer: format!("ServiceJourney {}", strings.resolve(record.key.id)),
                     element: "StopPointInJourneyPatternRef".to_owned(),
-                    id: strings.resolve(raw_time.point.id).to_owned(),
-                    version: raw_time
-                        .point
-                        .version
-                        .map(|v| strings.resolve(v).to_owned()),
+                    id: strings.resolve(point.id).to_owned(),
+                    version: point.version.map(|v| strings.resolve(v).to_owned()),
                 });
             }
+        }
+        if raw.iter().any(|r| r.point.is_none()) && raw.len() != points {
+            let entity = (record.origin, record.key.id);
+            let about = Some(patterns.indexed[pattern as usize].key.id);
+            self.found(
+                Concern::PassingTimesOtherThanPoints,
+                "ServiceJourney",
+                entity,
+                about,
+            );
         }
     }
 

@@ -50,6 +50,7 @@
             "days-outside-line-version", "journey-outside-line-version", "flexible-line-journey",
             "headway-group-without-runs", "axis-order-swapped", "axis-order-undecided",
             "resolved-ignoring-version", "resolved-as-other-class", "unknown-reference-system",
+            "quay-of-two-stop-places", "passing-times-other-than-points", "properties-of-day-unread",
             "journey-without-travel-time", "time-goes-back", "stop-point-without-place",
             "stop-point-without-position", "unreferenced"
           ]

@@ -89,6 +89,23 @@ pub enum Concern {
     /// a position. Names the system. Made only with the `crs` feature, which
     /// reads positions in other systems than WGS 84 at all.
     UnknownReferenceSystem,
+    /// A quay defined beside its stop place that two stop places claim — by
+    /// naming it among their quays (`QuayRef`), or by the quay's `SiteRef`
+    /// naming another than the one listing it: kept with the stop place
+    /// that lists it first, a listing before a `SiteRef`. Names the other
+    /// stop place.
+    QuayOfTwoStopPlaces,
+    /// A journey whose passing times name no point of its pattern — NeTEx
+    /// 1.x leaves the reference out, and the French profile with it —, but
+    /// are other in number than the points of its pattern: read by position
+    /// as far as both go. Names the pattern.
+    PassingTimesOtherThanPoints,
+    /// A day type whose days are its properties' — a validity and days of
+    /// the week, no assignment of its own giving such a day — but whose
+    /// properties name more than days of the week (holidays, seasons, weeks of
+    /// the month), which the crate does not read: it runs on the days of its
+    /// assignments alone.
+    PropertiesOfDayUnread,
 }
 
 impl Concern {
@@ -111,6 +128,9 @@ impl Concern {
         Concern::ResolvedIgnoringVersion,
         Concern::ResolvedAsOtherClass,
         Concern::UnknownReferenceSystem,
+        Concern::QuayOfTwoStopPlaces,
+        Concern::PassingTimesOtherThanPoints,
+        Concern::PropertiesOfDayUnread,
     ];
 
     /// The concern's name in reports and on command lines, in lower case with
@@ -134,6 +154,9 @@ impl Concern {
             Concern::ResolvedIgnoringVersion => "resolved-ignoring-version",
             Concern::ResolvedAsOtherClass => "resolved-as-other-class",
             Concern::UnknownReferenceSystem => "unknown-reference-system",
+            Concern::QuayOfTwoStopPlaces => "quay-of-two-stop-places",
+            Concern::PassingTimesOtherThanPoints => "passing-times-other-than-points",
+            Concern::PropertiesOfDayUnread => "properties-of-day-unread",
         }
     }
 
@@ -176,6 +199,13 @@ impl Concern {
             Concern::ResolvedAsOtherClass => "reference resolved to another class than it names",
             Concern::UnknownReferenceSystem => {
                 "position in a reference system the crate does not know, left without a position"
+            }
+            Concern::QuayOfTwoStopPlaces => "quay two stop places claim, kept with the first",
+            Concern::PassingTimesOtherThanPoints => {
+                "passing times naming no point, other in number than the pattern's points"
+            }
+            Concern::PropertiesOfDayUnread => {
+                "day type whose properties name more than days of the week, its assignments' days alone"
             }
         }
     }

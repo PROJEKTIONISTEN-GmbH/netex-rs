@@ -264,7 +264,7 @@ fn every_element_the_walk_skips_is_handed_to_the_sink_with_where_it_stands() {
     let xml = r#"<PublicationDelivery xmlns="http://www.netex.org.uk/netex" xmlns:o="urn:other" version="1.10">
       <PublicationTimestamp>2026-10-10T00:00:00</PublicationTimestamp>
       <dataObjects>
-        <GeneralFrame id="g" version="1"/>
+        <FareFrame id="f" version="1"/>
         <CompositeFrame id="c" version="1">
           <FrameDefaults><DefaultLocale><TimeZone>Europe/Berlin</TimeZone></DefaultLocale></FrameDefaults>
           <frames>
@@ -287,7 +287,7 @@ fn every_element_the_walk_skips_is_handed_to_the_sink_with_where_it_stands() {
         recorded.seen,
         [
             "PublicationTimestamp at Delivery in None",
-            "GeneralFrame at Frames in None",
+            "FareFrame at Frames in None",
             "FrameDefaults at Frame(Composite) in Some(Composite)",
             "extension at Frame(Service) in Some(Service)",
             "entity Line",

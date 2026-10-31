@@ -16,8 +16,20 @@
 //!   `ValidBetween` each, as the Austrian deliveries write it — limits the
 //!   days of a journey naming one: a version governs the days it is valid on
 //!   but those a version beginning later is valid on ([`governed`]).
+//! - A day type's properties are read where they name days of the week and
+//!   nothing else ([`properties`]): an assignment of the day type to an
+//!   operating period without day bits gives the period's days on those days
+//!   of the week; and a day type stating a validity of a first and a last day,
+//!   none of whose assignments gives it a day of its own — a period, or a date
+//!   within its validity on one of its days of the week —, runs on the days of
+//!   its validity on its days of the week, its assignments adding days to them
+//!   and taking days away in their order. That is the French profile's day
+//!   type: a validity and days of the week, the assignments its exceptions. A
+//!   day type whose assignments do give it such a day — as where a delivery
+//!   lists each day it runs on — runs on its assignments' days alone, its
+//!   properties describing them.
 
-use crate::model::{DateTime, Order, ValidBetween};
+use crate::model::{DateTime, Order, PropertyOfDay, ValidBetween};
 
 /// The days a version of an entity is valid on, either end open where it
 /// states none.
@@ -171,6 +183,90 @@ pub fn period_days(from: Option<i64>, to: Option<i64>, bits: Option<&str>) -> Pe
     }
 }
 
+/// Days of the week, as a `DaysOfWeek` list of a property of day names them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct DaysOfWeek(u8);
+
+impl DaysOfWeek {
+    /// No day.
+    pub const NONE: DaysOfWeek = DaysOfWeek(0);
+    /// Every day of the week.
+    pub const EVERY: DaysOfWeek = DaysOfWeek(0b111_1111);
+
+    /// The days a list of the schema's `DayOfWeekEnumeration` tokens names —
+    /// `Monday` to `Sunday`, `Weekdays`, `Weekend`, `Everyday`, `none` —, or
+    /// none where a token is not one of them.
+    pub fn parse(list: &str) -> Option<DaysOfWeek> {
+        list.split_whitespace()
+            .try_fold(DaysOfWeek::NONE, |days, token| {
+                let named = match token {
+                    "Monday" => 1,
+                    "Tuesday" => 1 << 1,
+                    "Wednesday" => 1 << 2,
+                    "Thursday" => 1 << 3,
+                    "Friday" => 1 << 4,
+                    "Saturday" => 1 << 5,
+                    "Sunday" => 1 << 6,
+                    "Weekdays" => 0b001_1111,
+                    "Weekend" => 0b110_0000,
+                    "Everyday" => DaysOfWeek::EVERY.0,
+                    "none" => 0,
+                    _ => return None,
+                };
+                Some(DaysOfWeek(days.0 | named))
+            })
+    }
+
+    /// Whether `day`, in days since 1970-01-01, falls on one of these days.
+    pub fn contains(self, day: i64) -> bool {
+        // 1970-01-01 was a Thursday, the fourth day from Monday.
+        let from_monday = (day + 3).rem_euclid(7);
+        self.0 & (1 << from_monday) != 0
+    }
+}
+
+/// What a day type's properties say of the days it runs on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Properties {
+    /// It states none.
+    Absent,
+    /// Days of the week and nothing else.
+    DaysOfWeek(DaysOfWeek),
+    /// More than days of the week — holidays, seasons, weeks of the month, a
+    /// token the schema does not list —, which the crate does not read.
+    Unread,
+}
+
+/// What the properties of a day type say of its days: each property of day
+/// one alternative, the days of the week it names — every day where it names
+/// none, as the French profile says, "Tous les jours par défaut" —, and
+/// [`Properties::Unread`] where any names more than days of the week.
+pub fn properties(properties: &[PropertyOfDay]) -> Properties {
+    if properties.is_empty() {
+        return Properties::Absent;
+    }
+    let mut days = DaysOfWeek::NONE;
+    for property in properties {
+        let more = property.weeks_of_month.is_some()
+            || property.month_of_year.is_some()
+            || property.day_of_month.is_some()
+            || property.day_of_year.is_some()
+            || property.country_ref.is_some()
+            || property.holiday_types.is_some()
+            || property.seasons.is_some()
+            || !property.unprocessed.is_empty();
+        let named = match &property.days_of_week {
+            Some(list) => DaysOfWeek::parse(list),
+            None => Some(DaysOfWeek::EVERY),
+        };
+        match named {
+            Some(named) if !more => days.0 |= named.0,
+            _ => return Properties::Unread,
+        }
+    }
+    Properties::DaysOfWeek(days)
+}
+
 /// Where an assignment of a day type with `order` stands among the
 /// assignments of its document: by its order, one stating none after every
 /// one that does.
@@ -233,6 +329,53 @@ mod tests {
                 days: Vec::new(),
                 issue: Some(PeriodIssue::NoFirstDay)
             }
+        );
+    }
+
+    #[test]
+    fn days_of_the_week_are_read_from_monday_on() {
+        let weekend = DaysOfWeek::parse("Saturday Sunday").expect("days of the week");
+        assert_eq!(Some(weekend), DaysOfWeek::parse("Weekend"));
+        assert_eq!(
+            DaysOfWeek::parse("Weekdays Weekend"),
+            Some(DaysOfWeek::EVERY)
+        );
+        assert_eq!(DaysOfWeek::parse("none"), Some(DaysOfWeek::NONE));
+        assert_eq!(DaysOfWeek::parse("Friday Holiday"), None);
+        // 1970-01-01 was a Thursday, 2026-10-17 a Saturday.
+        let saturday = crate::model::Date::from("2026-10-17")
+            .days_since_epoch()
+            .expect("a date");
+        assert!(weekend.contains(saturday) && weekend.contains(saturday + 1));
+        assert!(!weekend.contains(saturday + 2) && !weekend.contains(saturday - 1));
+        let thursday = DaysOfWeek::parse("Thursday").expect("a day");
+        assert!(thursday.contains(0) && !thursday.contains(1) && thursday.contains(-7));
+    }
+
+    #[test]
+    fn properties_are_alternatives_of_days_of_the_week_or_unread() {
+        let property = |days: Option<&str>| PropertyOfDay {
+            days_of_week: days.map(Box::from),
+            ..PropertyOfDay::default()
+        };
+        assert_eq!(properties(&[]), Properties::Absent);
+        assert_eq!(
+            properties(&[property(Some("Monday")), property(Some("Friday"))]),
+            Properties::DaysOfWeek(DaysOfWeek::parse("Monday Friday").expect("days"))
+        );
+        assert_eq!(
+            properties(&[property(None)]),
+            Properties::DaysOfWeek(DaysOfWeek::EVERY),
+            "a property naming no day of the week is every day"
+        );
+        let summer_saturdays = PropertyOfDay {
+            seasons: Some("Summer".into()),
+            ..property(Some("Saturday"))
+        };
+        assert_eq!(properties(&[summer_saturdays]), Properties::Unread);
+        assert_eq!(
+            properties(&[property(Some("Feiertag"))]),
+            Properties::Unread
         );
     }
 
