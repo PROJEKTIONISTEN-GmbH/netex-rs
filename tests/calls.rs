@@ -218,6 +218,98 @@ fn a_journey_without_two_timed_calls_is_left_out() {
     );
 }
 
+/// Three journeys over a pattern of three points whose passing times name no
+/// point, as NeTEx 1.x allows and the French deliveries write them: each time
+/// is at the point of its position. Two times on three points are the first
+/// two, and three points for four times take the first three; either is a
+/// finding.
+#[test]
+fn a_passing_time_naming_no_point_is_at_the_point_of_its_position() {
+    let document = Timetable::new()
+        .line("L", "1", None)
+        .stop_point("A")
+        .stop_point("B")
+        .stop_point("C")
+        .pattern(
+            "P",
+            "L",
+            &[
+                Point::at("P1", "A"),
+                Point::at("P2", "B"),
+                Point::at("P3", "C"),
+            ],
+        )
+        .journey_by_position(
+            "J",
+            ("L", "1"),
+            "P",
+            &[],
+            &[
+                (None, Some("08:00:00")),
+                (Some("08:10:00"), Some("08:11:00")),
+                (Some("08:20:00"), None),
+            ],
+        )
+        .journey_by_position(
+            "SHORT",
+            ("L", "1"),
+            "P",
+            &[],
+            &[(None, Some("09:00:00")), (Some("09:10:00"), None)],
+        )
+        .journey_by_position(
+            "LONG",
+            ("L", "1"),
+            "P",
+            &[],
+            &[
+                (None, Some("10:00:00")),
+                (Some("10:10:00"), Some("10:11:00")),
+                (Some("10:20:00"), Some("10:21:00")),
+                (Some("10:30:00"), None),
+            ],
+        )
+        .xml();
+    let documents = [("A.xml".to_owned(), document)];
+    for index in [serially(&documents), merged(&documents)] {
+        let times = |id: &str| -> Vec<(Option<u32>, Option<u32>)> {
+            let journey = index.journey_by_id(id).expect("the journey");
+            index
+                .journey(journey)
+                .passing_times
+                .iter()
+                .map(|time| (time.arrival, time.departure))
+                .collect()
+        };
+        let journey = index.journey_by_id("J").expect("the journey");
+        assert_eq!(calls(&index, journey), ["A", "B", "C"]);
+        assert_eq!(
+            times("J"),
+            [
+                (None, Some(8 * 3600)),
+                (Some(8 * 3600 + 600), Some(8 * 3600 + 660)),
+                (Some(8 * 3600 + 1200), None)
+            ]
+        );
+        let short = index.journey_by_id("SHORT").expect("the short run");
+        assert_eq!(calls(&index, short), ["A", "B"]);
+        let long = index.journey_by_id("LONG").expect("the long run");
+        assert_eq!(calls(&index, long), ["A", "B", "C"]);
+        assert_eq!(
+            times("LONG")[2],
+            (Some(10 * 3600 + 1200), Some(10 * 3600 + 1260))
+        );
+        assert_eq!(
+            findings(&index, Concern::PassingTimesOtherThanPoints),
+            [
+                "passing times naming no point, other in number than the pattern's points: ServiceJourney LONG in A.xml (P)",
+                "passing times naming no point, other in number than the pattern's points: ServiceJourney SHORT in A.xml (P)"
+            ]
+        );
+        assert!(index.unresolved().is_empty(), "{:?}", index.unresolved());
+    }
+}
+
 /// Journeys over one pattern (`tests/fixtures/fragments/frames/journeys-and-blocks.xml`):
 /// two with a time at every point, one naming its vehicle type and one taking
 /// it from its block, and a third stating nothing, which is left out.

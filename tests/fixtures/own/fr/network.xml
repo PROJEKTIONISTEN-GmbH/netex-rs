@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The network of a delivery in the French profile (NeTEx France), as the
+  profile's network.xml: one general frame of the type NETEX_RESEAU naming the
+  network's lines. The model does not type a network: the reader carries it
+  through as it was written.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.10:FR-NETEX-2.3">
+  <PublicationTimestamp>2026-10-01T08:00:00</PublicationTimestamp>
+  <ParticipantRef>EXEMPLE</ParticipantRef>
+  <dataObjects>
+    <GeneralFrame id="EX:GeneralFrame:NETEX_RESEAU:LOC" version="1">
+      <TypeOfFrameRef ref="FR:TypeOfFrame:NETEX_RESEAU:"/>
+      <members>
+        <Network id="EX:Network:exemple:LOC" version="1">
+          <Name>Réseau d'Exemple</Name>
+          <members>
+            <LineRef ref="EX:Line:10:LOC" versionRef="1"/>
+          </members>
+        </Network>
+      </members>
+    </GeneralFrame>
+  </dataObjects>
+</PublicationDelivery>

@@ -19,7 +19,7 @@ mod support;
 
 use std::collections::BTreeMap;
 
-use netex_rs::index::{IndexBuilder, LineId, StopPointId};
+use netex_rs::index::{Concern, IndexBuilder, LineId, StopPointId};
 use netex_rs::model::{
     DayType, DayTypeAssignment, EntranceItem, OperatingPeriod, QuayItem, ScheduledStopPoint,
     ServiceJourney, ServiceJourneyInterchange, Submode,
@@ -151,7 +151,7 @@ fn read_document(xml: &str) -> Result<Vec<String>, String> {
 #[test]
 fn every_set_of_frames_reads_writes_back_and_indexes_alike_in_full_and_streamed() {
     let frames = fragments::frames();
-    assert_eq!(frames.len(), 22);
+    assert_eq!(frames.len(), 23);
     let mut failures = Vec::new();
     for fixture in &frames {
         let document = fragments::publication(&fixture.xml);
@@ -449,5 +449,53 @@ fn a_submode_stated_beside_a_mode_is_read_where_it_stands() {
             ("ex:Quay:Hafen:1".to_owned(), ferry()),
             ("ex:StopPlace:Markt".to_owned(), None),
         ]
+    );
+}
+
+/// Quays defined beside their stop place (`quays-beside-their-stop-place.xml`):
+/// a quay belongs to the stop place naming it among its quays, else to the one
+/// its `SiteRef` names. A second claim — a second stop place naming it, or its
+/// `SiteRef` naming another than the one that does — leaves it where it is and
+/// is a finding; a `QuayRef` to nothing is a reference to nothing, and one
+/// naming a stop place resolves to another class than it names.
+#[test]
+fn a_quay_defined_beside_its_stop_place_belongs_to_the_one_naming_it() {
+    let name = "quays-beside-their-stop-place.xml";
+    let index = serially(&[(name.to_owned(), fragments::document(name))]);
+    let place_of = |quay: &str| {
+        let quay = index.stop(index.stop_by_id(quay).expect("the quay"));
+        quay.parent.map(|place| index.stop(place).id)
+    };
+    for quay in ["ex:Quay:1", "ex:Quay:2", "ex:Quay:3", "ex:Quay:4"] {
+        assert_eq!(place_of(quay), Some("ex:StopPlace:A"), "{quay}");
+    }
+    assert_eq!(place_of("ex:Quay:5"), None);
+    let findings = |concern: Concern| -> Vec<String> {
+        index
+            .findings()
+            .filter(|finding| finding.concern == concern)
+            .map(|finding| finding.to_string())
+            .collect()
+    };
+    assert_eq!(
+        findings(Concern::QuayOfTwoStopPlaces),
+        [
+            "quay two stop places claim, kept with the first: Quay ex:Quay:3 in quays-beside-their-stop-place.xml (ex:StopPlace:B)",
+            "quay two stop places claim, kept with the first: Quay ex:Quay:4 in quays-beside-their-stop-place.xml (ex:StopPlace:B)"
+        ]
+    );
+    assert_eq!(
+        findings(Concern::ResolvedAsOtherClass),
+        ["reference resolved to another class than it names: QuayRef ex:StopPlace:A in quays-beside-their-stop-place.xml (StopPlace)"]
+    );
+    let unresolved: Vec<String> = index.unresolved().iter().map(ToString::to_string).collect();
+    assert_eq!(unresolved.len(), 1, "{unresolved:?}");
+    assert_eq!(
+        (
+            index.unresolved()[0].element.as_str(),
+            index.unresolved()[0].id.as_str(),
+            index.unresolved()[0].referrer.as_str()
+        ),
+        ("QuayRef", "ex:Quay:gone", "StopPlace ex:StopPlace:A")
     );
 }

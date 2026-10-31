@@ -132,6 +132,29 @@ impl Timetable {
         self
     }
 
+    /// A day type valid from `valid`'s first to its last day, where given,
+    /// with a property of day for each of `properties`, the property's
+    /// children as written: `<DaysOfWeek>Saturday</DaysOfWeek>`.
+    pub fn day_type_with(
+        mut self,
+        id: &str,
+        valid: Option<(&str, &str)>,
+        properties: &[&str],
+    ) -> Self {
+        let valid = valid.map_or(String::new(), |(from, to)| {
+            format!("<ValidBetween><FromDate>{from}T00:00:00</FromDate><ToDate>{to}T00:00:00</ToDate></ValidBetween>")
+        });
+        let properties: String = properties
+            .iter()
+            .map(|property| format!("<PropertyOfDay>{property}</PropertyOfDay>"))
+            .collect();
+        let _ = write!(
+            self.day_types,
+            r#"<DayType id="{id}" version="1">{valid}<Name>{id}</Name><properties>{properties}</properties></DayType>"#
+        );
+        self
+    }
+
     /// A UIC operating period from `from` to `to` with a bit per day.
     pub fn uic_period(mut self, id: &str, from: &str, to: &str, bits: &str) -> Self {
         let _ = write!(
@@ -171,6 +194,57 @@ impl Timetable {
         let _ = write!(
             self.assignments,
             r#"<DayTypeAssignment id="{id}" version="1" order="{order}"><OperatingPeriodRef ref="{period}" version="1"/><DayTypeRef ref="{day_type}" version="1"/>{available}</DayTypeAssignment>"#
+        );
+        self
+    }
+
+    /// A day type assignment of the date `date` to `day_type`, in `order`,
+    /// available or not.
+    pub fn date_assignment(
+        mut self,
+        id: &str,
+        order: u32,
+        date: &str,
+        day_type: &str,
+        available: bool,
+    ) -> Self {
+        let _ = write!(
+            self.assignments,
+            r#"<DayTypeAssignment id="{id}" version="1" order="{order}"><Date>{date}</Date><DayTypeRef ref="{day_type}" version="1"/><isAvailable>{available}</isAvailable></DayTypeAssignment>"#
+        );
+        self
+    }
+
+    /// A journey of `line` in `line_version` along `pattern` on `day_types`,
+    /// whose passing times — arrival and departure as written — name no point
+    /// of the pattern, as NeTEx 1.x allows.
+    pub fn journey_by_position(
+        mut self,
+        id: &str,
+        (line, line_version): (&str, &str),
+        pattern: &str,
+        day_types: &[&str],
+        times: &[(Option<&str>, Option<&str>)],
+    ) -> Self {
+        let passing: String = times
+            .iter()
+            .map(|(arrival, departure)| {
+                let arrival = arrival.map_or(String::new(), |time| {
+                    format!("<ArrivalTime>{time}</ArrivalTime>")
+                });
+                let departure = departure.map_or(String::new(), |time| {
+                    format!("<DepartureTime>{time}</DepartureTime>")
+                });
+                format!(r#"<TimetabledPassingTime version="1">{arrival}{departure}</TimetabledPassingTime>"#)
+            })
+            .collect();
+        let day_types: String = day_types
+            .iter()
+            .map(|day_type| format!(r#"<DayTypeRef ref="{day_type}" version="1"/>"#))
+            .collect();
+        let _ = write!(
+            self.journeys,
+            r#"<ServiceJourney id="{id}" version="1"><dayTypes>{day_types}</dayTypes><ServiceJourneyPatternRef ref="{pattern}" version="1"/><LineRef ref="{line}" version="{line_version}"/><passingTimes>{passing}</passingTimes></ServiceJourney>"#
         );
         self
     }

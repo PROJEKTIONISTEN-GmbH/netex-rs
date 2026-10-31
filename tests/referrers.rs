@@ -345,6 +345,45 @@ fn what_nothing_refers_to_is_listed_but_a_stop_place_whose_quay_is_used() {
     );
 }
 
+/// Stops in the French profile's form: each stop place names its quays, each
+/// quay its stop place. Those references are in the graph, but they state
+/// what a stop is made of, not that it is used: a stop place and its quay no
+/// stop point is placed at are listed as unreferenced all the same.
+#[test]
+fn a_stop_place_and_its_quay_naming_each_other_are_no_use_of_either() {
+    let xml = r#"<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.10:FR-NETEX-2.3">
+      <PublicationTimestamp>2026-10-14T00:00:00</PublicationTimestamp>
+      <ParticipantRef>test</ParticipantRef>
+      <dataObjects><GeneralFrame id="g" version="1"><members>
+        <StopPlace id="SP-used" version="1"><Name>Used</Name>
+          <quays><QuayRef ref="Q-used" version="1"/></quays></StopPlace>
+        <StopPlace id="SP-idle" version="1"><Name>Idle</Name>
+          <quays><QuayRef ref="Q-idle" version="1"/></quays></StopPlace>
+        <Quay id="Q-used" version="1"><Name>Used 1</Name><SiteRef ref="SP-used" version="1"/></Quay>
+        <Quay id="Q-idle" version="1"><Name>Idle 1</Name><SiteRef ref="SP-idle" version="1"/></Quay>
+        <ScheduledStopPoint id="A" version="1"><Name>A</Name></ScheduledStopPoint>
+        <PassengerStopAssignment id="PSA" version="1" order="1">
+          <ScheduledStopPointRef ref="A" version="1"/><QuayRef ref="Q-used" version="1"/>
+        </PassengerStopAssignment>
+      </members></GeneralFrame></dataObjects>
+    </PublicationDelivery>"#;
+    let index = with_referrers(&[("stop.xml".to_owned(), xml.to_owned())]);
+    assert_eq!(
+        referrers_of(&index, "Quay", "Q-idle", None),
+        set(&["QuayRef from StopPlace SP-idle"])
+    );
+    assert_eq!(
+        referrers_of(&index, "StopPlace", "SP-idle", None),
+        set(&["SiteRef from Quay Q-idle"])
+    );
+    let referrers = index.referrers().expect("the references were kept");
+    let unreferenced: BTreeSet<String> = referrers
+        .unreferenced()
+        .map(|object| describe(&referrers, object))
+        .collect();
+    assert_eq!(unreferenced, set(&["StopPlace SP-idle", "Quay Q-idle"]));
+}
+
 #[test]
 fn the_graph_is_the_same_whatever_order_and_threads_the_documents_are_read_in() {
     // Each object as text with what refers to it, as text: one list for the

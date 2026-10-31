@@ -8,7 +8,7 @@ mod support;
 use netex_rs::calendar::{governed, Governed, Span};
 use netex_rs::index::{Concern, Index};
 use netex_rs::model::Date;
-use support::timetable::{serially, Point, Timetable};
+use support::timetable::{merged, serially, Point, Timetable};
 
 fn day(text: &str) -> i64 {
     Date::from(text).days_since_epoch().expect("a date")
@@ -281,6 +281,162 @@ fn calendars_of_uic_periods_give_the_days_their_periods_state() {
         wednesdays,
         ["2026-02-04", "2026-02-11", "2026-02-18", "2026-02-25"].map(day)
     );
+}
+
+/// A journey `J-<day type>` on each of `day_types`, over the line frame.
+fn journeys_on(timetable: Timetable, day_types: &[&str]) -> Vec<(String, String)> {
+    let timetable = day_types.iter().fold(
+        line_frame(timetable.line("L", "1", None)),
+        |timetable, day_type| {
+            timetable.journey(
+                &format!("J-{day_type}"),
+                ("L", "1"),
+                "P",
+                &[day_type],
+                &TIMES,
+            )
+        },
+    );
+    vec![("A.xml".to_owned(), timetable.xml())]
+}
+
+/// The French profile's day type: a validity and days of the week, its
+/// assignments its exceptions. The weekend from 10 to 25 October runs on its
+/// Saturdays and Sundays, but Sunday 18 taken away, and on Friday 16 added; a
+/// day type of Sundays added Friday 16 runs on its Sundays and that Friday;
+/// without a validity, the days of the week give no day.
+#[test]
+fn a_day_type_with_a_validity_and_days_of_the_week_runs_on_them_its_assignments_its_exceptions() {
+    let documents = journeys_on(
+        Timetable::new()
+            .day_type_with(
+                "WEEKEND",
+                Some(("2026-10-10", "2026-10-25")),
+                &["<DaysOfWeek>Saturday Sunday</DaysOfWeek>"],
+            )
+            .date_assignment("WEEKEND-1", 1, "2026-10-18", "WEEKEND", false)
+            .date_assignment("WEEKEND-2", 2, "2026-10-16", "WEEKEND", true)
+            .day_type_with(
+                "SUNDAY",
+                Some(("2026-10-10", "2026-10-25")),
+                &["<DaysOfWeek>Sunday</DaysOfWeek>"],
+            )
+            .date_assignment("SUNDAY-1", 1, "2026-10-16", "SUNDAY", true)
+            .day_type_with("OPEN", None, &["<DaysOfWeek>Saturday</DaysOfWeek>"]),
+        &["WEEKEND", "SUNDAY", "OPEN"],
+    );
+    for index in [serially(&documents), merged(&documents)] {
+        assert_eq!(october_days(&index, "J-WEEKEND"), [10, 11, 16, 17, 24, 25]);
+        assert_eq!(october_days(&index, "J-SUNDAY"), [11, 16, 18, 25]);
+        assert_eq!(october_days(&index, "J-OPEN"), Vec::<i64>::new());
+        assert_eq!(
+            findings(&index, Concern::JourneyWithoutDays),
+            ["journey without an operating day: ServiceJourney J-OPEN in A.xml"]
+        );
+    }
+}
+
+/// A day type whose assignments give it a day of its own runs on its
+/// assignments' days alone, its validity and days of the week describing
+/// them: school days Monday to Friday from 12 to 23 October assigned 12, 13
+/// and 19 October run on those three; a weekend day type assigned a UIC
+/// period runs on the days of its bits, a Monday and a Tuesday among them.
+#[test]
+fn a_day_type_whose_assignments_give_it_its_own_days_runs_on_those_alone() {
+    let documents = journeys_on(
+        Timetable::new()
+            .day_type_with(
+                "SCHOOL",
+                Some(("2026-10-12", "2026-10-23")),
+                &["<DaysOfWeek>Monday Tuesday Wednesday Thursday Friday</DaysOfWeek>"],
+            )
+            .date_assignment("SCHOOL-1", 1, "2026-10-12", "SCHOOL", true)
+            .date_assignment("SCHOOL-2", 1, "2026-10-13", "SCHOOL", true)
+            .date_assignment("SCHOOL-3", 1, "2026-10-19", "SCHOOL", true)
+            .day_type_with(
+                "BITS",
+                Some(("2026-10-10", "2026-10-25")),
+                &["<DaysOfWeek>Weekend</DaysOfWeek>"],
+            )
+            .uic_period("WEEK", "2026-10-12", "2026-10-18", "1100011")
+            .assignment("BITS-1", 1, "WEEK", "BITS", true),
+        &["SCHOOL", "BITS"],
+    );
+    for index in [serially(&documents), merged(&documents)] {
+        assert_eq!(october_days(&index, "J-SCHOOL"), [12, 13, 19]);
+        assert_eq!(october_days(&index, "J-BITS"), [12, 13, 17, 18]);
+    }
+}
+
+/// An operating period without day bits gives a day type the days of the
+/// week its properties name, each property of day an alternative: the
+/// Wednesdays of 12 to 25 October, its Mondays and Fridays; a day type naming
+/// no day of the week gets every day of the period.
+#[test]
+fn an_operating_period_without_day_bits_gives_the_days_of_the_week_its_day_type_names() {
+    let documents = journeys_on(
+        Timetable::new()
+            .day_type_with("WEDNESDAY", None, &["<DaysOfWeek>Wednesday</DaysOfWeek>"])
+            .day_type_with(
+                "MONDAY-FRIDAY",
+                None,
+                &[
+                    "<DaysOfWeek>Monday</DaysOfWeek>",
+                    "<DaysOfWeek>Friday</DaysOfWeek>",
+                ],
+            )
+            .day_type("EVERY")
+            .period("TWO-WEEKS", Some("2026-10-12"), "2026-10-25")
+            .period("THREE-DAYS", Some("2026-10-12"), "2026-10-14")
+            .assignment("WEDNESDAY-1", 1, "TWO-WEEKS", "WEDNESDAY", true)
+            .assignment("MONDAY-FRIDAY-1", 1, "TWO-WEEKS", "MONDAY-FRIDAY", true)
+            .assignment("EVERY-1", 1, "THREE-DAYS", "EVERY", true),
+        &["WEDNESDAY", "MONDAY-FRIDAY", "EVERY"],
+    );
+    for index in [serially(&documents), merged(&documents)] {
+        assert_eq!(october_days(&index, "J-WEDNESDAY"), [14, 21]);
+        assert_eq!(october_days(&index, "J-MONDAY-FRIDAY"), [12, 16, 19, 23]);
+        assert_eq!(october_days(&index, "J-EVERY"), [12, 13, 14]);
+    }
+}
+
+/// Properties naming more than days of the week are not read, and where
+/// they would decide the days — a day type of summer Saturdays with a
+/// validity and no assignment, one of autumn days assigned a period without
+/// day bits — that is a finding; the assignments stand as they are. A
+/// holiday day type assigned a single date needs no property read.
+#[test]
+fn properties_naming_more_than_days_of_the_week_are_a_finding_where_they_would_decide() {
+    let documents = journeys_on(
+        Timetable::new()
+            .day_type_with(
+                "SUMMER",
+                Some(("2026-10-10", "2026-10-25")),
+                &["<DaysOfWeek>Saturday</DaysOfWeek><Seasons>Summer</Seasons>"],
+            )
+            .day_type_with("AUTUMN", None, &["<Seasons>Autumn</Seasons>"])
+            .period("THREE-DAYS", Some("2026-10-12"), "2026-10-14")
+            .assignment("AUTUMN-1", 1, "THREE-DAYS", "AUTUMN", true)
+            .day_type_with(
+                "HOLIDAY",
+                None,
+                &["<HolidayTypes>NationalHoliday</HolidayTypes>"],
+            )
+            .date_assignment("HOLIDAY-1", 1, "2026-10-31", "HOLIDAY", true),
+        &["SUMMER", "AUTUMN", "HOLIDAY"],
+    );
+    for index in [serially(&documents), merged(&documents)] {
+        assert_eq!(october_days(&index, "J-SUMMER"), Vec::<i64>::new());
+        assert_eq!(october_days(&index, "J-AUTUMN"), [12, 13, 14]);
+        assert_eq!(october_days(&index, "J-HOLIDAY"), [31]);
+        assert_eq!(
+            findings(&index, Concern::PropertiesOfDayUnread),
+            [
+                "day type whose properties name more than days of the week, its assignments' days alone: DayType AUTUMN in A.xml",
+                "day type whose properties name more than days of the week, its assignments' days alone: DayType SUMMER in A.xml"
+            ]
+        );
+    }
 }
 
 #[test]

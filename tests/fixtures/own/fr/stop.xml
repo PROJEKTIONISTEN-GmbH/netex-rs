@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The stops of a delivery in the French profile (NeTEx France), as the
+  profile's stop.xml: one general frame of the type NETEX_ARRET. Each quay
+  (zone d'embarquement) is defined on its own and names its stop place by its
+  SiteRef; each stop place (lieu d'arrêt monomodal) names its quays by a
+  QuayRef. Identifiers follow the profile's FR:<INSEE code>:<type>:<code>:LOC.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented, and so are the INSEE codes.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.10:FR-NETEX-2.3">
+  <PublicationTimestamp>2026-10-01T08:00:00</PublicationTimestamp>
+  <ParticipantRef>EXEMPLE</ParticipantRef>
+  <dataObjects>
+    <GeneralFrame id="EX:GeneralFrame:NETEX_ARRET:LOC" version="1">
+      <TypeOfFrameRef ref="FR:TypeOfFrame:NETEX_ARRET:"/>
+      <members>
+        <StopPlace id="FR:00001:LMO:gare:LOC" version="1">
+          <Name>Gare</Name>
+          <Centroid>
+            <Location>
+              <Longitude>2.3500</Longitude>
+              <Latitude>48.8500</Latitude>
+            </Location>
+          </Centroid>
+          <placeTypes>
+            <TypeOfPlaceRef ref="monomodalStopPlace"/>
+          </placeTypes>
+          <TransportMode>bus</TransportMode>
+          <StopPlaceType>busStation</StopPlaceType>
+          <quays>
+            <QuayRef ref="FR:00001:ZE:gare-a:LOC" version="1"/>
+            <QuayRef ref="FR:00001:ZE:gare-r:LOC" version="1"/>
+          </quays>
+        </StopPlace>
+        <StopPlace id="FR:00001:LMO:mairie:LOC" version="1">
+          <Name>Mairie</Name>
+          <Centroid>
+            <Location>
+              <Longitude>2.3600</Longitude>
+              <Latitude>48.8560</Latitude>
+            </Location>
+          </Centroid>
+          <placeTypes>
+            <TypeOfPlaceRef ref="monomodalStopPlace"/>
+          </placeTypes>
+          <TransportMode>bus</TransportMode>
+          <StopPlaceType>onstreetBus</StopPlaceType>
+          <quays>
+            <QuayRef ref="FR:00001:ZE:mairie:LOC" version="1"/>
+          </quays>
+        </StopPlace>
+        <StopPlace id="FR:00002:LMO:eglise:LOC" version="1">
+          <Name>Église</Name>
+          <Centroid>
+            <Location>
+              <Longitude>2.3800</Longitude>
+              <Latitude>48.8700</Latitude>
+            </Location>
+          </Centroid>
+          <placeTypes>
+            <TypeOfPlaceRef ref="monomodalStopPlace"/>
+          </placeTypes>
+          <TransportMode>bus</TransportMode>
+          <StopPlaceType>onstreetBus</StopPlaceType>
+          <quays>
+            <QuayRef ref="FR:00002:ZE:eglise:LOC" version="1"/>
+          </quays>
+        </StopPlace>
+        <Quay id="FR:00001:ZE:gare-a:LOC" version="1">
+          <Name>Gare</Name>
+          <PrivateCode>GA</PrivateCode>
+          <Centroid>
+            <Location>
+              <Longitude>2.3502</Longitude>
+              <Latitude>48.8501</Latitude>
+            </Location>
+          </Centroid>
+          <AccessibilityAssessment id="EX:AccessibilityAssessment:gare-a:LOC" version="1">
+            <MobilityImpairedAccess>true</MobilityImpairedAccess>
+          </AccessibilityAssessment>
+          <SiteRef ref="FR:00001:LMO:gare:LOC" version="1"/>
+          <TransportMode>bus</TransportMode>
+        </Quay>
+        <Quay id="FR:00001:ZE:gare-r:LOC" version="1">
+          <Name>Gare</Name>
+          <PrivateCode>GR</PrivateCode>
+          <Centroid>
+            <Location>
+              <Longitude>2.3498</Longitude>
+              <Latitude>48.8499</Latitude>
+            </Location>
+          </Centroid>
+          <AccessibilityAssessment id="EX:AccessibilityAssessment:gare-r:LOC" version="1">
+            <MobilityImpairedAccess>false</MobilityImpairedAccess>
+          </AccessibilityAssessment>
+          <SiteRef ref="FR:00001:LMO:gare:LOC" version="1"/>
+          <TransportMode>bus</TransportMode>
+        </Quay>
+        <Quay id="FR:00001:ZE:mairie:LOC" version="1">
+          <Name>Mairie</Name>
+          <Centroid>
+            <Location>
+              <Longitude>2.3601</Longitude>
+              <Latitude>48.8561</Latitude>
+            </Location>
+          </Centroid>
+          <SiteRef ref="FR:00001:LMO:mairie:LOC" version="1"/>
+          <TransportMode>bus</TransportMode>
+        </Quay>
+        <Quay id="FR:00002:ZE:eglise:LOC" version="1">
+          <Name>Église</Name>
+          <Centroid>
+            <Location>
+              <Longitude>2.3801</Longitude>
+              <Latitude>48.8701</Latitude>
+            </Location>
+          </Centroid>
+          <SiteRef ref="FR:00002:LMO:eglise:LOC" version="1"/>
+          <TransportMode>bus</TransportMode>
+        </Quay>
+      </members>
+    </GeneralFrame>
+  </dataObjects>
+</PublicationDelivery>

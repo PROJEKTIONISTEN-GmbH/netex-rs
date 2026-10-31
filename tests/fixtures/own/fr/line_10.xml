@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One line of a delivery in the French profile (NeTEx France), as the
+  profile's line_xyz.xml: a composite frame of the type NETEX_LIGNE holding a
+  general frame NETEX_LIGNE_STRUCTURE — the line, its route, stop points
+  assigned to the quays of stop.xml, its journey pattern — and a general frame
+  NETEX_HORAIRE with three journeys, one on each day type of resource.xml.
+  Their passing times name no point of the pattern: NeTEx 1.x leaves the
+  reference out (PassingTimeGroup, netex_passingTimes_version.xsd), and the
+  French deliveries write the times in the order of the pattern's points.
+  NeTEx 2.0 requires the reference and an identifier of the passing time:
+  this document is valid for the release the profile is written for, 1.x.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.10:FR-NETEX-2.3">
+  <PublicationTimestamp>2026-10-01T08:00:00</PublicationTimestamp>
+  <ParticipantRef>EXEMPLE</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="EX:CompositeFrame:NETEX_LIGNE-10:LOC" version="1">
+      <TypeOfFrameRef ref="FR:TypeOfFrame:NETEX_LIGNE:"/>
+      <frames>
+        <GeneralFrame id="EX:GeneralFrame:NETEX_LIGNE_STRUCTURE-10:LOC" version="1">
+          <TypeOfFrameRef ref="FR:TypeOfFrame:NETEX_LIGNE_STRUCTURE:"/>
+          <members>
+            <Line id="EX:Line:10:LOC" version="1">
+              <Name>Gare – Église</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>10</PublicCode>
+              <OperatorRef ref="EX:Operator:autocars:LOC" versionRef="1"/>
+            </Line>
+            <Direction id="EX:Direction:10-aller:LOC" version="1">
+              <Name>Église</Name>
+              <DirectionType>outbound</DirectionType>
+            </Direction>
+            <Route id="EX:Route:10-aller:LOC" version="1">
+              <Name>Gare – Église</Name>
+              <LineRef ref="EX:Line:10:LOC" version="1"/>
+              <DirectionType>outbound</DirectionType>
+              <DirectionRef ref="EX:Direction:10-aller:LOC" version="1"/>
+            </Route>
+            <DestinationDisplay id="EX:DestinationDisplay:eglise:LOC" version="1">
+              <FrontText>Église</FrontText>
+            </DestinationDisplay>
+            <ScheduledStopPoint id="EX:ScheduledStopPoint:gare-a:LOC" version="1">
+              <Name>Gare</Name>
+              <Location>
+                <Longitude>2.3502</Longitude>
+                <Latitude>48.8501</Latitude>
+              </Location>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="EX:ScheduledStopPoint:mairie:LOC" version="1">
+              <Name>Mairie</Name>
+              <Location>
+                <Longitude>2.3601</Longitude>
+                <Latitude>48.8561</Latitude>
+              </Location>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="EX:ScheduledStopPoint:eglise:LOC" version="1">
+              <Name>Église</Name>
+              <Location>
+                <Longitude>2.3801</Longitude>
+                <Latitude>48.8701</Latitude>
+              </Location>
+            </ScheduledStopPoint>
+            <PassengerStopAssignment id="EX:PassengerStopAssignment:gare-a:LOC" version="1" order="1">
+              <ScheduledStopPointRef ref="EX:ScheduledStopPoint:gare-a:LOC" version="1"/>
+              <StopPlaceRef ref="FR:00001:LMO:gare:LOC" versionRef="1"/>
+              <QuayRef ref="FR:00001:ZE:gare-a:LOC" versionRef="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="EX:PassengerStopAssignment:mairie:LOC" version="1" order="1">
+              <ScheduledStopPointRef ref="EX:ScheduledStopPoint:mairie:LOC" version="1"/>
+              <StopPlaceRef ref="FR:00001:LMO:mairie:LOC" versionRef="1"/>
+              <QuayRef ref="FR:00001:ZE:mairie:LOC" versionRef="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="EX:PassengerStopAssignment:eglise:LOC" version="1" order="1">
+              <ScheduledStopPointRef ref="EX:ScheduledStopPoint:eglise:LOC" version="1"/>
+              <StopPlaceRef ref="FR:00002:LMO:eglise:LOC" versionRef="1"/>
+              <QuayRef ref="FR:00002:ZE:eglise:LOC" versionRef="1"/>
+            </PassengerStopAssignment>
+            <ServiceJourneyPattern id="EX:ServiceJourneyPattern:10-aller:LOC" version="1">
+              <RouteRef ref="EX:Route:10-aller:LOC" version="1"/>
+              <DestinationDisplayRef ref="EX:DestinationDisplay:eglise:LOC" version="1"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="EX:StopPointInJourneyPattern:10-aller-1:LOC" version="1" order="1">
+                  <ScheduledStopPointRef ref="EX:ScheduledStopPoint:gare-a:LOC" version="1"/>
+                  <ForAlighting>false</ForAlighting>
+                  <ForBoarding>true</ForBoarding>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="EX:StopPointInJourneyPattern:10-aller-2:LOC" version="1" order="2">
+                  <ScheduledStopPointRef ref="EX:ScheduledStopPoint:mairie:LOC" version="1"/>
+                  <ForAlighting>true</ForAlighting>
+                  <ForBoarding>true</ForBoarding>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="EX:StopPointInJourneyPattern:10-aller-3:LOC" version="1" order="3">
+                  <ScheduledStopPointRef ref="EX:ScheduledStopPoint:eglise:LOC" version="1"/>
+                  <ForAlighting>true</ForAlighting>
+                  <ForBoarding>false</ForBoarding>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </members>
+        </GeneralFrame>
+        <GeneralFrame id="EX:GeneralFrame:NETEX_HORAIRE-10:LOC" version="1">
+          <TypeOfFrameRef ref="FR:TypeOfFrame:NETEX_HORAIRE:"/>
+          <members>
+            <ServiceJourney id="EX:ServiceJourney:10-0730:LOC" version="1">
+              <dayTypes>
+                <DayTypeRef ref="EX:DayType:scolaire:LOC" versionRef="1"/>
+              </dayTypes>
+              <JourneyPatternRef ref="EX:ServiceJourneyPattern:10-aller:LOC" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime version="1">
+                  <DepartureTime>07:30:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime version="1">
+                  <ArrivalTime>07:41:00</ArrivalTime>
+                  <DepartureTime>07:42:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime version="1">
+                  <ArrivalTime>07:55:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="EX:ServiceJourney:10-0930:LOC" version="1">
+              <dayTypes>
+                <DayTypeRef ref="EX:DayType:week-end:LOC" versionRef="1"/>
+              </dayTypes>
+              <JourneyPatternRef ref="EX:ServiceJourneyPattern:10-aller:LOC" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime version="1">
+                  <DepartureTime>09:30:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime version="1">
+                  <ArrivalTime>09:41:00</ArrivalTime>
+                  <DepartureTime>09:42:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime version="1">
+                  <ArrivalTime>09:55:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="EX:ServiceJourney:10-2345:LOC" version="1">
+              <dayTypes>
+                <DayTypeRef ref="EX:DayType:mercredi:LOC" versionRef="1"/>
+              </dayTypes>
+              <JourneyPatternRef ref="EX:ServiceJourneyPattern:10-aller:LOC" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime version="1">
+                  <DepartureTime>23:45:00</DepartureTime>
+                  <DepartureDayOffset>0</DepartureDayOffset>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime version="1">
+                  <ArrivalTime>23:56:00</ArrivalTime>
+                  <ArrivalDayOffset>0</ArrivalDayOffset>
+                  <DepartureTime>23:57:00</DepartureTime>
+                  <DepartureDayOffset>0</DepartureDayOffset>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime version="1">
+                  <ArrivalTime>00:10:00</ArrivalTime>
+                  <ArrivalDayOffset>1</ArrivalDayOffset>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </members>
+        </GeneralFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

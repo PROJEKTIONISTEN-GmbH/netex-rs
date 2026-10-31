@@ -32,6 +32,7 @@ Apache-2.0**.
 | `frames/levels.xml` | levels and what refers to them — quays, entrances, access spaces, path links, parkings — defined or not |
 | `frames/site-structures.xml` | a site structure with its levels, new in NeTEx 2.0 |
 | `frames/submodes.xml` | the submode a stop place, its entrance and its quay state beside their mode, and a stop place stating none |
+| `frames/quays-beside-their-stop-place.xml` | quays defined beside their stop place, as the French profile writes them: named by their stop place's `QuayRef`, naming it by their `SiteRef`, claimed by two, by none, a `QuayRef` to nothing and to a stop place |
 | `frames/axis-order.xml` | link geometries written longitude first, latitude first, far away, from nothing, without geometry |
 | `entities/day-types.xml` | day types with and without the schema defaults of their attributes, a name's language, properties of day |
 | `entities/calendar.xml` | a day type, a UIC period and the assignment of the one to the other |

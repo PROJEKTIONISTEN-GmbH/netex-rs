@@ -1,13 +1,17 @@
 //! The crate's own examples, one small delivery for each profile it is used
 //! with most: a line offer of the European Passenger Information Profile
 //! (EPIP), a line offer of the Italian profile of South Tyrol (IT-ITH1), two
-//! line documents of an Austrian-style delivery, and the shared and the
-//! timetable document of a Swiss-style one. They are written for these
+//! line documents of an Austrian-style delivery, the shared and the
+//! timetable document of a Swiss-style one, and the four documents of a
+//! delivery in the French profile (NeTEx France). They are written for these
 //! tests and licensed as the crate is (`tests/fixtures/own/README.md`), so that
 //! the cases each profile poses are pinned without data under a licence of its
 //! own: identifiers that are each document's own, lines in versions, journeys
 //! stating their calls, template journeys run at a headway, names in several
-//! languages, and patterns naming their line only through their route.
+//! languages, patterns naming their line only through their route, and
+//! everything in general frames — quays defined beside their stop place,
+//! passing times naming no point, day types given their days by a validity and
+//! days of the week.
 //!
 //! Every example is read four ways — the full model one document after the
 //! other, in the reverse order, the lean stream one builder per document, and
@@ -19,7 +23,7 @@ mod support;
 use std::collections::BTreeSet;
 
 use netex_rs::dataset::Source;
-use netex_rs::index::{CallUse, Concern, Headway, Index, StopKind};
+use netex_rs::index::{CallUse, Concern, Headway, Index, StopKind, Transfer};
 use netex_rs::model::{Date, Submode};
 use netex_rs::stream::{Entity, FrameKind, Kind, ReadOptions, Selection};
 use netex_rs::Release;
@@ -105,8 +109,8 @@ fn every_own_example_reads_and_writes_back_element_for_element() {
     let fixtures = support::own_fixtures("");
     assert_eq!(
         fixtures.len(),
-        6,
-        "EPIP 1, Italy 1, Austria 2, Switzerland 2"
+        10,
+        "EPIP 1, Italy 1, Austria 2, Switzerland 2, France 4"
     );
     for fixture in &fixtures {
         let document = netex_rs::read(&fixture.xml)
@@ -131,10 +135,14 @@ fn every_own_example_reads_and_writes_back_element_for_element() {
 }
 
 /// The examples are valid against the schemas of both releases, as written
-/// and as the crate writes them for each — but for the Swiss timetable
-/// document, which names what the shared document defines: an XML Schema key
-/// reference cannot reach into another document, so each of its references
-/// to the shared document is a complaint, and nothing else is.
+/// and as the crate writes them for each — but for two documents. The Swiss
+/// timetable document names what the shared document defines: an XML Schema
+/// key reference cannot reach into another document, so each of its
+/// references to the shared document is a complaint, and nothing else is. The
+/// French line document states passing times as NeTEx 1.x allows them, the
+/// release its profile is written for — without the point they are at, and
+/// without an identifier —, which NeTEx 2.0 requires: against 2.0 its passing
+/// times are its only complaints.
 #[test]
 fn every_own_example_is_valid_for_both_releases_but_for_references_into_another_document() {
     let shared = documents("ch")
@@ -162,7 +170,27 @@ fn every_own_example_is_valid_for_both_releases_but_for_references_into_another_
                 xml: fixture.xml,
             });
         }
-        let complaints = validate_all(release, &candidates);
+        let mut complaints = validate_all(release, &candidates);
+        let french = [
+            "fr/line_10.xml".to_owned(),
+            format!("fr/line_10.xml written for {release:?}"),
+        ];
+        for name in &french {
+            let complaint = complaints.remove(name);
+            if release == Release::V1 {
+                assert_eq!(complaint, None, "{name} is valid for NeTEx 1.x");
+                continue;
+            }
+            let complaint = complaint.unwrap_or_else(|| panic!("{name} is not valid for 2.0"));
+            for line in complaint.lines().filter(|l| *l != "fails to validate") {
+                assert!(
+                    ["TimetabledPassingTime", "ArrivalTime", "DepartureTime"]
+                        .iter()
+                        .any(|element| line.contains(&format!("netex}}{element}'"))),
+                    "not about a passing time: {line}"
+                );
+            }
+        }
         let named: Vec<&String> = complaints.keys().collect();
         assert_eq!(
             named,
@@ -582,6 +610,198 @@ fn the_swiss_shuttle_runs_every_twenty_minutes_on_weekdays() {
     assert_eq!(departures, [at(6, 0), at(6, 20), at(6, 40), at(7, 0)]);
     assert_eq!(calls(&index, shuttle), ["Bergdorf", "Talwil"]);
     assert_eq!(october(&index, shuttle), [12, 13, 14, 15, 16]);
+}
+
+/// The French stops: three stop places, each naming its quays by reference,
+/// and four quays defined beside them, each naming its stop place. Every quay
+/// is a quay of its stop place, and the stop points are assigned to quays.
+#[test]
+fn a_french_quay_defined_beside_its_stop_place_is_one_of_its_quays() {
+    let index = index("fr");
+    assert_eq!(index.stop_count(), 7, "three stop places, four quays");
+    let stop = |id: &str| index.stop(index.stop_by_id(id).expect("the stop"));
+    let mut quays: Vec<(&str, &str)> = index
+        .stops()
+        .map(|stop| index.stop(stop))
+        .filter(|stop| stop.kind == StopKind::Quay)
+        .map(|quay| (quay.id, quay.parent.map_or("-", |p| index.stop(p).id)))
+        .collect();
+    quays.sort_unstable();
+    assert_eq!(
+        quays,
+        [
+            ("FR:00001:ZE:gare-a:LOC", "FR:00001:LMO:gare:LOC"),
+            ("FR:00001:ZE:gare-r:LOC", "FR:00001:LMO:gare:LOC"),
+            ("FR:00001:ZE:mairie:LOC", "FR:00001:LMO:mairie:LOC"),
+            ("FR:00002:ZE:eglise:LOC", "FR:00002:LMO:eglise:LOC"),
+        ]
+    );
+    let quay = stop("FR:00001:ZE:gare-a:LOC");
+    assert_eq!(
+        (quay.name, quay.latitude, quay.longitude),
+        ("Gare", Some(48.8501), Some(2.3502))
+    );
+    let gare = index
+        .stop_point_by_id("EX:ScheduledStopPoint:gare-a:LOC")
+        .expect("the stop point");
+    assert_eq!(
+        index.stop_of_stop_point(gare).map(|s| index.stop(s).id),
+        Some("FR:00001:ZE:gare-a:LOC"),
+        "the quay the assignment names, in another document"
+    );
+    let gare_a = index
+        .stop_by_id("FR:00001:ZE:gare-a:LOC")
+        .expect("the quay");
+    let gare_r = index
+        .stop_by_id("FR:00001:ZE:gare-r:LOC")
+        .expect("the quay");
+    assert_eq!(
+        index.transfers_from(gare_a),
+        [Transfer {
+            from: gare_a,
+            to: gare_r,
+            seconds: 120,
+            both_ways: true,
+        }],
+        "the walk of the common frame between the two quays"
+    );
+    assert!(index.unresolved().is_empty(), "{:?}", index.unresolved());
+    let findings: Vec<String> = index.findings().map(|f| f.to_string()).collect();
+    assert_eq!(findings, Vec::<String>::new());
+}
+
+/// The lean stream yields the quays defined on their own as entities of
+/// their own, standing in the general frame.
+#[test]
+fn the_lean_stream_yields_the_french_quays_in_their_general_frame() {
+    let (_, stops) = documents("fr")
+        .into_iter()
+        .find(|(name, _)| name == "stop.xml")
+        .expect("the stops");
+    let options = ReadOptions::new(Selection::none().with(Kind::Quay));
+    let mut quays = Vec::new();
+    netex_rs::stream::read(&stops, &options, |entity, scope| {
+        let Entity::Quay(quay) = entity else {
+            panic!("only quays are selected");
+        };
+        let frame = scope.frames().last().expect("the frame it stands in");
+        let site = quay.site_ref.as_ref().and_then(|r| r.r#ref.as_ref());
+        quays.push(format!(
+            "{} of {} in {:?}",
+            quay.id.as_ref().map_or("-", |id| id.as_str()),
+            site.map_or("-", |id| id.as_str()),
+            frame.kind
+        ));
+        Ok(())
+    })
+    .expect("the stops read");
+    assert_eq!(
+        quays,
+        [
+            "FR:00001:ZE:gare-a:LOC of FR:00001:LMO:gare:LOC in General",
+            "FR:00001:ZE:gare-r:LOC of FR:00001:LMO:gare:LOC in General",
+            "FR:00001:ZE:mairie:LOC of FR:00001:LMO:mairie:LOC in General",
+            "FR:00002:ZE:eglise:LOC of FR:00002:LMO:eglise:LOC in General",
+        ]
+    );
+}
+
+/// The passing times name no point of the pattern: each is at the point of
+/// its position, the last one of the night journey on the next day.
+#[test]
+fn a_french_passing_time_is_at_the_point_of_its_position() {
+    let index = index("fr");
+    let line = index.line(index.line_by_id("EX:Line:10:LOC").expect("the line"));
+    assert_eq!((line.public_code, line.mode), (Some("10"), Some("bus")));
+    for journey in [
+        "EX:ServiceJourney:10-0730:LOC",
+        "EX:ServiceJourney:10-0930:LOC",
+        "EX:ServiceJourney:10-2345:LOC",
+    ] {
+        assert_eq!(calls(&index, journey), ["Gare", "Mairie", "Église"]);
+    }
+    assert_eq!(
+        times(&index, "EX:ServiceJourney:10-0730:LOC"),
+        [
+            (None, Some(at(7, 30))),
+            (Some(at(7, 41)), Some(at(7, 42))),
+            (Some(at(7, 55)), None)
+        ]
+    );
+    assert_eq!(
+        times(&index, "EX:ServiceJourney:10-2345:LOC"),
+        [
+            (None, Some(at(23, 45))),
+            (Some(at(23, 56)), Some(at(23, 57))),
+            (Some(86_400 + at(0, 10)), None)
+        ]
+    );
+    let journey = index.journey(
+        index
+            .journey_by_id("EX:ServiceJourney:10-0730:LOC")
+            .expect("the journey"),
+    );
+    assert_eq!(
+        journey.uses,
+        [
+            CallUse {
+                boarding: true,
+                alighting: false
+            },
+            CallUse {
+                boarding: true,
+                alighting: true
+            },
+            CallUse {
+                boarding: false,
+                alighting: true
+            }
+        ],
+        "as the pattern states it"
+    );
+}
+
+/// The three forms of a French day type. School days state a validity and
+/// the days of the week, and assignments listing each day: those days alone,
+/// the holiday Friday and the last three days of the validity among none of
+/// them. The weekend states a validity and its days, and assignments as
+/// exceptions: every Saturday and Sunday of its validity but the Sunday taken
+/// away, and the Friday added. Wednesdays are assigned a period stating no
+/// day bits: its Wednesdays.
+#[test]
+fn a_french_day_type_takes_its_days_from_its_dates_or_from_its_days_of_the_week() {
+    let index = index("fr");
+    assert_eq!(
+        october(&index, "EX:ServiceJourney:10-0730:LOC"),
+        [12, 13, 14, 15, 19, 20]
+    );
+    assert_eq!(
+        october(&index, "EX:ServiceJourney:10-0930:LOC"),
+        [10, 11, 16, 17, 24, 25]
+    );
+    assert_eq!(october(&index, "EX:ServiceJourney:10-2345:LOC"), [14, 21]);
+}
+
+/// What the model does not type in the French delivery — the stop places'
+/// kinds of place and the network — is carried through as written.
+#[test]
+fn the_french_delivery_carries_through_only_its_kinds_of_place_and_its_network() {
+    let mut untyped = Vec::new();
+    for (name, xml) in documents("fr") {
+        let document = netex_rs::read(&xml).expect("the document reads");
+        document.for_each_unprocessed(&mut |parent, fragment| {
+            untyped.push(format!("{name}: {parent}/{}", fragment.name));
+        });
+    }
+    assert_eq!(
+        untyped,
+        [
+            "network.xml: members/Network",
+            "stop.xml: StopPlace/placeTypes",
+            "stop.xml: StopPlace/placeTypes",
+            "stop.xml: StopPlace/placeTypes",
+        ]
+    );
 }
 
 #[test]

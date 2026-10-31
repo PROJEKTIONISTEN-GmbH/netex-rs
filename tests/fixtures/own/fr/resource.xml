@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The common part and the calendar of a delivery in the French profile
+  (NeTEx France), as the profile's resource.xml: a composite frame of the type
+  NETEX_FRANCE holding a general frame NETEX_COMMUN — the operator, a walk
+  between two quays — and a general frame NETEX_CALENDRIER with the day types
+  in the three forms the French deliveries write:
+  - school days, a validity and days of the week whose assignments list each
+    day it runs on: the properties describe, the dates decide;
+  - the weekend, a validity and days of the week whose assignments are its
+    exceptions: a Sunday taken away, a Friday holiday added;
+  - Wednesdays, assigned an operating period that states no day bits.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.10:FR-NETEX-2.3">
+  <PublicationTimestamp>2026-10-01T08:00:00</PublicationTimestamp>
+  <ParticipantRef>EXEMPLE</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="EX:CompositeFrame:NETEX_FRANCE:LOC" version="1">
+      <TypeOfFrameRef ref="FR:TypeOfFrame:NETEX_FRANCE:"/>
+      <FrameDefaults>
+        <DefaultLocale>
+          <TimeZone>Europe/Paris</TimeZone>
+          <DefaultLanguage>fr</DefaultLanguage>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <GeneralFrame id="EX:GeneralFrame:NETEX_COMMUN:LOC" version="1">
+          <TypeOfFrameRef ref="FR:TypeOfFrame:NETEX_COMMUN:"/>
+          <members>
+            <Operator id="EX:Operator:autocars:LOC" version="1">
+              <Name>Autocars d'Exemple</Name>
+              <OrganisationType>operator</OrganisationType>
+            </Operator>
+            <SiteConnection id="EX:SiteConnection:gare-a-r:LOC" version="1">
+              <Distance>40</Distance>
+              <WalkTransferDuration>
+                <DefaultDuration>PT2M</DefaultDuration>
+              </WalkTransferDuration>
+              <BothWays>true</BothWays>
+              <From>
+                <StopPlaceRef ref="FR:00001:LMO:gare:LOC" versionRef="1"/>
+                <QuayRef ref="FR:00001:ZE:gare-a:LOC" versionRef="1"/>
+              </From>
+              <To>
+                <StopPlaceRef ref="FR:00001:LMO:gare:LOC" versionRef="1"/>
+                <QuayRef ref="FR:00001:ZE:gare-r:LOC" versionRef="1"/>
+              </To>
+            </SiteConnection>
+          </members>
+        </GeneralFrame>
+        <GeneralFrame id="EX:GeneralFrame:NETEX_CALENDRIER:LOC" version="1">
+          <TypeOfFrameRef ref="FR:TypeOfFrame:NETEX_CALENDRIER:"/>
+          <members>
+            <DayType id="EX:DayType:scolaire:LOC" version="1">
+              <ValidBetween>
+                <FromDate>2026-10-12T00:00:00</FromDate>
+                <ToDate>2026-10-23T00:00:00</ToDate>
+              </ValidBetween>
+              <Name>Période scolaire</Name>
+              <properties>
+                <PropertyOfDay>
+                  <DaysOfWeek>Monday Tuesday Wednesday Thursday Friday</DaysOfWeek>
+                </PropertyOfDay>
+              </properties>
+            </DayType>
+            <DayType id="EX:DayType:week-end:LOC" version="1">
+              <ValidBetween>
+                <FromDate>2026-10-10T00:00:00</FromDate>
+                <ToDate>2026-10-25T00:00:00</ToDate>
+              </ValidBetween>
+              <Name>Week-end</Name>
+              <properties>
+                <PropertyOfDay>
+                  <DaysOfWeek>Saturday Sunday</DaysOfWeek>
+                </PropertyOfDay>
+              </properties>
+            </DayType>
+            <DayType id="EX:DayType:mercredi:LOC" version="1">
+              <Name>Mercredi</Name>
+              <properties>
+                <PropertyOfDay>
+                  <DaysOfWeek>Wednesday</DaysOfWeek>
+                </PropertyOfDay>
+              </properties>
+            </DayType>
+            <OperatingPeriod id="EX:OperatingPeriod:octobre:LOC" version="1">
+              <FromDate>2026-10-12T00:00:00</FromDate>
+              <ToDate>2026-10-25T00:00:00</ToDate>
+            </OperatingPeriod>
+            <DayTypeAssignment id="EX:DayTypeAssignment:scolaire-1:LOC" version="1" order="1">
+              <Date>2026-10-12</Date>
+              <DayTypeRef ref="EX:DayType:scolaire:LOC" version="1"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="EX:DayTypeAssignment:scolaire-2:LOC" version="1" order="1">
+              <Date>2026-10-13</Date>
+              <DayTypeRef ref="EX:DayType:scolaire:LOC" version="1"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="EX:DayTypeAssignment:scolaire-3:LOC" version="1" order="1">
+              <Date>2026-10-14</Date>
+              <DayTypeRef ref="EX:DayType:scolaire:LOC" version="1"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="EX:DayTypeAssignment:scolaire-4:LOC" version="1" order="1">
+              <Date>2026-10-15</Date>
+              <DayTypeRef ref="EX:DayType:scolaire:LOC" version="1"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="EX:DayTypeAssignment:scolaire-5:LOC" version="1" order="1">
+              <Date>2026-10-19</Date>
+              <DayTypeRef ref="EX:DayType:scolaire:LOC" version="1"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="EX:DayTypeAssignment:scolaire-6:LOC" version="1" order="1">
+              <Date>2026-10-20</Date>
+              <DayTypeRef ref="EX:DayType:scolaire:LOC" version="1"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="EX:DayTypeAssignment:week-end-1:LOC" version="1" order="1">
+              <Date>2026-10-18</Date>
+              <DayTypeRef ref="EX:DayType:week-end:LOC" version="1"/>
+              <isAvailable>false</isAvailable>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="EX:DayTypeAssignment:week-end-2:LOC" version="1" order="2">
+              <Date>2026-10-16</Date>
+              <DayTypeRef ref="EX:DayType:week-end:LOC" version="1"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="EX:DayTypeAssignment:mercredi:LOC" version="1" order="1">
+              <OperatingPeriodRef ref="EX:OperatingPeriod:octobre:LOC" version="1"/>
+              <DayTypeRef ref="EX:DayType:mercredi:LOC" version="1"/>
+            </DayTypeAssignment>
+          </members>
+        </GeneralFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

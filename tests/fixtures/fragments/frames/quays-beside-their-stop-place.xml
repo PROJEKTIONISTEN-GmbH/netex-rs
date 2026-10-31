@@ -1,0 +1,52 @@
+<!--
+  Quays defined beside their stop place, as the French profile writes them:
+  a stop place names its quays by reference (quays_RelStructure,
+  netex_stopPlace_version.xsd, holds a QuayRef as well as a Quay) and a quay
+  names its stop place as its site (SiteRef, netex_site_version.xsd). Stop
+  place A names quays 1, 3 and 4; quay 2 names A by its SiteRef alone; B
+  names quay 3 as well, and quay 4 names B as its site; quay 5 names no stop
+  place and none names it. One reference of A's names a quay no document
+  defines, one of B's a stop place; both name the version by versionRef, as
+  a reference into another document does.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<GeneralFrame id="ex:GeneralFrame:quays" version="1">
+  <members>
+    <StopPlace id="ex:StopPlace:A" version="1">
+      <Name>A</Name>
+      <quays>
+        <QuayRef ref="ex:Quay:1" version="1"/>
+        <QuayRef ref="ex:Quay:3" version="1"/>
+        <QuayRef ref="ex:Quay:4" version="1"/>
+        <QuayRef ref="ex:Quay:gone" versionRef="1"/>
+      </quays>
+    </StopPlace>
+    <StopPlace id="ex:StopPlace:B" version="1">
+      <Name>B</Name>
+      <quays>
+        <QuayRef ref="ex:Quay:3" version="1"/>
+        <QuayRef ref="ex:StopPlace:A" versionRef="1"/>
+      </quays>
+    </StopPlace>
+    <Quay id="ex:Quay:1" version="1">
+      <Name>A 1</Name>
+      <SiteRef ref="ex:StopPlace:A" version="1"/>
+    </Quay>
+    <Quay id="ex:Quay:2" version="1">
+      <Name>A 2</Name>
+      <SiteRef ref="ex:StopPlace:A" version="1"/>
+    </Quay>
+    <Quay id="ex:Quay:3" version="1">
+      <Name>A 3</Name>
+      <SiteRef ref="ex:StopPlace:A" version="1"/>
+    </Quay>
+    <Quay id="ex:Quay:4" version="1">
+      <Name>A 4</Name>
+      <SiteRef ref="ex:StopPlace:B" version="1"/>
+    </Quay>
+    <Quay id="ex:Quay:5" version="1">
+      <Name>Alone</Name>
+    </Quay>
+  </members>
+</GeneralFrame>
