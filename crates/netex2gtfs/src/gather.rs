@@ -487,20 +487,24 @@ impl Gather {
                 .or_insert(facts);
         }
         for item in place.quays.iter().flat_map(|quays| &quays.items) {
-            let QuayItem::Quay(quay) = item else {
-                continue;
-            };
-            let facts = StopFacts {
-                document: self.document,
-                wheelchair: Wheelchair::of(quay.accessibility_assessment.as_ref()),
-                platform: self.intern(quay.public_code.as_deref()),
-                level: self.reference(quay.level_ref.as_ref()),
-                parent_site: None,
-                sloid: self.intern(sloid(quay.key_list.as_ref())),
-            };
-            let id = self.id(quay.id.as_ref());
-            self.stop(id, facts);
+            if let QuayItem::Quay(quay) = item {
+                self.quay(quay);
+            }
         }
+    }
+
+    /// A quay, in its stop place or defined beside it.
+    fn quay(&mut self, quay: &model::Quay) {
+        let facts = StopFacts {
+            document: self.document,
+            wheelchair: Wheelchair::of(quay.accessibility_assessment.as_ref()),
+            platform: self.intern(quay.public_code.as_deref()),
+            level: self.reference(quay.level_ref.as_ref()),
+            parent_site: None,
+            sloid: self.intern(sloid(quay.key_list.as_ref())),
+        };
+        let id = self.id(quay.id.as_ref());
+        self.stop(id, facts);
     }
 
     /// Keeps what a stop place or quay states, as the definition of the
@@ -555,54 +559,23 @@ impl Gather {
         facts.location_system = facts.location_system.or(system);
     }
 
-    /// The train numbers of a `trainNumbers` container, which the walk does
-    /// not type: each `TrainNumber`'s identifier and the number it advertises
+    /// A train number: its identifier and the number it advertises
     /// (`ForAdvertisement`, else `Description`).
-    fn train_numbers<'i>(
-        &mut self,
-        cursor: &mut Cursor<'i>,
-        container: &Child<'i>,
-    ) -> netex_rs::Result<()> {
-        cursor.enter(container)?;
-        if !container.empty {
-            while let Some(number) = cursor.next_child()? {
-                if number.local != "TrainNumber" {
-                    cursor.skip_over(&number)?;
-                    continue;
-                }
-                let mut id = None;
-                for attribute in number.attributes() {
-                    let (key, value) = attribute?;
-                    if key == "id" {
-                        id = Some(value.into_owned());
-                    }
-                }
-                let mut advertised = None;
-                cursor.enter(&number)?;
-                if !number.empty {
-                    while let Some(child) = cursor.next_child()? {
-                        match child.local {
-                            "ForAdvertisement" | "Description" if advertised.is_none() => {
-                                let text = model::MultilingualString::read(cursor, &child)?;
-                                advertised = Some(text.as_str().trim().to_owned());
-                            }
-                            _ => cursor.skip_over(&child)?,
-                        }
-                    }
-                }
-                cursor.leave();
-                if let (Some(id), Some(advertised)) = (id, advertised.filter(|a| !a.is_empty())) {
-                    let record = TrainNumber {
-                        document: self.document,
-                        id: self.names.intern(&id),
-                        advertised: self.names.intern(&advertised),
-                    };
-                    self.train_numbers.push(record);
-                }
-            }
+    fn train_number(&mut self, number: &model::TrainNumber) {
+        let advertised = number
+            .for_advertisement
+            .as_deref()
+            .or(number.description.as_ref().map(|d| d.as_str()))
+            .map(str::trim)
+            .filter(|advertised| !advertised.is_empty());
+        if let (Some(id), Some(advertised)) = (number.id.as_ref(), advertised) {
+            let record = TrainNumber {
+                document: self.document,
+                id: self.names.intern(id.as_str()),
+                advertised: self.names.intern(advertised),
+            };
+            self.train_numbers.push(record);
         }
-        cursor.leave();
-        Ok(())
     }
 
     /// Takes in what `other` gathered.
@@ -758,6 +731,8 @@ impl<'i> Sink<'i> for Gather {
     fn entity(&mut self, entity: Entity, _: &Scope) -> netex_rs::Result<()> {
         match &entity {
             Entity::StopPlace(place) => self.stop_place(place),
+            Entity::Quay(quay) => self.quay(quay),
+            Entity::TrainNumber(number) => self.train_number(number),
             Entity::Operator(organisation) | Entity::Authority(organisation) => {
                 self.organisation(organisation)
             }
@@ -825,7 +800,6 @@ impl<'i> Sink<'i> for Gather {
                 }
                 return Ok(());
             }
-            (Skipped::Frame(_), "trainNumbers") => return self.train_numbers(cursor, element),
             (Skipped::Frame(_), "TypeOfFrameRef") => {
                 for attribute in element.attributes() {
                     let (key, value) = attribute?;

@@ -21,8 +21,8 @@ pub struct Reading {
 }
 
 /// What a selection reads for a feed: the routing entities, and the
-/// organisations, data sources, destination displays and directions; the
-/// service links where their geometry is wanted.
+/// organisations, data sources, destination displays, directions and train
+/// numbers; the service links where their geometry is wanted.
 pub fn selection(reading: Reading) -> Selection {
     let selection = [
         Kind::Operator,
@@ -31,6 +31,7 @@ pub fn selection(reading: Reading) -> Selection {
         Kind::DestinationDisplay,
         Kind::Direction,
         Kind::InterchangeRule,
+        Kind::TrainNumber,
     ]
     .into_iter()
     .fold(Selection::routing(), Selection::with);

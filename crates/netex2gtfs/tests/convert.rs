@@ -610,3 +610,136 @@ fn a_delivery_stating_offsets_and_no_time_zone_takes_its_profile_s() {
         .expect("the decision is reported");
     assert_eq!(decision.example.as_deref(), Some("Europe/Zurich"));
 }
+
+#[test]
+fn a_french_delivery_converts_with_its_quays_beside_their_stop_places_and_its_three_calendars() {
+    let Some(path) = own_example("fr") else {
+        return;
+    };
+    let (feed, report) = convert_to_directory(&path, &Options::default());
+    assert_eq!(
+        table(feed.path(), "agency.txt", &["agency_id", "agency_timezone"]),
+        ["EX:Operator:autocars:LOC|Europe/Paris"]
+    );
+    // The quays stand under the stop place naming them; the first states its
+    // accessibility. The second quay of the Gare has no stop point and no call.
+    assert_eq!(
+        table(
+            feed.path(),
+            "stops.txt",
+            &[
+                "stop_id",
+                "location_type",
+                "parent_station",
+                "wheelchair_boarding"
+            ]
+        ),
+        [
+            "FR:00001:LMO:gare:LOC|1||0",
+            "FR:00001:LMO:mairie:LOC|1||0",
+            "FR:00002:LMO:eglise:LOC|1||0",
+            "FR:00001:ZE:gare-a:LOC|0|FR:00001:LMO:gare:LOC|1",
+            "FR:00001:ZE:mairie:LOC|0|FR:00001:LMO:mairie:LOC|0",
+            "FR:00002:ZE:eglise:LOC|0|FR:00002:LMO:eglise:LOC|0",
+        ]
+    );
+    // The passing times name no point: each is at the point of its position.
+    assert_eq!(
+        table(
+            feed.path(),
+            "stop_times.txt",
+            &["trip_id", "stop_id", "arrival_time", "departure_time"]
+        )[6..],
+        [
+            "EX:ServiceJourney:10-2345:LOC|FR:00001:ZE:gare-a:LOC|23:45:00|23:45:00",
+            "EX:ServiceJourney:10-2345:LOC|FR:00001:ZE:mairie:LOC|23:56:00|23:57:00",
+            "EX:ServiceJourney:10-2345:LOC|FR:00002:ZE:eglise:LOC|24:10:00|24:10:00",
+        ]
+    );
+    // School days as their dates list them; the weekend by its days of the
+    // week but Sunday 18, with Friday 16; the Wednesdays of a plain period.
+    assert_eq!(
+        table(feed.path(), "trips.txt", &["trip_id", "service_id"]),
+        [
+            "EX:ServiceJourney:10-0730:LOC|c0",
+            "EX:ServiceJourney:10-0930:LOC|c1",
+            "EX:ServiceJourney:10-2345:LOC|c2",
+        ]
+    );
+    assert_eq!(
+        table(
+            feed.path(),
+            "calendar.txt",
+            &[
+                "service_id",
+                "monday",
+                "tuesday",
+                "wednesday",
+                "thursday",
+                "friday",
+                "saturday",
+                "sunday",
+                "start_date",
+                "end_date"
+            ]
+        ),
+        [
+            "c0|1|1|1|1|0|0|0|20261012|20261020",
+            "c1|0|0|0|0|1|1|1|20261010|20261025",
+            "c2|0|0|1|0|0|0|0|20261014|20261021",
+        ]
+    );
+    assert_eq!(
+        table(
+            feed.path(),
+            "calendar_dates.txt",
+            &["service_id", "date", "exception_type"]
+        ),
+        ["c1|20261018|2", "c1|20261023|2"]
+    );
+    assert_eq!(report.index_findings.get("walk-without-duration"), Some(&1));
+}
+
+#[test]
+fn a_train_number_among_a_general_frame_s_members_names_its_trip() {
+    let Some(path) = own_example("fr") else {
+        return;
+    };
+    let delivery = tempfile::tempdir().expect("a directory");
+    for entry in std::fs::read_dir(&path).expect("the example") {
+        let entry = entry.expect("an entry");
+        let mut xml = std::fs::read_to_string(entry.path()).expect("a document");
+        if entry.file_name() == "line_10.xml" {
+            xml = xml
+                .replacen(
+                    r#"<JourneyPatternRef ref="EX:ServiceJourneyPattern:10-aller:LOC" version="1"/>"#,
+                    r#"<JourneyPatternRef ref="EX:ServiceJourneyPattern:10-aller:LOC" version="1"/><trainNumbers><TrainNumberRef ref="EX:TrainNumber:851:LOC" version="1"/></trainNumbers>"#,
+                    1,
+                )
+                .replace(
+                    r#"<TypeOfFrameRef ref="FR:TypeOfFrame:NETEX_HORAIRE:"/>
+          <members>"#,
+                    r#"<TypeOfFrameRef ref="FR:TypeOfFrame:NETEX_HORAIRE:"/>
+          <members><TrainNumber id="EX:TrainNumber:851:LOC" version="1"><ForAdvertisement>851</ForAdvertisement></TrainNumber>"#,
+                );
+        }
+        std::fs::write(delivery.path().join(entry.file_name()), xml).expect("written");
+    }
+    let (feed, report) = convert_to_directory(delivery.path(), &Options::default());
+    assert_eq!(
+        table(feed.path(), "trips.txt", &["trip_id", "trip_short_name"]),
+        [
+            "EX:ServiceJourney:10-0730:LOC|851",
+            "EX:ServiceJourney:10-0930:LOC|",
+            "EX:ServiceJourney:10-2345:LOC|",
+        ]
+    );
+    assert!(
+        report
+            .not_carried
+            .iter()
+            .all(|n| n.element != "TrainNumber"),
+        "{:?}",
+        report.not_carried
+    );
+}
