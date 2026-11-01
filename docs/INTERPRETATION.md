@@ -1293,8 +1293,9 @@ and the model did not type `privateCodes`.
 
 **Proposal: adopt.** Effort **S**.
 
-**Built (unreleased, after 0.7.2).** The model types `privateCodes` wherever
-it types `keyList` (`PrivateCodes`). A stop place's or quay's global
+**Built (unreleased, after 0.7.2).** The model types `privateCodes` beside
+`keyList` (`PrivateCodes`), but on a passing time and a stop point in a pattern,
+where it stays untyped. A stop place's or quay's global
 identifier (`Stop::dhid`, `Index::stop_by_dhid`) is its `GlobalID`, else its
 `StopPlaceCode` or `QuayCode`; `netex convert --stop-ids global` writes it,
 and `netex merge` pairs a stop of a later delivery with an earlier one by it,

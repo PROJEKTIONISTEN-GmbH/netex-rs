@@ -70,7 +70,8 @@ register's quays, the profile's codespaces and frame types); against NeTEx
   register's stops state codes in NeTEx 2.0's `privateCodes`: line planning
   numbers, journey numbers, user stop codes, and the register's
   `StopPlaceCode` `NL:S:…` and `QuayCode` `NL:Q:…`. The model reads
-  `privateCodes` wherever it reads `keyList` (`PrivateCodes`).
+  `privateCodes` beside `keyList` (`PrivateCodes`), but on a passing time and
+  a stop point in a pattern, where it stays untyped.
 - **The register's codes are the stops' global identifiers.** The German
   delivery names the Dutch stops it serves by `GlobalID` `NL:Q:…` and
   `NL:S:…`; the register states the same keys as private codes. A stop's
