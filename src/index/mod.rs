@@ -69,7 +69,12 @@ pub enum StopKind {
 pub struct Stop<'a> {
     /// The NeTEx identifier.
     pub id: &'a str,
-    /// The DHID, from the `GlobalID` key, if the stop carries one.
+    /// The identifier the stop carries across deliveries: the `GlobalID`
+    /// key — the German DHID, and the keys the German delivery gives the
+    /// foreign stops it serves —, else the code the Dutch stop register gives
+    /// a quay or stop place (`QuayCode` `NL:Q:…`, `StopPlaceCode` `NL:S:…`),
+    /// which the German delivery names those stops by. None where the stop
+    /// carries neither.
     pub dhid: Option<&'a str>,
     /// The name.
     pub name: &'a str,
@@ -415,8 +420,11 @@ impl Index {
         self.stop_table.latest_of(sym).map(StopId)
     }
 
-    /// The stop with this DHID; of several stops that carry it, the one whose
-    /// identifier sorts first, at its highest version.
+    /// The stop with this DHID — or other identifier across deliveries
+    /// ([`Stop::dhid`]): a Dutch quay is found by its `NL:Q:…` in the Dutch
+    /// stop register and in the German delivery alike —; of several stops
+    /// that carry it, the one whose identifier sorts first, at its highest
+    /// version.
     pub fn stop_by_dhid(&self, dhid: &str) -> Option<StopId> {
         let sym = self.strings.get(dhid)?;
         self.stop_by_dhid.get(&sym).copied()

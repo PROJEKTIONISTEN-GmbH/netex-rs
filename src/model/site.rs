@@ -4,7 +4,8 @@
 use super::{
     AccessMode, AccessSpaceType, AlternativeNames, Centroid, Codespaces, Duration, EntranceType,
     FrameDefaults, Id, KeyList, LimitationStatus, Locale, MultilingualString, PrivateCode,
-    QuayType, Ref, StopType, Submode, ValidBetween, ValidityConditions, VehicleMode, Version,
+    PrivateCodes, QuayType, Ref, StopType, Submode, ValidBetween, ValidityConditions, VehicleMode,
+    Version,
 };
 
 netex_element! {
@@ -23,6 +24,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The frame's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name of the frame.
@@ -37,6 +40,9 @@ netex_element! {
             pub codespaces: Option<Codespaces> = "codespaces",
             /// What the entities assume unless they say otherwise.
             pub frame_defaults: Option<FrameDefaults> = "FrameDefaults",
+            /// The availability conditions the frame's content shares, the
+            /// Dutch deliveries' calendar.
+            pub content_validity_conditions: Option<ValidityConditions> = "contentValidityConditions",
             /// Towns, districts, regions.
             pub topographic_places: Option<TopographicPlaces> = "topographicPlaces",
             /// Groups of stop places.
@@ -79,6 +85,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -202,6 +210,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// Name.
             pub name: Option<MultilingualString> = "Name",
             /// Short name: `UG`, `EG`, `1`.
@@ -243,6 +253,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -311,6 +323,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs; the German delivery's DHID is under `GlobalID`.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -398,6 +412,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -474,6 +490,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs; the German delivery's DHID is under `GlobalID`.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -561,6 +579,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -649,6 +669,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.

@@ -4,11 +4,11 @@ use super::{
     AvailabilityCondition, Codespaces, DataSource, DateTime, DayType, DayTypeAssignment,
     DestinationDisplay, Direction, Duration, FrameDefaults, GroupOfStopPlaces, Id, InterchangeRule,
     KeyList, Line, MultilingualString, Notice, NoticeAssignment, OperatingDay, OperatingPeriod,
-    Organisation, PassengerStopAssignment, Quay, Ref, ResourceFrame, ResponsibilitySet, Route,
-    RoutePoint, ScheduledStopPoint, ServiceCalendarFrame, ServiceFrame, ServiceJourney,
-    ServiceJourneyInterchange, ServiceJourneyPattern, ServiceLink, SiteConnection, SiteFrame,
-    StopPlace, TimetableFrame, TopographicPlace, TrainNumber, ValidBetween, ValidityConditions,
-    VehicleType, Version,
+    Organisation, PassengerStopAssignment, PrivateCodes, Quay, Ref, ResourceFrame,
+    ResponsibilitySet, Route, RoutePoint, ScheduledStopPoint, ServiceCalendarFrame, ServiceFrame,
+    ServiceJourney, ServiceJourneyInterchange, ServiceJourneyPattern, ServiceLink, SiteConnection,
+    SiteFrame, StopPlace, TimeDemandType, TimetableFrame, TopographicPlace, TrainNumber,
+    ValidBetween, ValidityConditions, VehicleType, Version,
 };
 
 netex_element! {
@@ -75,6 +75,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The frame's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name of the frame.
@@ -89,6 +91,9 @@ netex_element! {
             pub codespaces: Option<Codespaces> = "codespaces",
             /// What the entities assume unless they say otherwise.
             pub frame_defaults: Option<FrameDefaults> = "FrameDefaults",
+            /// The availability conditions the frame's content shares, the
+            /// Dutch deliveries' calendar.
+            pub content_validity_conditions: Option<ValidityConditions> = "contentValidityConditions",
             /// The frames held.
             pub frames: Option<Frames> = "frames",
         }
@@ -114,6 +119,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The frame's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name of the frame.
@@ -128,6 +135,9 @@ netex_element! {
             pub codespaces: Option<Codespaces> = "codespaces",
             /// What the entities assume unless they say otherwise.
             pub frame_defaults: Option<FrameDefaults> = "FrameDefaults",
+            /// The availability conditions the frame's content shares, the
+            /// Dutch deliveries' calendar.
+            pub content_validity_conditions: Option<ValidityConditions> = "contentValidityConditions",
             /// The entities, in document order.
             pub members: Option<GeneralFrameMembers> = "members",
         }
@@ -185,6 +195,8 @@ netex_container! {
         Notice(Notice) = "Notice",
         /// Where a notice applies.
         NoticeAssignment(NoticeAssignment) = "NoticeAssignment",
+        /// A time demand type.
+        TimeDemandType(TimeDemandType) = "TimeDemandType",
         /// A day type.
         DayType(DayType) = "DayType",
         /// An operating day.

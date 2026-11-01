@@ -2,8 +2,8 @@
 
 use super::{
     Codespaces, Connections, DirectionType, Duration, FrameDefaults, Id, KeyList, Location,
-    MultilingualString, Order, PrivateCode, Ref, StopType, StopUse, TimingPointStatus,
-    ValidBetween, ValidityConditions, VehicleMode, Version,
+    MultilingualString, Order, PrivateCode, PrivateCodes, Ref, StopType, StopUse,
+    TimingPointStatus, ValidBetween, ValidityConditions, VehicleMode, Version,
 };
 
 netex_element! {
@@ -22,6 +22,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The frame's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name of the frame.
@@ -36,6 +38,9 @@ netex_element! {
             pub codespaces: Option<Codespaces> = "codespaces",
             /// What the entities assume unless they say otherwise.
             pub frame_defaults: Option<FrameDefaults> = "FrameDefaults",
+            /// The availability conditions the frame's content shares, the
+            /// Dutch deliveries' calendar.
+            pub content_validity_conditions: Option<ValidityConditions> = "contentValidityConditions",
             /// Directions.
             pub directions: Option<Directions> = "directions",
             /// Points routes go through.
@@ -56,6 +61,8 @@ netex_element! {
             pub stop_assignments: Option<StopAssignments> = "stopAssignments",
             /// Journey patterns.
             pub journey_patterns: Option<JourneyPatterns> = "journeyPatterns",
+            /// Time demand types: the run and wait times of the journeys naming them.
+            pub time_demand_types: Option<TimeDemandTypes> = "timeDemandTypes",
             /// Notices.
             pub notices: Option<Notices> = "notices",
             /// Where notices apply.
@@ -78,6 +85,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -200,6 +209,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -271,6 +282,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -361,6 +374,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -409,6 +424,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -453,6 +470,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -521,6 +540,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -563,6 +584,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -653,6 +676,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -701,6 +726,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -808,11 +835,61 @@ netex_element! {
     }
 }
 
+netex_choice! {
+    /// A timing point: a point a journey's times are planned for. A stop
+    /// point is one.
+    pub enum TimingPointRef {
+        /// A timing point that is no stop point.
+        TimingPoint(Ref) = "TimingPointRef",
+        /// A scheduled stop point.
+        ScheduledStopPoint(Ref) = "ScheduledStopPointRef",
+        /// A point where a driver may be relieved.
+        ReliefPoint(Ref) = "ReliefPointRef",
+        /// A point on a border.
+        BorderPoint(Ref) = "BorderPointRef",
+    }
+}
+
+netex_element! {
+    /// A point of a journey pattern where the vehicle does not stop, but
+    /// whose times are planned: the run times of a time demand type lead to
+    /// and from it.
+    pub struct TimingPointInJourneyPattern {
+        attributes {
+            /// The `id` attribute.
+            pub id: Option<Id> = "id",
+            /// The `version` attribute.
+            pub version: Option<Version> = "version",
+            /// The `order` attribute.
+            pub order: Option<Order> = "order",
+        }
+        children {
+            /// When the entity is valid.
+            pub valid_between: Vec<ValidBetween> = "ValidBetween",
+            /// What it is.
+            pub description: Option<MultilingualString> = "Description",
+            /// The timing point.
+            pub timing_point_ref: Option<TimingPointRef> = choice,
+            /// The timing link onward.
+            pub onward_timing_link_ref: Option<Ref> = "OnwardTimingLinkRef",
+            /// Whether the vehicle waits here to keep time.
+            pub is_wait_point: Option<bool> = "IsWaitPoint",
+            /// How long it waits.
+            pub wait_time: Option<Duration> = "WaitTime",
+            /// Notices about this point.
+            pub notice_assignments: Option<NoticeAssignments> = "noticeAssignments",
+        }
+    }
+}
+
 netex_container! {
-    /// The stops of a journey pattern, in order.
+    /// The points of a journey pattern, in order: its stops, and the timing
+    /// points between them.
     pub struct PointsInSequence of PointInSequenceItem {
         /// A stop.
         StopPointInJourneyPattern(StopPointInJourneyPattern) = "StopPointInJourneyPattern",
+        /// A timing point that is no stop.
+        TimingPointInJourneyPattern(TimingPointInJourneyPattern) = "TimingPointInJourneyPattern",
     }
 }
 
@@ -833,6 +910,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -866,6 +945,110 @@ netex_element! {
             /// What kind of service pattern: `passenger`, `garageRunOut`, …
             pub service_journey_pattern_type: Option<Box<str>> = "ServiceJourneyPatternType",
         }
+    }
+}
+
+netex_element! {
+    /// How long a journey takes on one timing link of its pattern, from one
+    /// timing point to the next.
+    pub struct JourneyRunTime {
+        attributes {
+            /// The `id` attribute.
+            pub id: Option<Id> = "id",
+            /// The `version` attribute.
+            pub version: Option<Version> = "version",
+        }
+        children {
+            /// When the entity is valid.
+            pub valid_between: Vec<ValidBetween> = "ValidBetween",
+            /// Name.
+            pub name: Option<MultilingualString> = "Name",
+            /// The timing link.
+            pub timing_link_ref: Option<Ref> = "TimingLinkRef",
+            /// How long.
+            pub run_time: Option<Duration> = "RunTime",
+        }
+    }
+}
+
+netex_container! {
+    /// The run times of a time demand type.
+    pub struct JourneyRunTimes of JourneyRunTimeItem {
+        /// A run time.
+        JourneyRunTime(JourneyRunTime) = "JourneyRunTime",
+    }
+}
+
+netex_element! {
+    /// How long a journey waits at one timing point of its pattern.
+    pub struct JourneyWaitTime {
+        attributes {
+            /// The `id` attribute.
+            pub id: Option<Id> = "id",
+            /// The `version` attribute.
+            pub version: Option<Version> = "version",
+        }
+        children {
+            /// When the entity is valid.
+            pub valid_between: Vec<ValidBetween> = "ValidBetween",
+            /// Name.
+            pub name: Option<MultilingualString> = "Name",
+            /// The timing point: a timing point, or a stop point.
+            pub timing_point_ref: Option<TimingPointRef> = choice,
+            /// How long.
+            pub wait_time: Option<Duration> = "WaitTime",
+        }
+    }
+}
+
+netex_container! {
+    /// The wait times of a time demand type.
+    pub struct JourneyWaitTimes of JourneyWaitTimeItem {
+        /// A wait time.
+        JourneyWaitTime(JourneyWaitTime) = "JourneyWaitTime",
+    }
+}
+
+netex_element! {
+    /// A time demand type: how long the journeys naming it take on each
+    /// timing link of their pattern, and wait at its timing points. A journey
+    /// naming one and its departure states its passing times so, rather than
+    /// listing them — as the Dutch deliveries state every journey.
+    pub struct TimeDemandType {
+        attributes {
+            /// The `id` attribute.
+            pub id: Option<Id> = "id",
+            /// The `version` attribute.
+            pub version: Option<Version> = "version",
+        }
+        children {
+            /// When the entity is valid.
+            pub valid_between: Vec<ValidBetween> = "ValidBetween",
+            /// Key-value pairs.
+            pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
+            /// The entity's branding.
+            pub branding_ref: Option<Ref> = "BrandingRef",
+            /// Name.
+            pub name: Option<MultilingualString> = "Name",
+            /// What it is.
+            pub description: Option<MultilingualString> = "Description",
+            /// The publisher's own code.
+            pub private_code: Option<PrivateCode> = "PrivateCode",
+            /// How long on each timing link.
+            pub run_times: Option<JourneyRunTimes> = "runTimes",
+            /// How long at each timing point waited at.
+            pub wait_times: Option<JourneyWaitTimes> = "waitTimes",
+        }
+    }
+}
+
+netex_container! {
+    /// The time demand types of a service or timetable frame.
+    pub struct TimeDemandTypes of TimeDemandTypeItem {
+        /// A time demand type.
+        TimeDemandType(TimeDemandType) = "TimeDemandType",
     }
 }
 

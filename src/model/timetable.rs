@@ -3,9 +3,9 @@
 
 use super::{
     AccessibilityAssessment, Codespaces, DirectionType, Duration, FrameDefaults, Id, KeyList,
-    LineRef, MultilingualString, NoticeAssignments, Notices, Order, PrivateCode, Ref, StopPointRef,
-    StopUse, Time, TimingPointStatus, TransportSubmode, ValidBetween, ValidityConditions,
-    VehicleMode, VehicleTypes, Version,
+    LineRef, MultilingualString, NoticeAssignments, Notices, Order, PrivateCode, PrivateCodes, Ref,
+    StopPointRef, StopUse, Time, TimeDemandTypes, TimingPointStatus, TransportSubmode,
+    ValidBetween, ValidityConditions, VehicleMode, VehicleTypes, Version,
 };
 
 netex_element! {
@@ -24,6 +24,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The frame's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name of the frame.
@@ -38,12 +40,17 @@ netex_element! {
             pub codespaces: Option<Codespaces> = "codespaces",
             /// What the entities assume unless they say otherwise.
             pub frame_defaults: Option<FrameDefaults> = "FrameDefaults",
+            /// The availability conditions the frame's content shares, the
+            /// Dutch deliveries' calendar.
+            pub content_validity_conditions: Option<ValidityConditions> = "contentValidityConditions",
             /// The modes, space-separated.
             pub vehicle_modes: Option<Box<str>> = "VehicleModes",
             /// Whether the journeys are monitored in real time.
             pub monitored: Option<bool> = "Monitored",
             /// The calendar frame the day types are in.
             pub service_calendar_frame_ref: Option<Ref> = "ServiceCalendarFrameRef",
+            /// Time demand types: the run and wait times of the journeys naming them.
+            pub time_demand_types: Option<TimeDemandTypes> = "timeDemandTypes",
             /// The journeys.
             pub vehicle_journeys: Option<VehicleJourneys> = "vehicleJourneys",
             /// The numbers trains are advertised and run under, named by
@@ -104,6 +111,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// What it is.
@@ -387,6 +396,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -506,6 +517,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.
@@ -586,6 +599,8 @@ netex_element! {
             pub valid_between: Vec<ValidBetween> = "ValidBetween",
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.

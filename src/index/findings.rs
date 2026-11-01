@@ -122,6 +122,12 @@ pub enum Concern {
     /// [`Index::stop_by_id`]: super::Index::stop_by_id
     /// [`Index::stop_point_by_id`]: super::Index::stop_point_by_id
     LocalIdentifier,
+    /// A journey stating its times by a time demand type — as the Dutch
+    /// deliveries state every journey — whose pattern has a point, before
+    /// its last, naming no timing link onward, or a link the type states no
+    /// run time for: its calls from there on are untimed. Names the time
+    /// demand type.
+    LinkWithoutRunTime,
 }
 
 impl Concern {
@@ -149,6 +155,7 @@ impl Concern {
         Concern::PropertiesOfDayUnread,
         Concern::WalkWithoutDuration,
         Concern::LocalIdentifier,
+        Concern::LinkWithoutRunTime,
     ];
 
     /// The concern's name in reports and on command lines, in lower case with
@@ -177,6 +184,7 @@ impl Concern {
             Concern::PropertiesOfDayUnread => "properties-of-day-unread",
             Concern::WalkWithoutDuration => "walk-without-duration",
             Concern::LocalIdentifier => "local-identifier",
+            Concern::LinkWithoutRunTime => "link-without-run-time",
         }
     }
 
@@ -230,6 +238,9 @@ impl Concern {
             Concern::WalkWithoutDuration => "walk stating no duration, no transfer",
             Concern::LocalIdentifier => {
                 "identifier naming another stop than in another document, a stop of its own"
+            }
+            Concern::LinkWithoutRunTime => {
+                "timing link of the pattern without a run time, the calls after it untimed"
             }
         }
     }

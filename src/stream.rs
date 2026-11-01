@@ -120,6 +120,8 @@ entities! {
     ServiceJourneyPattern(model::ServiceJourneyPattern) = "ServiceJourneyPattern",
     /// A journey pattern, with its points in sequence.
     JourneyPattern(model::ServiceJourneyPattern) = "JourneyPattern",
+    /// A time demand type: the run and wait times of the journeys naming it.
+    TimeDemandType(model::TimeDemandType) = "TimeDemandType",
     /// A notice.
     Notice(model::Notice) = "Notice",
     /// Where a notice applies, when assigned at frame level.
@@ -134,7 +136,8 @@ entities! {
     UicOperatingPeriod(model::OperatingPeriod) = "UicOperatingPeriod",
     /// Which day type a day is.
     DayTypeAssignment(model::DayTypeAssignment) = "DayTypeAssignment",
-    /// The days an entity is available on, defined in a frame's `validityConditions`.
+    /// The days an entity is available on, defined in a frame's
+    /// `validityConditions` or `contentValidityConditions`.
     AvailabilityCondition(model::AvailabilityCondition) = "AvailabilityCondition",
     /// A journey, with its passing times.
     ServiceJourney(model::ServiceJourney) = "ServiceJourney",
@@ -177,10 +180,10 @@ impl Selection {
 
     /// What a routing importer reads: stops with their quays — and the quays
     /// defined beside them —, routes and lines — flexible lines among them —,
-    /// stop points and their assignments, journey patterns, journeys with
-    /// their passing times or calls, template and dated journeys, the
-    /// calendar with its availability conditions, walks, interchanges, and
-    /// notices.
+    /// stop points and their assignments, journey patterns, the time demand
+    /// types journeys state their times by, journeys with their passing times
+    /// or calls, template and dated journeys, the calendar with its
+    /// availability conditions, walks, interchanges, and notices.
     pub fn routing() -> Self {
         [
             Kind::StopPlace,
@@ -192,6 +195,7 @@ impl Selection {
             Kind::PassengerStopAssignment,
             Kind::ServiceJourneyPattern,
             Kind::JourneyPattern,
+            Kind::TimeDemandType,
             Kind::SiteConnection,
             Kind::Notice,
             Kind::NoticeAssignment,
@@ -335,10 +339,16 @@ type Containers = &'static [(&'static str, &'static [Kind])];
 /// their availability conditions there.
 const CONDITIONS: (&str, &[Kind]) = ("validityConditions", &[Kind::AvailabilityCondition]);
 
-const COMPOSITE: Containers = &[CONDITIONS];
+/// The validity conditions a frame's content shares: the Dutch deliveries
+/// define their availability conditions there.
+const CONTENT_CONDITIONS: (&str, &[Kind]) =
+    ("contentValidityConditions", &[Kind::AvailabilityCondition]);
+
+const COMPOSITE: Containers = &[CONDITIONS, CONTENT_CONDITIONS];
 
 const RESOURCE: Containers = &[
     CONDITIONS,
+    CONTENT_CONDITIONS,
     ("dataSources", &[Kind::DataSource]),
     ("responsibilitySets", &[Kind::ResponsibilitySet]),
     ("organisations", &[Kind::Operator, Kind::Authority]),
@@ -347,6 +357,7 @@ const RESOURCE: Containers = &[
 
 const SITE: Containers = &[
     CONDITIONS,
+    CONTENT_CONDITIONS,
     ("topographicPlaces", &[Kind::TopographicPlace]),
     ("groupsOfStopPlaces", &[Kind::GroupOfStopPlaces]),
     ("stopPlaces", &[Kind::StopPlace]),
@@ -354,6 +365,7 @@ const SITE: Containers = &[
 
 const SERVICE: Containers = &[
     CONDITIONS,
+    CONTENT_CONDITIONS,
     ("directions", &[Kind::Direction]),
     ("routePoints", &[Kind::RoutePoint]),
     ("routes", &[Kind::Route]),
@@ -367,6 +379,7 @@ const SERVICE: Containers = &[
         "journeyPatterns",
         &[Kind::ServiceJourneyPattern, Kind::JourneyPattern],
     ),
+    ("timeDemandTypes", &[Kind::TimeDemandType]),
     ("notices", &[Kind::Notice]),
     ("noticeAssignments", &[Kind::NoticeAssignment]),
 ];
@@ -375,6 +388,7 @@ const SERVICE: Containers = &[
 /// `<ServiceCalendar>` it may wrap.
 const CALENDAR: Containers = &[
     CONDITIONS,
+    CONTENT_CONDITIONS,
     ("dayTypes", &[Kind::DayType]),
     ("operatingDays", &[Kind::OperatingDay]),
     (
@@ -386,6 +400,8 @@ const CALENDAR: Containers = &[
 
 const TIMETABLE: Containers = &[
     CONDITIONS,
+    CONTENT_CONDITIONS,
+    ("timeDemandTypes", &[Kind::TimeDemandType]),
     (
         "vehicleJourneys",
         &[
@@ -403,7 +419,7 @@ const TIMETABLE: Containers = &[
 ];
 
 /// A general frame's one container: its `members`, of every kind.
-const GENERAL: Containers = &[CONDITIONS, ("members", Kind::ALL)];
+const GENERAL: Containers = &[CONDITIONS, CONTENT_CONDITIONS, ("members", Kind::ALL)];
 
 /// Where the walk of [`read_with`] met an element it does not read itself.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -419,8 +435,8 @@ pub enum Skipped<'a> {
     /// A child of a frame of this kind that the walk does not read: anything
     /// but the frame's `ValidBetween`, a composite frame's `frames`, a calendar
     /// frame's `ServiceCalendar` and the containers holding a selected kind —
-    /// among them the frame's `validityConditions`, holding availability
-    /// conditions — the frame's `FrameDefaults`, say, or a container of no
+    /// among them the frame's `validityConditions` and
+    /// `contentValidityConditions`, holding availability conditions — the frame's `FrameDefaults`, say, or a container of no
     /// selected kind.
     Frame(FrameKind),
     /// A child of a calendar frame's `<ServiceCalendar>` that is no container

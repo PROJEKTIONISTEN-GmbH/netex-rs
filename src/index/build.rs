@@ -17,9 +17,9 @@ use crate::model::{
     AssignedDayType, AssignedDays, AvailabilityCondition, Date, DateTime, DayType, Frame,
     GeneralFrameMember, JourneyPatternItem, JourneyPatternRef, JourneyRef, LineRef, OperatingDay,
     OperatingDayRef, OperatingPeriod, OperatingPeriodItem, PeriodEnd, PeriodStart,
-    PointInPatternRef, Quay, QuayItem, Ref, RouteRefOrView, ServiceJourney, ServiceJourneyPattern,
-    SiteConnectionEnd, StopPlace, StopPointRef, StopUse, Time, ValidBetween, ValidityConditionItem,
-    VehicleJourney,
+    PointInPatternRef, PointInSequenceItem, Quay, QuayItem, Ref, RouteRefOrView, ServiceJourney,
+    ServiceJourneyPattern, SiteConnectionEnd, StopPlace, StopPointRef, StopUse, Time,
+    TimeDemandType, TimingPointRef, ValidBetween, ValidityConditionItem, VehicleJourney,
 };
 use crate::stream::{self, Entity, ReadOptions, Scope, Sink, Skipped};
 use crate::xml::{Child, Cursor};
@@ -241,7 +241,87 @@ pub(crate) struct PatternRecord {
     /// The pattern's points: a range of the builder's `pattern_point_refs`,
     /// `pattern_point_keys` and `pattern_point_uses`, one entry per point.
     pub(crate) points: (u32, u32),
+    /// Its points as a journey's times are laid along them — its stop points
+    /// and the timing points between them —, where it names a timing link
+    /// onward from any: a range of the builder's `pattern_steps`; empty where
+    /// it names none.
+    pub(crate) steps: (u32, u32),
     pub(crate) validity: Validity,
+}
+
+/// A point of a pattern as the times of a journey naming a time demand type
+/// are laid along it: the stop point or timing point it names, the timing
+/// link onward, how long the pattern says the vehicle waits there, and which
+/// of the pattern's stop points it is.
+///
+/// A pattern may pass a point or a link more than once — a loop through a
+/// town and back —, and a time demand type then states a time for each pass,
+/// in pattern order: the step knows how often the pattern runs its link
+/// onward before, and comes by its point after.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct TimingStep {
+    pub(crate) point: Sym,
+    /// The later steps at the same point.
+    pub(crate) later_visits: u32,
+    pub(crate) onward: Option<Sym>,
+    /// The earlier steps onward on the same link.
+    pub(crate) passage: u32,
+    /// How long the pattern says the vehicle waits there, in milliseconds.
+    pub(crate) wait: Option<u32>,
+    /// Its position among the pattern's stop points; none for a timing point
+    /// that is no stop.
+    pub(crate) stop: Option<u32>,
+}
+
+impl TimingStep {
+    /// A step at `point`, onward on `onward`, the first visit and passage.
+    fn new(point: Sym, onward: Option<Sym>, wait: Option<u32>, stop: Option<u32>) -> TimingStep {
+        TimingStep {
+            point,
+            later_visits: 0,
+            onward,
+            passage: 0,
+            wait,
+            stop,
+        }
+    }
+}
+
+/// Numbers each step's passage of its link onward among the steps before
+/// it, and counts its point's visits among the steps after it.
+fn number_passes(steps: &mut [TimingStep]) {
+    let mut passages: FxHashMap<Sym, u32> = FxHashMap::default();
+    for step in steps.iter_mut() {
+        if let Some(link) = step.onward {
+            let passage = passages.entry(link).or_default();
+            step.passage = *passage;
+            *passage += 1;
+        }
+    }
+    let mut visits: FxHashMap<Sym, u32> = FxHashMap::default();
+    for step in steps.iter_mut().rev() {
+        let later = visits.entry(step.point).or_default();
+        step.later_visits = *later;
+        *later += 1;
+    }
+}
+
+/// A time demand type: how long its journeys take on each timing link and
+/// wait at each timing point, a range of the builder's `demand_times`.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct TimeDemandRecord {
+    pub(crate) key: Key,
+    pub(crate) origin: Sym,
+    pub(crate) times: (u32, u32),
+}
+
+/// One time of a time demand type, in milliseconds — the Dutch deliveries
+/// state run times to the tenth of a second —: on the timing link, or at the
+/// timing point, of the identifier.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DemandTime {
+    Run(Sym, u32),
+    Wait(Sym, u32),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -268,6 +348,12 @@ pub(crate) struct JourneyRecord {
     /// Passing times as gathered: one per `TimetabledPassingTime`, with the key
     /// of the point it refers to; a range of the builder's `raw_times`.
     pub(crate) raw_times: (u32, u32),
+    /// When it leaves its first stop, in seconds since the operating day's
+    /// start, where it states it.
+    pub(crate) departure: Option<u32>,
+    /// The time demand type it names: with its departure, its passing times
+    /// where it lists none.
+    pub(crate) time_demand: Option<Pending>,
     pub(crate) validity: Validity,
 }
 
@@ -558,6 +644,9 @@ pub struct IndexBuilder {
     pub(crate) pattern_point_refs: Vec<Pending>,
     pub(crate) pattern_point_keys: Vec<Key>,
     pub(crate) pattern_point_uses: Vec<PointUse>,
+    pub(crate) pattern_steps: Vec<TimingStep>,
+    pub(crate) time_demands: Vec<TimeDemandRecord>,
+    pub(crate) demand_times: Vec<DemandTime>,
     pub(crate) journeys: Vec<JourneyRecord>,
     pub(crate) journey_day_types: Vec<Pending>,
     pub(crate) journey_conditions: Vec<Pending>,
@@ -788,6 +877,7 @@ impl Visit<'_> {
                 Frame::Composite(composite) => {
                     let validity = Validity::of(&composite.valid_between, inherited);
                     self.conditions(composite.validity_conditions.as_ref());
+                    self.conditions(composite.content_validity_conditions.as_ref());
                     if let Some(inner) = &composite.frames {
                         self.frames(&inner.items, validity);
                     }
@@ -795,6 +885,7 @@ impl Visit<'_> {
                 Frame::Site(site) => {
                     let validity = Validity::of(&site.valid_between, inherited);
                     self.conditions(site.validity_conditions.as_ref());
+                    self.conditions(site.content_validity_conditions.as_ref());
                     for item in site.stop_places.iter().flat_map(|s| &s.items) {
                         if let crate::model::StopPlaceItem::StopPlace(place) = item {
                             self.stop_place(place, validity);
@@ -807,6 +898,7 @@ impl Visit<'_> {
                 Frame::Service(service) => {
                     let validity = Validity::of(&service.valid_between, inherited);
                     self.conditions(service.validity_conditions.as_ref());
+                    self.conditions(service.content_validity_conditions.as_ref());
                     for item in service.routes.iter().flat_map(|r| &r.items) {
                         if let crate::model::RouteItem::Route(route) = item {
                             self.route(route, validity);
@@ -855,9 +947,11 @@ impl Visit<'_> {
                             JourneyPatternItem::Unprocessed(_) => {}
                         }
                     }
+                    self.time_demand_types(service.time_demand_types.as_ref());
                 }
                 Frame::ServiceCalendar(calendar) => {
                     self.conditions(calendar.validity_conditions.as_ref());
+                    self.conditions(calendar.content_validity_conditions.as_ref());
                     if let Some(inner) = &calendar.service_calendar {
                         self.calendar_parts(
                             inner.day_types.as_ref(),
@@ -876,6 +970,8 @@ impl Visit<'_> {
                 Frame::Timetable(timetable) => {
                     let validity = Validity::of(&timetable.valid_between, inherited);
                     self.conditions(timetable.validity_conditions.as_ref());
+                    self.conditions(timetable.content_validity_conditions.as_ref());
+                    self.time_demand_types(timetable.time_demand_types.as_ref());
                     for item in timetable.vehicle_journeys.iter().flat_map(|v| &v.items) {
                         match item {
                             VehicleJourney::ServiceJourney(journey)
@@ -899,12 +995,14 @@ impl Visit<'_> {
                 }
                 Frame::Resource(resource) => {
                     self.conditions(resource.validity_conditions.as_ref());
+                    self.conditions(resource.content_validity_conditions.as_ref());
                 }
                 // The members in document order, which is the order the lean
                 // mode meets them in.
                 Frame::General(general) => {
                     let validity = Validity::of(&general.valid_between, inherited);
                     self.conditions(general.validity_conditions.as_ref());
+                    self.conditions(general.content_validity_conditions.as_ref());
                     for member in general.members.iter().flat_map(|m| &m.items) {
                         self.member(member, validity);
                     }
@@ -960,6 +1058,7 @@ impl Visit<'_> {
             Entity::ServiceJourneyPattern(pattern) | Entity::JourneyPattern(pattern) => {
                 self.pattern(pattern, validity)
             }
+            Entity::TimeDemandType(demand) => self.time_demand_type(demand),
             Entity::DayType(day_type) => self.day_type(day_type),
             Entity::OperatingDay(day) => self.operating_day(day),
             Entity::OperatingPeriod(period) => self.period(period, "OperatingPeriod"),
@@ -993,6 +1092,7 @@ impl Visit<'_> {
             GeneralFrameMember::PassengerStopAssignment(assignment) => self.assignment(assignment),
             GeneralFrameMember::ServiceJourneyPattern(pattern)
             | GeneralFrameMember::JourneyPattern(pattern) => self.pattern(pattern, validity),
+            GeneralFrameMember::TimeDemandType(demand) => self.time_demand_type(demand),
             GeneralFrameMember::DayType(day_type) => self.day_type(day_type),
             GeneralFrameMember::OperatingDay(day) => self.operating_day(day),
             GeneralFrameMember::OperatingPeriod(period) => self.period(period, "OperatingPeriod"),
@@ -1078,7 +1178,11 @@ impl Visit<'_> {
 
     fn stop_place_record(&mut self, place: &StopPlace, key: Key, validity: Validity) -> StopRecord {
         let location = place.centroid.as_ref().and_then(|c| c.location.as_ref());
-        let dhid = place.key_list.as_ref().and_then(|k| k.get("GlobalID"));
+        let dhid = global_id(
+            place.key_list.as_ref(),
+            place.private_codes.as_ref(),
+            "StopPlaceCode",
+        );
         let name = place.name.as_ref().map_or("", |n| n.as_str());
         let (latitude, longitude) = self.position(location, "StopPlace", key.id);
         StopRecord {
@@ -1189,7 +1293,11 @@ impl Visit<'_> {
             .level_ref
             .as_ref()
             .map(|r| self.builder.pending(r, "LevelRef", referrer, origin));
-        let dhid = quay.key_list.as_ref().and_then(|k| k.get("GlobalID"));
+        let dhid = global_id(
+            quay.key_list.as_ref(),
+            quay.private_codes.as_ref(),
+            "QuayCode",
+        );
         let name = quay.name.as_ref().map_or("", |n| n.as_str());
         let record = StopRecord {
             key,
@@ -1349,36 +1457,121 @@ impl Visit<'_> {
         let route = route.map(|r| self.builder.pending(r, "RouteRef", referrer, origin));
         let start = u32::try_from(self.builder.pattern_point_refs.len())
             .expect("fewer than 2^32 pattern points");
+        let mut steps = Vec::new();
         for item in pattern.points_in_sequence.iter().flat_map(|p| &p.items) {
-            if let crate::model::PointInSequenceItem::StopPointInJourneyPattern(point) = item {
-                let point_key = self.builder.key(&point.id, &point.version);
-                let stop_point = match &point.scheduled_stop_point_ref {
-                    Some(
-                        StopPointRef::ScheduledStopPoint(r)
-                        | StopPointRef::FareScheduledStopPoint(r),
-                    ) => self
-                        .builder
-                        .pending(r, "ScheduledStopPointRef", referrer, origin),
-                    None => continue,
-                };
-                self.builder.pattern_point_refs.push(stop_point);
-                self.builder.pattern_point_keys.push(point_key);
-                self.builder.pattern_point_uses.push(PointUse::of(
-                    point.stop_use.as_ref(),
-                    point.for_boarding,
-                    point.for_alighting,
-                ));
+            match item {
+                PointInSequenceItem::StopPointInJourneyPattern(point) => {
+                    let point_key = self.builder.key(&point.id, &point.version);
+                    let reference = match &point.scheduled_stop_point_ref {
+                        Some(
+                            StopPointRef::ScheduledStopPoint(r)
+                            | StopPointRef::FareScheduledStopPoint(r),
+                        ) => r,
+                        None => continue,
+                    };
+                    let stop_point =
+                        self.builder
+                            .pending(reference, "ScheduledStopPointRef", referrer, origin);
+                    let stop = u32::try_from(self.builder.pattern_point_refs.len())
+                        .expect("fewer than 2^32 pattern points")
+                        - start;
+                    steps.push(TimingStep::new(
+                        stop_point.key.id,
+                        self.id_of(point.onward_timing_link_ref.as_ref()),
+                        duration_milliseconds(point.wait_time.as_ref()),
+                        Some(stop),
+                    ));
+                    self.builder.pattern_point_refs.push(stop_point);
+                    self.builder.pattern_point_keys.push(point_key);
+                    self.builder.pattern_point_uses.push(PointUse::of(
+                        point.stop_use.as_ref(),
+                        point.for_boarding,
+                        point.for_alighting,
+                    ));
+                }
+                PointInSequenceItem::TimingPointInJourneyPattern(point) => {
+                    let Some(timing_point) = point.timing_point_ref.as_ref().map(timing_point_ref)
+                    else {
+                        continue;
+                    };
+                    let timing_point = self.builder.strings.intern(timing_point);
+                    steps.push(TimingStep::new(
+                        timing_point,
+                        self.id_of(point.onward_timing_link_ref.as_ref()),
+                        duration_milliseconds(point.wait_time.as_ref()),
+                        None,
+                    ));
+                }
+                PointInSequenceItem::Unprocessed(_) => {}
             }
         }
         let end = u32::try_from(self.builder.pattern_point_refs.len())
             .expect("fewer than 2^32 pattern points");
+        let steps_start = len_of(&self.builder.pattern_steps);
+        if steps.iter().any(|step| step.onward.is_some()) {
+            number_passes(&mut steps);
+            self.builder.pattern_steps.extend(steps);
+        }
         self.builder.patterns.push(PatternRecord {
             key,
             origin,
             line,
             route,
             points: (start, end),
+            steps: (steps_start, len_of(&self.builder.pattern_steps)),
             validity,
+        });
+    }
+
+    /// The identifier a reference names, interned.
+    fn id_of(&mut self, reference: Option<&Ref>) -> Option<Sym> {
+        let id = reference?.r#ref.as_ref()?;
+        Some(self.builder.strings.intern(id.as_str()))
+    }
+
+    /// The time demand types a frame defines.
+    fn time_demand_types(&mut self, demands: Option<&crate::model::TimeDemandTypes>) {
+        for item in demands.iter().flat_map(|d| &d.items) {
+            if let crate::model::TimeDemandTypeItem::TimeDemandType(demand) = item {
+                self.time_demand_type(demand);
+            }
+        }
+    }
+
+    /// A time demand type: its run times by timing link and its wait times
+    /// by timing point, each stating its duration.
+    fn time_demand_type(&mut self, demand: &TimeDemandType) {
+        let key = self.builder.key(&demand.id, &demand.version);
+        let start = len_of(&self.builder.demand_times);
+        for item in demand.run_times.iter().flat_map(|r| &r.items) {
+            let crate::model::JourneyRunTimeItem::JourneyRunTime(run) = item else {
+                continue;
+            };
+            let link = self.id_of(run.timing_link_ref.as_ref());
+            let milliseconds = duration_milliseconds(run.run_time.as_ref());
+            if let (Some(link), Some(milliseconds)) = (link, milliseconds) {
+                self.builder
+                    .demand_times
+                    .push(DemandTime::Run(link, milliseconds));
+            }
+        }
+        for item in demand.wait_times.iter().flat_map(|w| &w.items) {
+            let crate::model::JourneyWaitTimeItem::JourneyWaitTime(wait) = item else {
+                continue;
+            };
+            let point = wait.timing_point_ref.as_ref().map(timing_point_ref);
+            let milliseconds = duration_milliseconds(wait.wait_time.as_ref());
+            if let (Some(point), Some(milliseconds)) = (point, milliseconds) {
+                let point = self.builder.strings.intern(point);
+                self.builder
+                    .demand_times
+                    .push(DemandTime::Wait(point, milliseconds));
+            }
+        }
+        self.builder.time_demands.push(TimeDemandRecord {
+            key,
+            origin: self.origin,
+            times: (start, len_of(&self.builder.demand_times)),
         });
     }
 
@@ -1448,6 +1641,10 @@ impl Visit<'_> {
         }
         let times_end =
             u32::try_from(self.builder.raw_times.len()).expect("fewer than 2^32 passing times");
+        let time_demand = journey.time_demand_type_ref.as_ref().map(|r| {
+            self.builder
+                .pending(r, "TimeDemandTypeRef", referrer, origin)
+        });
         self.builder.journeys.push(JourneyRecord {
             key,
             origin,
@@ -1460,6 +1657,8 @@ impl Visit<'_> {
             calls,
             headways,
             raw_times: (times_start, times_end),
+            departure: seconds(&journey.departure_time, journey.departure_day_offset),
+            time_demand,
             validity,
         });
     }
@@ -1901,6 +2100,37 @@ impl Visit<'_> {
 /// The length of a list the builder ranges over, as a range's end.
 fn len_of<T>(list: &[T]) -> u32 {
     u32::try_from(list.len()).expect("fewer than 2^32 entries of a kind")
+}
+
+/// The identifier a stop place or quay carries across deliveries: its
+/// `GlobalID` key — the German DHID, and the keys the German delivery gives
+/// the foreign stops it serves —, else its code of type `code_type` in the
+/// Dutch stop register (`StopPlaceCode` `NL:S:…`, `QuayCode` `NL:Q:…`): the
+/// key the German delivery names those stops by.
+fn global_id<'a>(
+    key_list: Option<&'a crate::model::KeyList>,
+    private_codes: Option<&'a crate::model::PrivateCodes>,
+    code_type: &str,
+) -> Option<&'a str> {
+    key_list
+        .and_then(|keys| keys.get("GlobalID"))
+        .or_else(|| private_codes.and_then(|codes| codes.get(code_type)))
+}
+
+/// A duration in milliseconds, where it states one that fits.
+fn duration_milliseconds(duration: Option<&crate::model::Duration>) -> Option<u32> {
+    u32::try_from(duration?.milliseconds()?).ok()
+}
+
+/// The identifier of the timing point — a stop point among them — a
+/// reference names; empty where it names none.
+fn timing_point_ref(reference: &TimingPointRef) -> &str {
+    match reference {
+        TimingPointRef::TimingPoint(r)
+        | TimingPointRef::ScheduledStopPoint(r)
+        | TimingPointRef::ReliefPoint(r)
+        | TimingPointRef::BorderPoint(r) => r.r#ref.as_ref().map_or("", |id| id.as_str()),
+    }
 }
 
 /// A time of day plus a day offset, in seconds since midnight of the operating day.

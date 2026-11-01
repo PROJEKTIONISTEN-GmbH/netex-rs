@@ -1,6 +1,8 @@
 //! The framework: validity, codespaces, frame defaults.
 
-use super::{DateTime, DayTypeRefs, Id, KeyList, Locale, MultilingualString, Ref, Version};
+use super::{
+    DateTime, DayTypeRefs, Id, KeyList, Locale, MultilingualString, PrivateCodes, Ref, Version,
+};
 
 netex_element! {
     /// The period an entity or frame is valid for.
@@ -39,6 +41,8 @@ netex_element! {
         children {
             /// Key-value pairs.
             pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The entity's branding.
             pub branding_ref: Option<Ref> = "BrandingRef",
             /// Name.

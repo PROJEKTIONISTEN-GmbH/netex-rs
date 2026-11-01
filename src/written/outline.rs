@@ -81,8 +81,10 @@ pub struct Object<'x> {
     /// point and stop point.
     pub points: Vec<(&'x str, &'x str)>,
     /// The `keyList` pairs of it and of elements within it naming a stop
-    /// globally — `GlobalID`, `SLOID` —: the identifier of the element, the
-    /// key and the value.
+    /// globally — `GlobalID`, `SLOID` —, and the codes the Dutch stop
+    /// register gives them (`privateCodes`, `QuayCode`, `StopPlaceCode`), the
+    /// key the German delivery names those stops by: the identifier of the
+    /// element, the key or the code's type, and the value.
     pub keys: Vec<(&'x str, &'x str, &'x str)>,
 }
 
@@ -168,6 +170,10 @@ pub fn is_place(element: &str) -> bool {
 /// The keys naming a stop globally.
 const GLOBAL_KEYS: [&str; 2] = ["GlobalID", "SLOID"];
 
+/// The types of private code naming a stop globally: the Dutch stop
+/// register's.
+const GLOBAL_CODES: [&str; 2] = ["QuayCode", "StopPlaceCode"];
+
 /// What an open element is to the outline.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Role {
@@ -197,6 +203,8 @@ struct Builder<'x> {
     point: Option<(&'x str, usize)>,
     /// The text of the last `Key` of a `keyList`.
     key: Option<&'x str>,
+    /// The type of the private code open, where it names a stop globally.
+    code: Option<&'x str>,
 }
 
 impl<'x> Builder<'x> {
@@ -304,6 +312,11 @@ impl<'x> Visitor<'x> for Builder<'x> {
                 let number = self.current().expect("within an object");
                 let parent_name = self.open.last().map_or("", |(name, _)| *name);
                 let object = &mut self.outline.objects[number as usize];
+                if element.name == "PrivateCode" {
+                    self.code = element
+                        .attribute("type")
+                        .filter(|kind| GLOBAL_CODES.contains(kind));
+                }
                 if let Some((id, id_at)) = id.clone() {
                     object.nested.push(Nested {
                         element: element.name,
@@ -373,6 +386,7 @@ impl<'x> Visitor<'x> for Builder<'x> {
                 self.call = None;
                 self.point = None;
                 self.key = None;
+                self.code = None;
             }
             Role::Container(number) => {
                 self.outline.containers[number as usize].range = element.range;
@@ -409,6 +423,18 @@ impl<'x> Visitor<'x> for Builder<'x> {
                                     value.trim(),
                                 ));
                             }
+                        }
+                    }
+                    "PrivateCode" => {
+                        if let (Some(kind), Some(value), Some(&(owner, _))) =
+                            (self.code.take(), element.text, self.ids.last())
+                        {
+                            let number = self.current().expect("within an object");
+                            self.outline.objects[number as usize].keys.push((
+                                owner,
+                                kind,
+                                value.trim(),
+                            ));
                         }
                     }
                     _ => {}

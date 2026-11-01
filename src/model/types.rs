@@ -607,9 +607,17 @@ impl Time {
 }
 
 impl Duration {
-    /// The duration in whole seconds, if the form is an `xsd:duration` without
-    /// a year or month part (which have no fixed length).
+    /// The duration in whole seconds, a fraction of a second dropped, if the
+    /// form is an `xsd:duration` without a year or month part (which have no
+    /// fixed length).
     pub fn seconds(&self) -> Option<u64> {
+        self.milliseconds().map(|milliseconds| milliseconds / 1000)
+    }
+
+    /// The duration in milliseconds, a fraction of a second read to the
+    /// millisecond, if the form is an `xsd:duration` without a year or month
+    /// part: the Dutch deliveries state run times to the tenth of a second.
+    pub fn milliseconds(&self) -> Option<u64> {
         let text = self.0.strip_prefix('P')?;
         let (date_part, time_part) = match text.split_once('T') {
             Some((d, t)) => (d, Some(t)),
@@ -620,7 +628,7 @@ impl Duration {
         for c in date_part.chars() {
             match c {
                 '0'..='9' => number.push(c),
-                'D' => total += number.parse::<u64>().ok()? * 86_400,
+                'D' => total += number.parse::<u64>().ok()? * 86_400_000,
                 _ => return None,
             }
             if !c.is_ascii_digit() {
@@ -631,20 +639,30 @@ impl Duration {
             return None;
         }
         if let Some(time_part) = time_part {
-            let mut fraction = false;
+            // The digits after the point, the first three of them: milliseconds.
+            let mut fraction: Option<String> = None;
             for c in time_part.chars() {
-                match c {
-                    '0'..='9' if !fraction => number.push(c),
-                    '0'..='9' => {}
-                    '.' => fraction = true,
-                    'H' => total += number.parse::<u64>().ok()? * 3600,
-                    'M' => total += number.parse::<u64>().ok()? * 60,
-                    'S' => total += number.parse::<u64>().ok()?,
+                match (c, &mut fraction) {
+                    ('0'..='9', None) => number.push(c),
+                    ('0'..='9', Some(digits)) => {
+                        if digits.len() < 3 {
+                            digits.push(c);
+                        }
+                    }
+                    ('.', None) => fraction = Some(String::new()),
+                    ('H', _) => total += number.parse::<u64>().ok()? * 3_600_000,
+                    ('M', _) => total += number.parse::<u64>().ok()? * 60_000,
+                    ('S', _) => {
+                        let thousandths = fraction.as_deref().map_or(Some(0), |digits| {
+                            format!("{digits:0<3}").parse::<u64>().ok()
+                        })?;
+                        total += number.parse::<u64>().ok()? * 1000 + thousandths;
+                    }
                     _ => return None,
                 }
                 if !c.is_ascii_digit() && c != '.' {
                     number.clear();
-                    fraction = false;
+                    fraction = None;
                 }
             }
             if !number.is_empty() {
@@ -690,6 +708,30 @@ impl KeyList {
             .iter()
             .find(|kv| kv.key.as_deref() == Some(key))
             .and_then(|kv| kv.value.as_deref())
+    }
+}
+
+netex_element! {
+    /// The codes an entity is known by in other systems, each with its type:
+    /// NeTEx 2.0's `privateCodes`, beside the one `PrivateCode` of 1.x. The
+    /// Dutch stop register names its quays and stop places so (`QuayCode`
+    /// `NL:Q:…`, `StopPlaceCode` `NL:S:…`).
+    pub struct PrivateCodes {
+        attributes {}
+        children {
+            /// The codes.
+            pub codes: Vec<PrivateCode> = "PrivateCode",
+        }
+    }
+}
+
+impl PrivateCodes {
+    /// The code of type `kind`, if the list has one.
+    pub fn get(&self, kind: &str) -> Option<&str> {
+        self.codes
+            .iter()
+            .find(|code| code.r#type.as_deref() == Some(kind))
+            .map(|code| &*code.text)
     }
 }
 
@@ -832,5 +874,28 @@ impl Walk for MultilingualString {
         for translation in &self.translations {
             translation.walk_unprocessed("Text", visit);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Duration;
+
+    /// A duration read to the millisecond, a fraction of a second as written
+    /// to the tenth, the hundredth or beyond; whole seconds as before.
+    #[test]
+    fn a_duration_reads_to_the_millisecond() {
+        let read = |text: &str| {
+            let duration = Duration::from(text);
+            (duration.milliseconds(), duration.seconds())
+        };
+        assert_eq!(read("PT1M3.4S"), (Some(63_400), Some(63)));
+        assert_eq!(read("PT0.05S"), (Some(50), Some(0)));
+        assert_eq!(read("PT1.23456S"), (Some(1_234), Some(1)));
+        assert_eq!(read("P1DT2H"), (Some(93_600_000), Some(93_600)));
+        assert_eq!(read("PT30S"), (Some(30_000), Some(30)));
+        assert_eq!(read("P1M"), (None, None), "a month has no fixed length");
+        assert_eq!(read("PT1.2.3S"), (None, None));
+        assert_eq!(read("PT.5S"), (None, None));
     }
 }

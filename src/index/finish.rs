@@ -15,8 +15,9 @@ use std::collections::HashMap;
 use rustc_hash::FxHashMap;
 
 use super::build::{
-    level_fingerprint, precedes, version_is_higher, AssignedDaysRecord, IndexBuilder,
-    JourneyRecord, Key, LevelRecord, Pending, PeriodRecord, RawCall, RawHeadway, RawTime, Validity,
+    level_fingerprint, precedes, version_is_higher, AssignedDaysRecord, DemandTime, IndexBuilder,
+    JourneyRecord, Key, LevelRecord, Pending, PeriodRecord, RawCall, RawHeadway, RawTime,
+    TimingStep, Validity,
 };
 use super::calendar::DayBits;
 use super::findings::{self, Concern, FindingRecord};
@@ -195,6 +196,7 @@ struct Scopes {
     periods: Scope,
     conditions: Scope,
     operating_days: Scope,
+    time_demands: Scope,
     journeys: Scope,
 }
 
@@ -210,14 +212,56 @@ struct Lines {
 
 /// The patterns by position: what the index keeps of each; the calls of all,
 /// and the point of the builder each pattern call is; the range of each
-/// pattern's points in the builder; and the line definition each names, by
-/// position.
+/// pattern's points and of its timing steps in the builder; and the line
+/// definition each names, by position.
 struct Patterns {
     indexed: Vec<IndexedPattern>,
     calls: CallLists,
     points_of_calls: Vec<u32>,
     points: Vec<(u32, u32)>,
+    steps: Vec<(u32, u32)>,
     lines: Vec<Option<u32>>,
+}
+
+/// The run times of each timing link and the wait times at each timing point
+/// of a time demand type, in milliseconds, by identifier, each in the order
+/// stated: one for each pass of a pattern by the link or point.
+#[derive(Default)]
+struct DemandTimes {
+    runs: FxHashMap<Sym, Vec<u32>>,
+    waits: FxHashMap<Sym, Vec<u32>>,
+}
+
+impl DemandTimes {
+    fn of(times: &[DemandTime]) -> DemandTimes {
+        let mut demand = DemandTimes::default();
+        for &time in times {
+            let (list, of, seconds) = match time {
+                DemandTime::Run(link, seconds) => (&mut demand.runs, link, seconds),
+                DemandTime::Wait(point, seconds) => (&mut demand.waits, point, seconds),
+            };
+            list.entry(of).or_default().push(seconds);
+        }
+        demand
+    }
+
+    /// The run time of pass `pass` (from 0) on `link`: the one stated for
+    /// that pass, else the last stated — a type stating one run time for a
+    /// link a pattern runs twice means it for both.
+    fn run(&self, link: Sym, pass: u32) -> Option<u32> {
+        let stated = self.runs.get(&link)?;
+        stated.get(pass as usize).or(stated.last()).copied()
+    }
+
+    /// The wait at the visit of `point` the pattern visits `later` times
+    /// after: the waits stated for a point are those of its last visits, in
+    /// order — a type stating one wait for a stop a loop passes twice means
+    /// the layover at its end, the last visit.
+    fn wait(&self, point: Sym, later: u32) -> Option<u32> {
+        let stated = self.waits.get(&point)?;
+        let at = stated.len().checked_sub(1 + later as usize)?;
+        Some(stated[at])
+    }
 }
 
 /// The calls of every pattern, and of every journey stating its own: where,
@@ -774,6 +818,7 @@ impl Finish {
         ranks.sort(&mut self.b.periods, |r| r.origin);
         ranks.sort(&mut self.b.conditions, |r| r.origin);
         ranks.sort(&mut self.b.operating_days, |r| r.origin);
+        ranks.sort(&mut self.b.time_demands, |r| r.origin);
         ranks.sort(&mut self.b.quay_listings, |(_, pending)| pending.origin);
         ranks.sort(&mut self.b.quay_sites, |(_, pending)| pending.origin);
         // Assignments apply in the order of their documents' names, within a
@@ -868,6 +913,10 @@ impl Finish {
         for day in &b.operating_days {
             recorder.define("OperatingDay", day.key.id, Some(day.origin));
         }
+        recorder.begin(Kind::TimeDemand);
+        for demand in &b.time_demands {
+            recorder.define("TimeDemandType", demand.key.id, Some(demand.origin));
+        }
         recorder
     }
 
@@ -916,6 +965,11 @@ impl Finish {
             operating_days: scope(
                 Kind::OperatingDay,
                 b.operating_days.iter().map(|r| (r.key, r.origin)).collect(),
+                Vec::new(),
+            ),
+            time_demands: scope(
+                Kind::TimeDemand,
+                b.time_demands.iter().map(|r| (r.key, r.origin)).collect(),
                 Vec::new(),
             ),
             journeys: scope(
@@ -1025,6 +1079,7 @@ impl Finish {
             },
             points_of_calls: Vec::with_capacity(points),
             points: Vec::with_capacity(count),
+            steps: Vec::with_capacity(count),
             lines: Vec::with_capacity(count),
         };
         for position in 0..count {
@@ -1080,6 +1135,7 @@ impl Finish {
             };
             patterns.lines.push(line);
             patterns.points.push(record.points);
+            patterns.steps.push(record.steps);
             patterns.indexed.push(IndexedPattern {
                 key: record.key,
                 stop_points: (start, end),
@@ -1432,6 +1488,7 @@ impl Finish {
         let mut calendars = Calendars::default();
         let mut variants: FxHashMap<Key, Vec<JourneyId>> = FxHashMap::default();
         let mut laid_out = LaidOut::default();
+        let mut demands: FxHashMap<u32, DemandTimes> = FxHashMap::default();
         for (position, &index) in order.iter().enumerate() {
             let record = &records[index as usize];
             let pattern = match &record.pattern {
@@ -1479,10 +1536,13 @@ impl Finish {
                 continue;
             }
             let line = line.map(|position| lines.of_position[position as usize]);
+            let times = range(&raw.times, record.raw_times);
             if record.calls.0 < record.calls.1 {
                 self.lay_out_calls(record, range(&raw.calls, record.calls), &mut laid_out);
+            } else if times.is_empty() && record.time_demand.is_some() {
+                let demand = (scopes, &mut demands);
+                self.lay_out_by_demand(record, pattern, patterns, demand, &mut laid_out);
             } else {
-                let times = range(&raw.times, record.raw_times);
                 self.lay_out_pattern(record, pattern, patterns, times, &mut laid_out);
             }
             let Some((first, end)) = self.timed_calls(record, &laid_out.times) else {
@@ -1561,9 +1621,10 @@ impl Finish {
     /// The calendar of a journey: the days of its day types, each resolved
     /// in the journey's document first — within the days of the availability
     /// conditions it names, or those days alone where it names no day type,
-    /// a condition that is not available taking its days away —, with the
-    /// days dated journeys give it; of these, the days its line version
-    /// governs. Journeys of the same days share one calendar.
+    /// a condition that is not available taking its days away; none where
+    /// every condition it names is not available —, with the days dated
+    /// journeys give it; of these, the days its line version governs.
+    /// Journeys of the same days share one calendar.
     fn calendar_of(
         &mut self,
         days: Days<'_>,
@@ -1607,6 +1668,13 @@ impl Finish {
             } else {
                 bits.intersect(&within);
             }
+        } else if !unavailable.is_empty() {
+            // Conditions none of which is available state where the journey
+            // does not run, and none where it does: the Dutch profile names
+            // a journey so only to show the validity it no longer has, its day
+            // types beside for information (TMI9 Dienstregeling 9.3.0, 9.1.2
+            // and 9.2).
+            bits = DayBits::new(calendar.span);
         }
         for &condition in &unavailable {
             bits.subtract(&calendar.conditions[condition as usize]);
@@ -1756,6 +1824,57 @@ impl Finish {
                 entity,
                 about,
             );
+        }
+    }
+
+    /// The calls of a journey's pattern with the times the journey's
+    /// departure and the time demand type it names give them, into
+    /// `laid_out`; the type resolved in the journey's document first and its
+    /// times gathered once (`demands`, by position). The journey leaves the
+    /// pattern's first point at its departure and runs each timing link
+    /// onward in the type's run time; at every later point it arrives and
+    /// waits as long as the type says — else as long as the pattern says —
+    /// before it leaves, but at the last, where it arrives. A point naming no
+    /// timing link onward, or a link the type states no run time for, leaves
+    /// the calls after it untimed, and is a finding.
+    fn lay_out_by_demand(
+        &mut self,
+        record: &JourneyRecord,
+        pattern: Option<u32>,
+        patterns: &Patterns,
+        (scopes, demands): (&Scopes, &mut FxHashMap<u32, DemandTimes>),
+        laid_out: &mut LaidOut,
+    ) {
+        laid_out.clear();
+        let Some(pattern) = pattern else {
+            return;
+        };
+        let (first_point, end_point) = patterns.points[pattern as usize];
+        let mut by_position = vec![PassingTime::NONE; (end_point - first_point) as usize];
+        let demand = record
+            .time_demand
+            .as_ref()
+            .and_then(|pending| self.resolve_in(&scopes.time_demands, pending));
+        if let (Some(departure), Some(demand)) = (record.departure, demand) {
+            let times = demands.entry(demand).or_insert_with(|| {
+                DemandTimes::of(range(
+                    &self.b.demand_times,
+                    self.b.time_demands[demand as usize].times,
+                ))
+            });
+            let steps = range(&self.b.pattern_steps, patterns.steps[pattern as usize]);
+            if !walk_steps(steps, departure, times, &mut by_position) {
+                let entity = (record.origin, record.key.id);
+                let about = Some(self.b.time_demands[demand as usize].key.id);
+                self.found(Concern::LinkWithoutRunTime, "ServiceJourney", entity, about);
+            }
+        }
+        let (start, end) = patterns.indexed[pattern as usize].stop_points;
+        laid_out.pattern_calls = Some(start);
+        for &point in &patterns.points_of_calls[start as usize..end as usize] {
+            laid_out
+                .times
+                .push(by_position[(point - first_point) as usize]);
         }
     }
 
@@ -1939,6 +2058,54 @@ impl Journeys {
             && times(a) == times(b)
             && headways(a) == headways(b)
     }
+}
+
+/// The times of a journey leaving the first of `steps` at `departure`, by the
+/// position of each stop point among its pattern's, into `by_position`: each
+/// later step arrived at by the run time of the link onward from the one
+/// before and left once the wait there is over — the type's wait, else the
+/// pattern's —, the last only arrived at; a link or point passed again
+/// taking the type's time for that pass ([`DemandTimes::run`],
+/// [`DemandTimes::wait`]). The times add up to the
+/// millisecond, each passing time rounded to the nearest second, a half up —
+/// as the Dutch national GTFS feed states the times of the same journeys. Whether a run time leads on from
+/// every step but the last: where one does not, the times after that step
+/// are left out.
+fn walk_steps(
+    steps: &[TimingStep],
+    departure: u32,
+    times: &DemandTimes,
+    by_position: &mut [PassingTime],
+) -> bool {
+    let Some(last) = steps.len().checked_sub(1) else {
+        return true;
+    };
+    // Milliseconds since the operating day's start, and the second they round to.
+    let second = |milliseconds: u64| u32::try_from((milliseconds + 500) / 1000).ok();
+    let departure = u64::from(departure) * 1000;
+    let mut clock = departure;
+    for (at, step) in steps.iter().enumerate() {
+        let leaving = if at == 0 {
+            departure
+        } else {
+            let wait = times.wait(step.point, step.later_visits).or(step.wait);
+            clock + u64::from(wait.unwrap_or(0))
+        };
+        if let Some(stop) = step.stop {
+            by_position[stop as usize] = PassingTime {
+                arrival: (at > 0).then(|| second(clock)).flatten(),
+                departure: (at < last).then(|| second(leaving)).flatten(),
+            };
+        }
+        if at == last {
+            break;
+        }
+        match step.onward.and_then(|link| times.run(link, step.passage)) {
+            Some(run) => clock = leaving + u64::from(run),
+            None => return false,
+        }
+    }
+    true
 }
 
 /// The order levels are numbered in where references are recorded: by

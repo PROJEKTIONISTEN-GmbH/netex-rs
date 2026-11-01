@@ -63,6 +63,7 @@ const ELEMENTS: &[&str] = &[
     "UicOperatingPeriod",
     "AvailabilityCondition",
     "OperatingDay",
+    "TimeDemandType",
     "PassengerStopAssignment",
     "DayTypeAssignment",
     "ServiceLink",
@@ -89,6 +90,7 @@ const ELEMENTS: &[&str] = &[
     "ToPointRef",
     "FromJourneyRef",
     "ToJourneyRef",
+    "TimeDemandTypeRef",
 ];
 
 /// The position of an element name in [`ELEMENTS`].
@@ -130,9 +132,10 @@ pub(crate) enum Kind {
     Period,
     Condition,
     OperatingDay,
+    TimeDemand,
 }
 
-const KINDS: usize = 11;
+const KINDS: usize = 12;
 
 /// The references as resolved, before they are laid out as a graph.
 ///
@@ -456,7 +459,8 @@ impl<'a> Referrers<'a> {
     /// The definitions nothing refers to, in the order of their objects:
     /// stop places none of whose quays is referred to either, quays, stop
     /// points, levels, routes, lines, journey patterns, day types, operating
-    /// periods, availability conditions and operating days. Journeys are not
+    /// periods, availability conditions, operating days and time demand
+    /// types. Journeys are not
     /// among them; nothing has to refer to a journey. A stop place naming its
     /// quay (`QuayRef`) and a quay naming its stop place (`SiteRef`) state
     /// what the stop is made of, not a use: neither counts.

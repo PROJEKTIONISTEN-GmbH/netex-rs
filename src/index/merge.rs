@@ -17,8 +17,9 @@ use std::collections::hash_map::Entry;
 use rayon::prelude::*;
 
 use super::build::{
-    level_fingerprint, precedes, AssignedDaysRecord, DayTypeAssignmentRecord, IndexBuilder,
-    InterchangeRecord, Key, LevelRecord, Pending, PeriodRecord, Referrer, TransferRecord,
+    level_fingerprint, precedes, AssignedDaysRecord, DayTypeAssignmentRecord, DemandTime,
+    IndexBuilder, InterchangeRecord, Key, LevelRecord, Pending, PeriodRecord, Referrer,
+    TransferRecord,
 };
 use super::strings::{Strings, Sym};
 use super::StopId;
@@ -147,16 +148,36 @@ impl IndexBuilder {
                 .map(|key| renumbered.key(key)),
         );
         self.pattern_point_uses.extend(other.pattern_point_uses);
+        let step_offset = offset_of(&self.pattern_steps);
+        self.pattern_steps
+            .extend(other.pattern_steps.into_iter().map(|mut step| {
+                step.point = renumbered.sym(step.point);
+                step.onward = step.onward.map(|link| renumbered.sym(link));
+                step
+            }));
+        let moved = |(start, end): (u32, u32), by: u32| (start + by, end + by);
         for mut record in other.patterns {
             record.key = renumbered.key(record.key);
             record.origin = renumbered.sym(record.origin);
             record.line = record.line.map(|p| renumbered.pending(p));
             record.route = record.route.map(|p| renumbered.pending(p));
-            record.points = (
-                record.points.0 + point_offset,
-                record.points.1 + point_offset,
-            );
+            record.points = moved(record.points, point_offset);
+            record.steps = moved(record.steps, step_offset);
             self.patterns.push(record);
+        }
+        let demand_offset = offset_of(&self.demand_times);
+        self.demand_times
+            .extend(other.demand_times.into_iter().map(|time| match time {
+                DemandTime::Run(link, seconds) => DemandTime::Run(renumbered.sym(link), seconds),
+                DemandTime::Wait(point, seconds) => {
+                    DemandTime::Wait(renumbered.sym(point), seconds)
+                }
+            }));
+        for mut record in other.time_demands {
+            record.key = renumbered.key(record.key);
+            record.origin = renumbered.sym(record.origin);
+            record.times = moved(record.times, demand_offset);
+            self.time_demands.push(record);
         }
         let day_type_offset =
             u32::try_from(self.journey_day_types.len()).expect("fewer than 2^32 day type refs");
@@ -192,7 +213,6 @@ impl IndexBuilder {
                 headway.id = renumbered.sym(headway.id);
                 headway
             }));
-        let moved = |(start, end): (u32, u32), by: u32| (start + by, end + by);
         for mut record in other.journeys {
             record.key = renumbered.key(record.key);
             record.origin = renumbered.sym(record.origin);
@@ -204,6 +224,7 @@ impl IndexBuilder {
             record.calls = moved(record.calls, call_offset);
             record.headways = moved(record.headways, headway_offset);
             record.raw_times = moved(record.raw_times, time_offset);
+            record.time_demand = record.time_demand.map(|p| renumbered.pending(p));
             self.journeys.push(record);
         }
         for mut record in other.datings {
