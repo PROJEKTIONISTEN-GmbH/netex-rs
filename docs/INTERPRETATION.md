@@ -27,7 +27,11 @@ what the standard says; what an importer built on this crate does today; what
   networks and SNCF's trains (`docs/FR-PROFILE.md`); and Norway's national
   delivery in the Nordic NeTEx Profile, Entur's of 2026-10-31
   (`rb_norway-aggregated-netex.zip`, with its stop register;
-  `docs/NORDIC-PROFILE.md`).
+  `docs/NORDIC-PROFILE.md`); and the deliveries of four neighbours in the
+  European Passenger Information Profile (`docs/EPIP-NEIGHBOURS.md`):
+  Luxembourg's of 2026-10-21, Denmark's of 2026-10-30, the Belgian
+  operators' of 2026-10-22 (SNCB) and 2026-10-31 (De Lijn, TEC, STIB) and the
+  Czech national ones of 2026-10-30.
 - *The importer*: the NeTEx importer of a journey planner, built on this crate
   and not published; it is cited for what it does with the same deliveries.
 - The standard: the NeTEx XML schema (CEN/TS 16614, the `xsd/` of the NeTEx
@@ -1062,6 +1066,95 @@ register, the documents of each source after the first named under its file
 or directory name, so that no two documents share a name. The register's
 stops are stops of the delivery, merged as the stops of any two documents are.
 
+## 33. Bounds of an operating period written as instants
+
+**Problem.** The Belgian deliveries write the first and last day of every
+UIC operating period as an instant in UTC: `2026-10-21T22:00:00Z` for the
+period beginning 22 October, `2026-10-29T23:00:00Z` for the one ending
+30 October — the midnights beginning those days in Brussels, in summer and
+in winter time. Their day bits count from the local day. Read by the date
+of the instant, every period began a day early: 74 677 of STIB's 76 043
+journeys and 199 557 of TEC's 203 955 ran on other days than the GTFS feeds
+the operators publish beside the NeTEx give them.
+
+**Standard.** `FromDate` and `ToDate` of an operating period are
+`xsd:dateTime` (`netex_framework/netex_reusableComponents/netex_serviceCalendar_version.xsd`);
+a date and time with a zone is an instant. The schema does not say which
+day an instant names; the deliveries name no time zone
+(`DefaultLocale`) to turn it into a local day.
+
+**netex-rs.** Up to 0.7.2 the day of a bound was the date written.
+
+**Proposal: adopt.** Effort **S**.
+
+**Built (unreleased, after 0.7.2)** (`calendar::bound_day`). A bound written
+with a zone (`Z`, `+01:00`) at noon or later names the next day: the local
+midnight it is lies within twelve hours of UTC — every European zone — and
+is nearest the UTC midnight of its own day. A bound without a zone, or
+before noon, is the day of its date. Only the Belgian deliveries write such
+bounds of all those read; STIB's and TEC's journeys now run, trip for trip,
+on the days of their GTFS feeds. De Lijn and SNCB state every day by a
+dated assignment and no day bit, and read the same as before.
+
+## 34. Stop identifiers each document numbers anew
+
+**Problem.** The Czech deliveries of buses and of city transport are
+converted batch by batch from the national timetable format, each batch
+numbering its stop places from one: `CZ:cisjr_jdf:StopPlace:1` is another
+stop in each of the 13 347 bus documents, under 2 441 names, and no stop
+place states a position. A document of a line on a detour states its stop points
+under the identifiers of the regular timetable's, named otherwise (17 121
+stop points of the bus delivery). Gathered once by identifier, the bus
+delivery had 82 stops: every journey called at the stop places of the
+document named first. 513 994 of the 514 212 journeys the index holds now
+called at stops of other names before.
+
+**Standard.** An identifier is unique within its codespace; the schema's
+keys check it within one document only.
+
+**netex-rs.** Up to 0.7.2 a stop place, quay or stop point was gathered once
+by identifier and version; another document's other content was a finding
+(`Concern::RedefinedOtherwise`), and the definition of the document named
+first was kept.
+
+**Proposal: adopt.** Effort **S**.
+
+**Built (unreleased, after 0.7.2).** A stop place, quay or stop point is
+gathered by identifier, version and name: definitions naming it alike are
+one stop, as before; a definition naming it otherwise is a stop of its own
+(`Concern::LocalIdentifier`, naming the first document stating that name
+and the document whose stop the identifier alone names, `Index::stop_by_id`).
+A reference in a document defining the identifier resolves to that
+document's stop; elsewhere to the one of the document named first. The
+German delivery and eight of the nine Austrian ones repeat their stops under
+one name and read as before; the ninth (VOR) names two quays otherwise in
+another document (`Bahn` and `Zug`, `Bus` and `Bus + SEV`), now two quays
+each. The Czech bus delivery has 98 129 stops and 139 087 stop points.
+Without a position, a stop is known by its name alone: a reader who needs
+places has to find them by name.
+
+## 35. A stop assignment naming a quay by `StopPlaceRef`
+
+**Problem.** The Belgian deliveries assign every stop point to a quay
+through a `StopPlaceRef` (`<StopPlaceRef ref="gs:stibmivb:1306F"/>`, a quay
+of `stops.xml`): 10 253 assignments of STIB's, 179 487 of TEC's and 924 146
+of SNCB's.
+
+**Standard.** A passenger stop assignment names a stop place by
+`StopPlaceRef` and a quay by `QuayRef`
+(`netex_part_1/part1_tacticalPlanning/netex_stopAssignment_version.xsd`).
+
+**netex-rs.** Up to 0.7.2 the reference resolved to the quay, which is what
+the delivery means, and nothing was said.
+
+**Proposal: keep, and count.** Effort **S**.
+
+**Built (unreleased, after 0.7.2).** The stop point is at the stop the
+reference names, as before; a `StopPlaceRef` naming a quay, or a `QuayRef`
+naming a stop place, is a finding that it resolved to another class
+(`Concern::ResolvedAsOtherClass`, § 1), as a `QuayRef` naming a stop place
+among a stop place's quays was already.
+
 ---
 
 ## Summary
@@ -1100,3 +1193,6 @@ stops are stops of the delivery, merged as the stops of any two documents are.
 | 30 | Periods stated by operating days | adopt: their dates | S | ✓ (unreleased) |
 | 31 | A condition no journey names | better: the calendar spans what can give a day | S | ✓ (unreleased) |
 | 32 | Stops a delivery does not define | adopt: several sources read as one | S | ✓ (unreleased) |
+| 33 | Bounds of a period written as instants | adopt: from noon on, the next day | S | ✓ (unreleased) |
+| 34 | Stop identifiers each document numbers anew | adopt: a stop per name, found in its own document | S | ✓ (unreleased) |
+| 35 | An assignment naming a quay by `StopPlaceRef` | keep, and count | S | counted (unreleased) |

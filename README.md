@@ -233,6 +233,10 @@ profile relies on.
 | **IT-ITH1** (Italy, South Tyrol; the Italian national access point) | one document of EPIP frames (`IT:ITH1:…` identifiers), lines in versions | every name with the language it states; patterns naming their line only through a route; stop places stating a submode beside their mode; train numbers in the timetable frame; `OperatingPeriodRef`s naming UIC periods | yes, levels 1 and 3 of the delivery |
 | **NeTEx France** (the French national access point) | per network: stops, calendar, network and one document per line, everything in general frames typed by the part (`FR:TypeOfFrame:NETEX_ARRET`, …); or specific frames typed so; SNCF's trains in one document of 647 MB | general frames; quays defined beside their stop place, which names them by `QuayRef`; passing times naming no point, by position; day types given their days by a validity and days of the week, the assignments their exceptions; plain periods by the days of the week of their day type | yes, five deliveries: Fluo Grand Est (Bas-Rhin), Naolib, TBM, Normandy's aggregate, SNCF |
 | **Nordic NeTEx Profile** (Norway, Sweden, Finland) | per codespace, one document per line, a shared and a flexible shared document; no site in any of them, the stops being the national stop register's, published apart | journeys dated by the dated journeys naming them (`DatedServiceJourney`), cancelled and replaced ones giving no day; flexible lines as lines, their journeys left out and counted; operating periods stated by operating days; the stop register read along with the delivery (`Source::with`, `--with`); interchanges across line documents | yes, Norway's national delivery with its stop register |
+| **Luxembourg** (EPIP, `ntx:1.1`) | one document per line, 713 in one archive, in a folder per operator | as the German delivery: line offers of typed frames, walks between quays, a line naming its authority and an additional operator | yes, the national delivery |
+| **Denmark** (EPIP, `ntx:1.1`, Rejseplanen) | one document per line, 1 560 in one archive | as the German delivery; stop points with positions of their own, link geometries in GML; a link starting farther from its stop than the axis order can be told by is a finding | yes, the national delivery |
+| **Belgium** (EPIP, converted from GTFS; SNCB, De Lijn, TEC, STIB) | per operator a `common.xml` with the calendar (SNCB's 1.08 GB), `stops.xml` and one document per line; no `TypeOfFrameRef`, no version | the bounds of operating periods written as instants in UTC, each the midnight beginning a day in Brussels; stop assignments naming a quay by a `StopPlaceRef`, counted; lines naming no operator and no mode, left so | yes, the four operators' deliveries |
+| **Czechia** (EPIP, CIS JŘ) | one document per batch of the national formats: a bus or city line, a line on a detour, a train; `version="1"`; no position anywhere | stop places and stop points each document numbers anew: a stop per name, found from its own document (`local-identifier`); stops without a position, journeys past midnight without a day offset, both reported | yes, buses, city transport and trains |
 
 `tests/fixtures/own/` has a small delivery of each kind but DELFI, written for
 the tests; `tests/fixtures/fragments/` has small sets of frames and entities,
@@ -244,7 +248,9 @@ distinct elements, of which the typed model covers all but four, which are
 carried through. `docs/IT-ITH1-PROFILE.md` does the same for South Tyrol's,
 with what it states and how the crate reads it, `docs/FR-PROFILE.md` for
 five French deliveries, checked against the GTFS feeds their producers publish,
-and `docs/NORDIC-PROFILE.md` for Norway's, checked against Entur's GTFS feed.
+`docs/NORDIC-PROFILE.md` for Norway's, checked against Entur's GTFS feed, and
+`docs/EPIP-NEIGHBOURS.md` for the EPIP deliveries of Luxembourg, Denmark,
+Belgium and Czechia, with what each does not give.
 
 ## How conformant
 
@@ -444,7 +450,13 @@ timetables of Fluo Grand Est in the Bas-Rhin (Région Grand Est), Naolib
 Ouverte 2.0, TBM's (Bordeaux Métropole) under the Licence Ouverte 1.0, and
 SNCF's under the ODbL; and in the Nordic NeTEx Profile, Norway's national
 timetable with its stop register, published by Entur under the Norwegian
-Licence for Open Government Data (NLOD 2.0). `docs/INTERPRETATION.md` and the profile pages name the
+Licence for Open Government Data (NLOD 2.0); and in EPIP, Luxembourg's
+national delivery at its national access point
+([data.public.lu](https://data.public.lu/), CC0), Denmark's (Rejseplanen,
+through the Danish national access point, CC BY 4.0), the Belgian operators'
+SNCB, De Lijn, TEC and STIB (Belgian Mobility Company, CC BY 4.0) and the
+Czech national timetables of CIS JŘ, which state no licence and were only
+measured. `docs/INTERPRETATION.md` and the profile pages name the
 deliveries each figure was counted on. None of these deliveries is in the
 repository beyond the five DELFI files above.
 

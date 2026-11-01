@@ -62,6 +62,30 @@ and `ServiceJourney` a field more.
 - Own example `tests/fixtures/own/nordic/` with its stop register
   `tests/fixtures/own/nordic-stops/`.
 
+The European Passenger Information Profile as four neighbours publish it
+(`docs/EPIP-NEIGHBOURS.md`): Luxembourg's and Denmark's national deliveries,
+the four Belgian operators' and the Czech national ones were read before and
+after. Luxembourg and Denmark read as they did. The Belgian operators write
+the bounds of their operating periods as instants in UTC, and every period
+began a day early: STIB's and TEC's journeys now run, trip for trip, on the
+days of the GTFS feeds the operators publish beside the NeTEx. The Czech
+buses and city transport number their stop places from one in every
+document: the bus delivery had 82 stops, every journey calling at another
+document's; it has 98 129 now, each journey calling at its own document's
+(`docs/INTERPRETATION.md` §§ 33–35).
+
+- **calendar**: `bound_day`, the day a bound of an operating period names —
+  from noon on, an instant with a zone names the next day.
+- **model**: `DateTime::states_zone`.
+- **index**: a stop place, quay or stop point is gathered by identifier,
+  version and name; one another document names otherwise is a stop of its
+  own, which the references of the documents defining it resolve to
+  (`Concern::LocalIdentifier`; `Index::stop_by_id` names the stop of the
+  document named first). A `StopPlaceRef` of a stop assignment naming a
+  quay, or a `QuayRef` naming a stop place, is counted as resolved to
+  another class.
+- Own examples `tests/fixtures/own/lu/`, `dk/`, `be/` and `cz/`.
+
 ### netex2gtfs
 
 A delivery read with the stop register it names converts with its stops
@@ -77,6 +101,8 @@ none from its profile: France has more than one.
 
 `netex validate`, `stats`, `convert` and `extract` read documents along with
 the source: `--with PATH`, a stop register published apart, as Norway's.
+`netex validate` reports the class `local-identifier`, with the journeys
+calling at such stops.
 
 `netex validate` reports the four new findings (`quay-of-two-stop-places`,
 `passing-times-other-than-points`, `properties-of-day-unread`,
