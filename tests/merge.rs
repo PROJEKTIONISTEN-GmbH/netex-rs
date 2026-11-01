@@ -397,3 +397,54 @@ fn a_nordic_delivery_and_an_epip_delivery_merge_without_touching_each_other() {
         assert_eq!(journeys(&read), expected);
     }
 }
+
+/// A stop place of the German delivery across the border, keyed by the
+/// codes the Dutch register gives the place and its quay (`GlobalID`
+/// `NL:S:…`, `NL:Q:…`), as the German delivery keys the Dutch stops it serves.
+const GERMAN_KEYED_DUTCH_STOP: &str = r#"<PublicationDelivery xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2" version="ntx:1.1">
+  <PublicationTimestamp>2026-11-01T00:00:00</PublicationTimestamp>
+  <ParticipantRef>DE</ParticipantRef>
+  <dataObjects>
+    <SiteFrame id="DE::SiteFrame:1" version="1">
+      <stopPlaces>
+        <StopPlace id="DE::StopPlace:9900_EX::" version="1">
+          <keyList><KeyValue><Key>GlobalID</Key><Value>NL:S:99000100</Value></KeyValue></keyList>
+          <Name>Voorbeeldstad, Station</Name>
+          <Centroid><Location><Longitude>5.39027</Longitude><Latitude>52.15913</Latitude></Location></Centroid>
+          <quays>
+            <Quay id="DE::Quay:990001_EX::" version="1">
+              <keyList><KeyValue><Key>GlobalID</Key><Value>NL:Q:99000101</Value></KeyValue></keyList>
+              <Name>Voorbeeldstad, Station</Name>
+              <Centroid><Location><Longitude>5.39005</Longitude><Latitude>52.15926</Latitude></Location></Centroid>
+            </Quay>
+          </quays>
+        </StopPlace>
+      </stopPlaces>
+    </SiteFrame>
+  </dataObjects>
+</PublicationDelivery>"#;
+
+/// The Dutch delivery with its register, merged with a German document that
+/// names a Dutch stop place and quay by the register's codes: the codes are
+/// the global identifiers the stops pair by, and the German stop place is
+/// the register's.
+#[test]
+fn a_dutch_stop_pairs_with_the_german_delivery_s_stop_of_its_register_code() {
+    let own = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/own");
+    let dutch = Source::open(own.join("nl"))
+        .and_then(|delivery| delivery.with(Source::open(own.join("nl-register"))?))
+        .expect("the delivery and its register open");
+    let alone = Index::build(&dutch, &ReadOptions::new(Selection::routing())).expect("reads");
+    let german = tempfile::tempdir().expect("a directory");
+    std::fs::write(german.path().join("stops.xml"), GERMAN_KEYED_DUTCH_STOP).expect("written");
+    let inputs = [
+        Input::new("nl", dutch).expect("a label"),
+        Input::new("de", Source::open(german.path()).expect("opens")).expect("a label"),
+    ];
+    let to = tempfile::tempdir().expect("a directory");
+    let report = merge::merge(&inputs, to.path()).expect("merges");
+    assert_eq!(finding(&report, "stop-paired-by-global-id"), 2);
+    let read = index(to.path());
+    assert_eq!(read.stop_count(), alone.stop_count());
+    assert_eq!(journeys(&read), journeys(&alone));
+}

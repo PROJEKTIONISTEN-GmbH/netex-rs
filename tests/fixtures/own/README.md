@@ -17,8 +17,10 @@ are part of the crate and licensed as it is: **MIT OR Apache-2.0**.
 | `dk/` | Denmark's national delivery (Rejseplanen): one line offer per line, identifiers `DK::<type>:<number>::` | a train calling at stop points that state their own positions, service link geometries written as GML positions with leading zeros, one of them starting 178 m from its stop point |
 | `be/` | the Belgian operators' deliveries, converted from GTFS: a shared `common.xml` with the operator and the calendar, `stops.xml`, and one document per line (the deliveries name it `line-gr:<operator>:<line>.xml`, a name with colons, which this repository writes `line-gr-ex-1.xml`) | no `TypeOfFrameRef` and no version of the publication, the bounds of operating periods written as instants in UTC — the midnights beginning the days in Brussels, either side of the night the clocks go back —, a date not available written as a plain date, stop assignments naming a quay by a `StopPlaceRef`, a line naming neither operator nor mode |
 | `cz/` | the Czech national delivery of buses (CIS JŘ), converted from the national timetable format batch by batch: one document per batch, `version="1"` | two documents of one line — its regular timetable and its timetable on a detour — each numbering its stop places from one and stating its stop points under the same identifiers, with other names; no position for any stop place or stop point; times after midnight without a day offset |
+| `nl/` | a Dutch operator's delivery in the BISON profile (`NL_TT_BASELINE` 9.3.0) as the national access point publishes it: one document, identifiers `NL:<operator>:<type>:<code>`, private codes beside them (`privateCodes`) | positions in RD New (EPSG:28992), the frame's default; stop points assigned to quays of the stop register published apart, one to a quay the register no longer holds; journeys stating a departure and a time demand type rather than passing times — run times to the tenth of a second along the timing links the pattern names onward, through a timing point that is no stop, wait times at a stop point and at a timing point, a loop passing one link twice in another time each pass, a type missing a run time, a journey leaving on the next day by its day offset —; availability conditions of day bits in the timetable frames' `contentValidityConditions`, a journey cancelled on one day as the profile's own example writes it, with a journey naming only the condition not available; day types beside them for information |
+| `nl-register/` | the Dutch stop register (Centraal Haltebestand) as the national access point publishes it in NeTEx, apart from the timetables | stop places and quays named by the register's codes (`StopPlaceCode` `NL:S:…`, `QuayCode` `NL:Q:…`), positions in RD New in whole metres, quays without a name, a stop across the border in Germany |
 
-All twenty-two documents are valid against the schemas of NeTEx 1.x and 2.0, but
+All twenty-four documents are valid against the schemas of NeTEx 1.x and 2.0, but
 for the references of `ch/ch-timetable.xml` into `ch/ch-service.xml` — an XML
 Schema key reference does not reach into another document —, for the passing
 times of `fr/line_10.xml`, written as NeTEx 1.x allows them and the French
@@ -26,6 +28,11 @@ deliveries write them: without the point they are at, which NeTEx 2.0
 requires —, and for the dated journeys of the Nordic train's line file, written
 as the Nordic deliveries write them: naming their journey, which NeTEx 1.x does
 not let a dated journey do, and the dated journey a replacing one replaces as a
-plain `DatedServiceJourneyRef`, where NeTEx 2.0 has `replacedJourneys`. `tests/own_examples.rs`
+plain `DatedServiceJourneyRef`, where NeTEx 2.0 has `replacedJourneys`, and for
+the Dutch documents: they write their private codes as NeTEx 2.0 does
+(`privateCodes`), which NeTEx 1.x does not have, and the operator's delivery
+names what the national access point publishes apart — the register's quays,
+the profile's codespace and frame types —, which no key reference of one
+document reaches. `tests/own_examples.rs`
 reads them, writes them back, validates them where the official schemas are
 there, and asserts what the index makes of each.

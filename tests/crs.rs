@@ -61,6 +61,40 @@ fn every_system_lands_within_a_metre_of_the_reference() {
     }
 }
 
+/// Quays of the Dutch stop register (Centraal Haltebestand, CC0, as the
+/// national access point published it on 31 October 2026): each code, its
+/// position as the register writes it in RD New — whole metres —, and where
+/// RDNAPTRANS2018, the official transformation through its correction grid,
+/// puts it in ETRS89 (PROJ 9.5.1 with `nl_nsgi_rdtrans2018.tif`). The centre
+/// of the system at Amersfoort, the far north, south, west and east of the
+/// register — a stop in Belgium and one in Germany among them — and the quay
+/// the crate places farthest from the official position of all 74 736 stops
+/// of the register (Ihrhove, in Germany).
+#[cfg(feature = "crs")]
+const DUTCH_REGISTER: [(&str, f64, f64, f64, f64); 6] = [
+    ("NL:Q:50420143", 154776.0, 462915.0, 52.15440887, 5.38393048),
+    ("NL:Q:29300201", 208085.0, 612579.0, 53.49670915, 6.18708768),
+    ("NL:Q:66451040", 198351.0, 307335.0, 50.75433277, 6.00148306),
+    ("NL:Q:79840130", 13995.0, 371351.0, 51.31382964, 3.36459557),
+    ("NL:Q:13150004", 293760.0, 584371.0, 53.22792497, 7.46518613),
+    ("NL:Q:13150003", 292554.0, 576754.0, 53.15982900, 7.44388202),
+];
+
+/// RD New is read by the EPSG Helmert transformation alone, without the
+/// correction grid: within a quarter of a metre of RDNAPTRANS2018 at every
+/// quay of the register — the register states its positions to the whole
+/// metre, so half a metre is lost to its rounding before any transformation.
+#[cfg(feature = "crs")]
+#[test]
+fn a_quay_of_the_dutch_register_lands_where_rdnaptrans2018_puts_it() {
+    let rd = ReferenceSystem::from_srs_name("urn:ogc:def:crs:EPSG::28992").expect("RD New");
+    assert_eq!(rd.axes(), Axes::EastingNorthing);
+    for (code, x, y, latitude, longitude) in DUTCH_REGISTER {
+        let metres = metres_between(rd.to_wgs84(x, y), (latitude, longitude));
+        assert!(metres < 0.25, "{code} is {metres:.3} m off");
+    }
+}
+
 #[cfg(feature = "crs")]
 #[test]
 fn an_srs_name_names_its_system_in_any_of_the_usual_forms() {

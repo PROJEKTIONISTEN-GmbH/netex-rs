@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The Dutch stop register (Centraal Haltebestand) as the national access point
+  publishes it in NeTEx, apart from the timetables: stop places with their
+  quays in one site frame, each named by the code the register gives it
+  (privateCodes, StopPlaceCode NL:S:…, QuayCode NL:Q:…), positions in RD New
+  (EPSG:28992) in whole metres, the system the frame defaults name. The
+  register holds stops across the border too: one here stands in Germany. The
+  quays state no name of their own.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, codes and
+  positions are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2" version="ntx:1.1">
+  <PublicationTimestamp>2026-11-01T01:30:00</PublicationTimestamp>
+  <ParticipantRef>EX</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="NL:CHB:CompositeFrame:CHB" version="12">
+      <ValidBetween>
+        <FromDate>2026-11-01T01:30:00</FromDate>
+      </ValidBetween>
+      <FrameDefaults>
+        <DefaultCodespaceRef ref="NL:BISON:Codespace:CHB"/>
+        <DefaultLocale>
+          <TimeZone>Europe/Amsterdam</TimeZone>
+          <DefaultLanguage>nl</DefaultLanguage>
+        </DefaultLocale>
+        <DefaultLocationSystem>urn:ogc:def:crs:EPSG::28992</DefaultLocationSystem>
+        <DefaultSystemOfUnits>SiMetres</DefaultSystemOfUnits>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="NL:CHB:ResourceFrame:CHB" version="12">
+          <codespaces>
+            <Codespace id="NL:BISON:Codespace:CHB">
+              <Xmlns>NL:CHB</Xmlns>
+              <XmlnsUrl>https://example.org/chb</XmlnsUrl>
+              <Description>Stop register</Description>
+            </Codespace>
+          </codespaces>
+        </ResourceFrame>
+        <SiteFrame id="NL:CHB:SiteFrame:CHB" version="12">
+          <stopPlaces>
+            <StopPlace id="NL:CHB:StopPlace:99000100" version="12">
+              <privateCodes>
+                <PrivateCode type="StopPlaceCode">NL:S:99000100</PrivateCode>
+              </privateCodes>
+              <Name>Voorbeeldstad, Station</Name>
+              <Centroid>
+                <Location>
+                  <gml:pos>155210 463440</gml:pos>
+                </Location>
+              </Centroid>
+              <TransportMode>bus</TransportMode>
+              <quays>
+                <Quay id="NL:CHB:Quay:99000101" version="12">
+                  <privateCodes>
+                    <PrivateCode type="QuayCode">NL:Q:99000101</PrivateCode>
+                  </privateCodes>
+                  <Centroid>
+                    <Location>
+                      <gml:pos>155195 463455</gml:pos>
+                    </Location>
+                  </Centroid>
+                  <QuayType>busStop</QuayType>
+                </Quay>
+                <Quay id="NL:CHB:Quay:99000102" version="12">
+                  <privateCodes>
+                    <PrivateCode type="QuayCode">NL:Q:99000102</PrivateCode>
+                  </privateCodes>
+                  <Centroid>
+                    <Location>
+                      <gml:pos>155225 463425</gml:pos>
+                    </Location>
+                  </Centroid>
+                  <QuayType>busStop</QuayType>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="NL:CHB:StopPlace:99000200" version="12">
+              <privateCodes>
+                <PrivateCode type="StopPlaceCode">NL:S:99000200</PrivateCode>
+              </privateCodes>
+              <Name>Voorbeeldstad, Markt</Name>
+              <Centroid>
+                <Location>
+                  <gml:pos>155630 462980</gml:pos>
+                </Location>
+              </Centroid>
+              <TransportMode>bus</TransportMode>
+              <quays>
+                <Quay id="NL:CHB:Quay:99000201" version="12">
+                  <privateCodes>
+                    <PrivateCode type="QuayCode">NL:Q:99000201</PrivateCode>
+                  </privateCodes>
+                  <Centroid>
+                    <Location>
+                      <gml:pos>155640 462995</gml:pos>
+                    </Location>
+                  </Centroid>
+                  <QuayType>busStop</QuayType>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="NL:CHB:StopPlace:99000300" version="12">
+              <privateCodes>
+                <PrivateCode type="StopPlaceCode">NL:S:99000300</PrivateCode>
+              </privateCodes>
+              <Name>Voorbeeldstad, Ziekenhuis</Name>
+              <Centroid>
+                <Location>
+                  <gml:pos>156400 462100</gml:pos>
+                </Location>
+              </Centroid>
+              <TransportMode>bus</TransportMode>
+              <quays>
+                <Quay id="NL:CHB:Quay:99000301" version="12">
+                  <privateCodes>
+                    <PrivateCode type="QuayCode">NL:Q:99000301</PrivateCode>
+                  </privateCodes>
+                  <Centroid>
+                    <Location>
+                      <gml:pos>156410 462090</gml:pos>
+                    </Location>
+                  </Centroid>
+                  <QuayType>busStop</QuayType>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="NL:CHB:StopPlace:99000400" version="12">
+              <privateCodes>
+                <PrivateCode type="StopPlaceCode">NL:S:99000400</PrivateCode>
+              </privateCodes>
+              <Name>Grenzdorf, Kirche</Name>
+              <Centroid>
+                <Location>
+                  <gml:pos>293120 580240</gml:pos>
+                </Location>
+              </Centroid>
+              <TransportMode>bus</TransportMode>
+              <quays>
+                <Quay id="NL:CHB:Quay:99000401" version="12">
+                  <privateCodes>
+                    <PrivateCode type="QuayCode">NL:Q:99000401</PrivateCode>
+                  </privateCodes>
+                  <Centroid>
+                    <Location>
+                      <gml:pos>293120 580240</gml:pos>
+                    </Location>
+                  </Centroid>
+                  <QuayType>busStop</QuayType>
+                </Quay>
+              </quays>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

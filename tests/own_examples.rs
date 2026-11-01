@@ -6,7 +6,8 @@
 //! delivery in the French profile (NeTEx France), a delivery in the Nordic
 //! NeTEx Profile with the stop register it names, published apart, and
 //! deliveries in the forms of Luxembourg's, Denmark's, the Belgian operators'
-//! and the Czech national one. They are written for these tests and licensed
+//! and the Czech national one, and a Dutch operator's delivery in the BISON
+//! profile with the national stop register it names, published apart. They are written for these tests and licensed
 //! as the crate is (`tests/fixtures/own/README.md`), so that the cases each
 //! profile poses are pinned without data under a licence of its own:
 //! identifiers that are each document's own, lines in versions, journeys
@@ -15,8 +16,9 @@
 //! everything in general frames — quays defined beside their stop place,
 //! passing times naming no point, day types given their days by a validity and
 //! days of the week —, journeys dated by the dated journeys naming them,
-//! operating periods bounded by instants in UTC, and stop identifiers that
-//! name another stop in each document.
+//! operating periods bounded by instants in UTC, stop identifiers that name
+//! another stop in each document, and journeys stating their times by a
+//! departure and a time demand type, at stops in RD New coordinates.
 //!
 //! Every example is read four ways — the full model one document after the
 //! other, in the reverse order, the lean stream one builder per document, and
@@ -111,15 +113,16 @@ const fn at(hours: u32, minutes: u32) -> u32 {
 
 /// Every example reads and writes back as it is written, and writes for
 /// either release without a loss — but the Nordic train's dated journeys for
-/// NeTEx 1.x, where a dated journey names no journey: those references are
-/// left out, and said to be.
+/// NeTEx 1.x, where a dated journey names no journey, and the private codes
+/// of the Dutch documents (`privateCodes`), which NeTEx 1.x does not have:
+/// those are left out, and said to be.
 #[test]
 fn every_own_example_reads_and_writes_back_element_for_element() {
     let fixtures = support::own_fixtures("");
     assert_eq!(
         fixtures.len(),
-        22,
-        "EPIP 1, Italy 1, Austria 2, Switzerland 2, France 4, Nordic 4 and its stop register, Luxembourg 1, Denmark 1, Belgium 3, Czechia 2"
+        24,
+        "EPIP 1, Italy 1, Austria 2, Switzerland 2, France 4, Nordic 4 and its stop register, Luxembourg 1, Denmark 1, Belgium 3, Czechia 2, the Netherlands 1 and its stop register"
     );
     for fixture in &fixtures {
         let document = netex_rs::read(&fixture.xml)
@@ -133,6 +136,16 @@ fn every_own_example_reads_and_writes_back_element_for_element() {
             let expected: &[&str] = match (fixture.name.as_str(), release) {
                 ("nordic/EX_EX-Line-R1_R1_Eksempelby-Fjellstua.xml", Release::V1) => &[
                     "<ServiceJourneyRef> under <DatedServiceJourney> is not in NeTEx 1.x: left out 6 times, first at line 115",
+                ],
+                ("nl/NeTEx_EX_EX_20261101_20261101.xml", Release::V1) => &[
+                    "<privateCodes> under <Line> is not in NeTEx 1.x: left out 2 times, first at line 49",
+                    "<privateCodes> under <ScheduledStopPoint> is not in NeTEx 1.x: left out 5 times, first at line 69",
+                    "<privateCodes> under <ServiceJourney> is not in NeTEx 1.x: left out 7 times, first at line 354",
+                    "<privateCodes> under <TimingPoint> is not in NeTEx 1.x: left out 1 time, first at line 138",
+                ],
+                ("nl-register/NeTEx_EX_epiap_2026-11-01.xml", Release::V1) => &[
+                    "<privateCodes> under <Quay> is not in NeTEx 1.x: left out 5 times, first at line 44",
+                    "<privateCodes> under <StopPlace> is not in NeTEx 1.x: left out 4 times, first at line 32",
                 ],
                 _ => &[],
             };
@@ -154,7 +167,13 @@ fn every_own_example_reads_and_writes_back_element_for_element() {
 /// their journey, which NeTEx 1.x does not let a dated journey do, and the
 /// replacing one names the one it replaces as a plain reference, where NeTEx
 /// 2.0 asks for `replacedJourneys`. Against 1.x the line file's complaints
-/// are about these two references, against 2.0 about the second alone.
+/// are about these two references, against 2.0 about the second alone. The
+/// Dutch documents write their private codes as NeTEx 2.0 does
+/// (`privateCodes`), which 1.x does not have — written for 1.x, the codes
+/// are left out —, and the operator's delivery names what the national
+/// access point publishes apart: the register's quays, one of them one the
+/// register no longer holds, and the codespace and frame types of the
+/// profile.
 #[test]
 fn every_own_example_is_valid_for_both_releases_but_for_references_into_another_document() {
     let shared = documents("ch")
@@ -221,6 +240,38 @@ fn every_own_example_is_valid_for_both_releases_but_for_references_into_another_
                         .any(|element| line.contains(&format!("netex}}{element}'"))),
                     "not about the dated journeys' references: {line}"
                 );
+            }
+        }
+        let register = "nl-register/NeTEx_EX_epiap_2026-11-01.xml";
+        let private_codes = "netex}privateCodes': This element is not expected";
+        if release == Release::V1 {
+            let complaint = complaints
+                .remove(register)
+                .unwrap_or_else(|| panic!("{register} as written is not valid for NeTEx 1.x"));
+            for line in complaint.lines().filter(|l| *l != "fails to validate") {
+                assert!(
+                    line.contains(private_codes),
+                    "not about private codes: {line}"
+                );
+            }
+        }
+        for written in ["", " written for V1", " written for V2"] {
+            let name = format!("nl/NeTEx_EX_EX_20261101_20261101.xml{written}");
+            if written.is_empty() || written == format!(" written for {release:?}") {
+                let complaint = complaints.remove(&name).unwrap_or_else(|| {
+                    panic!("{name} names what other documents define, for NeTEx {release_name}")
+                });
+                for line in complaint.lines().filter(|l| *l != "fails to validate") {
+                    let elsewhere = line
+                        .split_once("No match found for key-sequence ['")
+                        .is_some_and(|(_, id)| {
+                            id.starts_with("NL:CHB:Quay:") || id.starts_with("NL:BISON:")
+                        });
+                    let codes = written.is_empty()
+                        && release == Release::V1
+                        && line.contains(private_codes);
+                    assert!(elsewhere || codes, "{name}: {line}");
+                }
             }
         }
         let named: Vec<&String> = complaints.keys().collect();
@@ -1350,6 +1401,442 @@ fn a_czech_stop_has_no_position_and_a_late_journey_its_times_as_stated() {
     assert_eq!(
         october(&index, "CZ:ex_jdf:ServiceJourney:100100_1_5"),
         [19, 20, 21, 22, 23]
+    );
+}
+
+/// The documents of the Dutch operator's delivery, and those of the stop
+/// register it names, published apart, under the register's directory.
+fn dutch_documents() -> Vec<(String, String)> {
+    let mut documents = documents("nl");
+    documents.extend(
+        support::own_fixtures("nl-register")
+            .into_iter()
+            .map(|fixture| (format!("nl-register/{}", fixture.name), fixture.xml)),
+    );
+    documents
+}
+
+/// The index of the Dutch delivery with its stop register, after checking
+/// that every way of reading them gives the same — the dataset reader over
+/// the delivery's directory with the register's read along.
+fn dutch_index() -> Index {
+    let documents = dutch_documents();
+    let own = support::fixtures_dir().join("own");
+    let source = Source::open(own.join("nl"))
+        .and_then(|delivery| delivery.with(Source::open(own.join("nl-register"))?))
+        .expect("the delivery and its register open");
+    let streamed = Index::build(&source, &ReadOptions::new(Selection::routing()))
+        .expect("the delivery indexes");
+    let full = serially(&documents);
+    let expected = render(&full);
+    assert_same(
+        &expected,
+        &render(&serially(&reversed(&documents))),
+        "in reverse order",
+    );
+    assert_same(&expected, &render(&merged(&documents)), "lean, merged");
+    assert_same(&expected, &render(&streamed), "from the directories");
+    full
+}
+
+/// The Dutch stop points are assigned to quays of the national register,
+/// which the operator's delivery does not hold; the register names each quay
+/// and stop place by its code (`QuayCode` `NL:Q:…`, `StopPlaceCode`
+/// `NL:S:…`), which is how the stop is known across deliveries — the German
+/// delivery names Dutch stops by the same keys. One stop point is assigned to
+/// a quay the register no longer holds.
+#[test]
+fn the_dutch_stop_points_are_at_quays_known_by_their_register_codes() {
+    let index = dutch_index();
+    assert_eq!(index.stop_count(), 4 + 5, "four stop places, five quays");
+    let quay = index.stop_by_dhid("NL:Q:99000101").expect("the quay");
+    let quay = index.stop(quay);
+    assert_eq!(
+        (quay.id, quay.kind),
+        ("NL:CHB:Quay:99000101", StopKind::Quay)
+    );
+    let place = index.stop(quay.parent.expect("its stop place"));
+    assert_eq!(
+        (place.id, place.dhid, place.name),
+        (
+            "NL:CHB:StopPlace:99000100",
+            Some("NL:S:99000100"),
+            "Voorbeeldstad, Station"
+        )
+    );
+    let across_the_border = index.stop_by_dhid("NL:S:99000400").expect("the stop place");
+    assert_eq!(index.stop(across_the_border).name, "Grenzdorf, Kirche");
+    let stop_of = |point: &str| {
+        let point = index.stop_point_by_id(point).expect("the stop point");
+        index
+            .stop_of_stop_point(point)
+            .and_then(|stop| index.stop(stop).dhid)
+    };
+    assert_eq!(
+        stop_of("NL:EX:ScheduledStopPoint:10002"),
+        Some("NL:Q:99000201")
+    );
+    assert_eq!(stop_of("NL:EX:ScheduledStopPoint:10005"), None);
+    let unresolved: Vec<String> = index
+        .unresolved()
+        .iter()
+        .map(|u| format!("<{}> {}", u.element, u.id))
+        .collect();
+    assert_eq!(unresolved, ["<QuayRef> NL:CHB:Quay:99000501"]);
+}
+
+/// Positions in RD New, the system the Dutch frames name by default, read in
+/// WGS 84: each within a quarter of a metre of where RDNAPTRANS2018 — the
+/// official transformation, through its correction grid — puts it (PROJ
+/// 9.5.1 with `nl_nsgi_rdtrans2018.tif`), the quay across the border in
+/// Germany among them, and the stop point the register no longer holds a
+/// quay for at its own position.
+#[cfg(feature = "crs")]
+#[test]
+fn a_dutch_position_in_rd_new_reads_where_rdnaptrans2018_puts_it() {
+    use netex_rs::geometry::metres_between;
+    let index = dutch_index();
+    let quay = |code: &str| {
+        let stop = index.stop(index.stop_by_dhid(code).expect("the quay"));
+        (
+            stop.latitude.expect("a latitude"),
+            stop.longitude.expect("a longitude"),
+        )
+    };
+    let point = index.stop_point(
+        index
+            .stop_point_by_id("NL:EX:ScheduledStopPoint:10005")
+            .expect("the stop point"),
+    );
+    let read = [
+        quay("NL:Q:99000101"),
+        quay("NL:Q:99000201"),
+        quay("NL:Q:99000401"),
+        (
+            point.latitude.expect("a latitude"),
+            point.longitude.expect("a longitude"),
+        ),
+    ];
+    let rdnaptrans2018 = [
+        (52.15926237, 5.39005341),
+        (52.15512756, 5.39655571),
+        (53.19099093, 7.45383384),
+        (52.14348519, 5.41496022),
+    ];
+    for (read, expected) in read.into_iter().zip(rdnaptrans2018) {
+        let metres = metres_between(read, expected);
+        assert!(metres < 0.25, "{read:?} is {metres:.3} m from {expected:?}");
+    }
+}
+
+/// No Dutch journey lists its passing times: each states its departure and
+/// names a time demand type. The journey leaves its first stop at its
+/// departure — the wait the type states there does not hold it back —, runs
+/// each timing link in the type's run time, through the timing point Brug,
+/// which is no stop, and waits where the type says: half a minute at Brug, a
+/// minute at Markt. The run times are stated to the tenth of a second; the
+/// times add up to the millisecond, each passing time rounded to the second.
+/// The night journey runs past midnight, the one leaving on the next day
+/// states a day offset.
+#[test]
+fn a_dutch_journey_takes_its_times_from_its_departure_and_its_time_demand_type() {
+    let index = dutch_index();
+    assert_eq!(
+        calls(&index, "NL:EX:ServiceJourney:1-101"),
+        ["Station", "Markt", "Ziekenhuis"]
+    );
+    assert_eq!(
+        times(&index, "NL:EX:ServiceJourney:1-101"),
+        [
+            (None, Some(at(8, 0))),
+            (Some(at(8, 4)), Some(at(8, 5))),
+            (Some(at(8, 8)), None)
+        ]
+    );
+    assert_eq!(
+        times(&index, "NL:EX:ServiceJourney:1-191"),
+        [
+            (None, Some(at(23, 58))),
+            (Some(at(24, 2)), Some(at(24, 3))),
+            (Some(at(24, 6)), None)
+        ]
+    );
+    assert_eq!(
+        times(&index, "NL:EX:ServiceJourney:1-193"),
+        [
+            (None, Some(at(24, 20))),
+            (Some(at(24, 24)), Some(at(24, 25))),
+            (Some(at(24, 28)), None)
+        ]
+    );
+    let journey = index
+        .journey_by_id("NL:EX:ServiceJourney:1-101")
+        .expect("the journey");
+    let uses: Vec<(bool, bool)> = index
+        .journey(journey)
+        .uses
+        .iter()
+        .map(|call| (call.boarding, call.alighting))
+        .collect();
+    assert_eq!(uses, [(true, false), (true, true), (false, true)]);
+    assert_eq!(index.finding_count(Concern::TooFewTimedCalls), 0);
+}
+
+/// The loop of line 2 passes the link from Station perron 2 to Markt twice,
+/// in three minutes first and in five the second time: each pass takes the
+/// run time the type states for it, in order. The type states one wait for
+/// the stop the loop passes twice — the layover of the second pass —, the
+/// first pass being the journey's departure.
+#[test]
+fn a_dutch_loop_takes_the_run_time_of_each_pass() {
+    let index = dutch_index();
+    assert_eq!(
+        calls(&index, "NL:EX:ServiceJourney:2-201"),
+        [
+            "Station perron 2",
+            "Markt",
+            "Ziekenhuis",
+            "Station perron 2",
+            "Markt"
+        ]
+    );
+    assert_eq!(
+        times(&index, "NL:EX:ServiceJourney:2-201"),
+        [
+            (None, Some(at(9, 0))),
+            (Some(at(9, 3)), Some(at(9, 3))),
+            (Some(at(9, 5)), Some(at(9, 5))),
+            (Some(at(9, 9)), Some(at(9, 10))),
+            (Some(at(9, 15)), None)
+        ]
+    );
+}
+
+/// The type of the journey to the old harbour states no run time for the
+/// link onward from Markt: the journey runs to Markt, its calls after it
+/// untimed and left out, and both are findings.
+#[test]
+fn a_dutch_journey_whose_type_misses_a_run_time_ends_where_its_times_do() {
+    let index = dutch_index();
+    assert_eq!(
+        calls(&index, "NL:EX:ServiceJourney:1-301"),
+        ["Station", "Markt"]
+    );
+    assert_eq!(
+        times(&index, "NL:EX:ServiceJourney:1-301"),
+        [(None, Some(at(10, 0))), (Some(at(10, 4)), Some(at(10, 4)))]
+    );
+    let document = "NeTEx_EX_EX_20261101_20261101.xml";
+    assert_eq!(
+        findings(&index, Concern::LinkWithoutRunTime),
+        [format!("timing link of the pattern without a run time, the calls after it untimed: ServiceJourney NL:EX:ServiceJourney:1-301 in {document} (NL:EX:TimeDemandType:1-haven)")]
+    );
+    assert_eq!(
+        findings(&index, Concern::UntimedEnds),
+        [format!("pattern points before its first or after its last passing time, no calls: ServiceJourney NL:EX:ServiceJourney:1-301 in {document}")]
+    );
+}
+
+/// The calendar is availability conditions in the timetable frames'
+/// `contentValidityConditions`, each a fortnight of day bits; the journeys
+/// name the day type of the calendar frame beside them, assigned the same
+/// days. The weekday journeys run on the ten weekdays, the journey leaving
+/// after midnight on the operating days of the weekdays too, the loop on the
+/// two Sundays. The journey cancelled on 4 November runs on the other
+/// weekdays; the journey naming only the condition not available for that
+/// day, written to show the validity the cancelled one no longer has, runs
+/// on none, whatever its day type says, and is a finding.
+#[test]
+fn a_dutch_journey_runs_on_the_days_of_its_availability_condition() {
+    let index = dutch_index();
+    let weekdays = [
+        "2026-11-02",
+        "2026-11-03",
+        "2026-11-04",
+        "2026-11-05",
+        "2026-11-06",
+        "2026-11-09",
+        "2026-11-10",
+        "2026-11-11",
+        "2026-11-12",
+        "2026-11-13",
+    ];
+    for journey in ["1-101", "1-191", "1-193", "1-301"] {
+        assert_eq!(
+            dates(&index, &format!("NL:EX:ServiceJourney:{journey}")),
+            weekdays,
+            "{journey}"
+        );
+    }
+    assert_eq!(
+        dates(&index, "NL:EX:ServiceJourney:2-201"),
+        ["2026-11-08", "2026-11-15"]
+    );
+    let cancelled: Vec<&str> = weekdays
+        .into_iter()
+        .filter(|day| *day != "2026-11-04")
+        .collect();
+    assert_eq!(dates(&index, "NL:EX:ServiceJourney:1-103"), cancelled);
+    assert!(dates(&index, "NL:EX:ServiceJourney:1-103-na").is_empty());
+    assert_eq!(
+        findings(&index, Concern::JourneyWithoutDays),
+        ["journey without an operating day: ServiceJourney NL:EX:ServiceJourney:1-103-na in NeTEx_EX_EX_20261101_20261101.xml"]
+    );
+}
+
+/// The lean stream yields the time demand types of the service frame, with
+/// their run and wait times as written, and the availability conditions of
+/// the timetable frames' `contentValidityConditions`, standing in their
+/// timetable frame.
+#[test]
+fn the_lean_stream_yields_the_dutch_time_demand_types_and_content_conditions() {
+    let (_, xml) = documents("nl").remove(0);
+    let selection = Selection::none()
+        .with(Kind::TimeDemandType)
+        .with(Kind::AvailabilityCondition);
+    let mut demands = Vec::new();
+    let mut conditions = Vec::new();
+    netex_rs::stream::read(&xml, &ReadOptions::new(selection), |entity, scope| {
+        let frame = scope.frames().last().expect("a frame").kind;
+        match entity {
+            Entity::TimeDemandType(demand) => {
+                let runs: Vec<String> = demand
+                    .run_times
+                    .iter()
+                    .flat_map(|runs| &runs.items)
+                    .filter_map(|item| match item {
+                        netex_rs::model::JourneyRunTimeItem::JourneyRunTime(run) => {
+                            run.run_time.as_ref().map(|time| time.to_string())
+                        }
+                        netex_rs::model::JourneyRunTimeItem::Unprocessed(_) => None,
+                    })
+                    .collect();
+                let waits = demand.wait_times.iter().flat_map(|w| &w.items).count();
+                let id = demand.id.expect("an identifier").to_string();
+                demands.push((frame, id, runs, waits));
+            }
+            Entity::AvailabilityCondition(condition) => {
+                let id = condition.id.expect("an identifier").to_string();
+                conditions.push((frame, id, condition.valid_day_bits));
+            }
+            _ => unreachable!("only the selected kinds"),
+        }
+        Ok(())
+    })
+    .expect("the document reads");
+    assert_eq!(
+        demands,
+        [
+            (
+                FrameKind::Service,
+                "NL:EX:TimeDemandType:1-out-dal".to_owned(),
+                vec![
+                    "PT2M".to_owned(),
+                    "PT1M29.6S".to_owned(),
+                    "PT3M0.4S".to_owned()
+                ],
+                3
+            ),
+            (
+                FrameKind::Service,
+                "NL:EX:TimeDemandType:2-ronde".to_owned(),
+                vec![
+                    "PT3M".to_owned(),
+                    "PT2M".to_owned(),
+                    "PT4M".to_owned(),
+                    "PT5M".to_owned()
+                ],
+                1
+            ),
+            (
+                FrameKind::Service,
+                "NL:EX:TimeDemandType:1-haven".to_owned(),
+                vec!["PT4M".to_owned()],
+                0
+            ),
+        ]
+    );
+    assert_eq!(
+        conditions,
+        [
+            (
+                FrameKind::Timetable,
+                "NL:EX:AvailabilityCondition:werkdag".to_owned(),
+                Some("11111001111100".into())
+            ),
+            (
+                FrameKind::Timetable,
+                "NL:EX:AvailabilityCondition:werkdag-zonder-4".to_owned(),
+                Some("11011001111100".into())
+            ),
+            (
+                FrameKind::Timetable,
+                "NL:EX:AvailabilityCondition:uitval-4".to_owned(),
+                Some("00100000000000".into())
+            ),
+            (
+                FrameKind::Timetable,
+                "NL:EX:AvailabilityCondition:zondag".to_owned(),
+                Some("00000010000001".into())
+            ),
+        ]
+    );
+}
+
+/// The typed model reads the Dutch delivery and its register: the private
+/// codes, the timing point among a pattern's points with its timing link
+/// onward, the time demand types, the content conditions. What it does not
+/// type — the timing points and timing links themselves, which the time
+/// demand types and patterns name by identifier, and the GML positions,
+/// elements of another namespace, which the `crs` feature reads where they
+/// are — is carried through as written.
+#[test]
+fn the_dutch_delivery_carries_through_only_its_timing_points_links_and_positions() {
+    let mut untyped = Vec::new();
+    for (name, xml) in dutch_documents() {
+        let document = netex_rs::read(&xml).expect("the document reads");
+        document.for_each_unprocessed(&mut |parent, fragment| {
+            untyped.push(format!("{name}: {parent}/{}", fragment.name));
+        });
+    }
+    let delivery = "NeTEx_EX_EX_20261101_20261101.xml";
+    let register = "nl-register/NeTEx_EX_epiap_2026-11-01.xml";
+    let mut expected = vec![
+        format!("{delivery}: ServiceFrame/timingPoints"),
+        format!("{delivery}: ServiceFrame/timingLinks"),
+    ];
+    expected.extend((0..5).map(|_| format!("{delivery}: Location/pos")));
+    expected.extend((0..4 + 5).map(|_| format!("{register}: Location/pos")));
+    assert_eq!(
+        untyped, expected,
+        "five stop points; four stop places, five quays"
+    );
+    let (_, xml) = documents("nl").remove(0);
+    let document = netex_rs::read(&xml).expect("the document reads");
+    let codes: Vec<(Option<&str>, &str)> = document
+        .delivery
+        .frames()
+        .filter_map(|frame| match frame {
+            netex_rs::model::Frame::Service(service) => Some(service),
+            _ => None,
+        })
+        .flat_map(|service| service.scheduled_stop_points.iter().flat_map(|s| &s.items))
+        .filter_map(|item| match item {
+            netex_rs::model::ScheduledStopPointItem::ScheduledStopPoint(point) => {
+                point.private_codes.as_ref()
+            }
+            _ => None,
+        })
+        .flat_map(|codes| &codes.codes)
+        .map(|code| (code.r#type.as_deref(), &*code.text))
+        .take(2)
+        .collect();
+    assert_eq!(
+        codes,
+        [
+            (Some("UserStopCode"), "10001"),
+            (Some("UserStopCode"), "10002")
+        ]
     );
 }
 

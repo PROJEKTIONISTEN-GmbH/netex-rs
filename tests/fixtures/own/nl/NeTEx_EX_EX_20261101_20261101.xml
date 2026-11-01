@@ -1,0 +1,580 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One operator's delivery in the Dutch profile (BISON, NL_TT_BASELINE 9.3.0)
+  as the national access point publishes it: one document, its stop points
+  assigned to quays of the national stop register published apart
+  (nl-register/), positions in RD New (EPSG:28992), identifiers of the form
+  NL:<operator>:<type>:<code> and private codes beside them (privateCodes).
+  No journey lists its passing times: each states its departure and names a
+  time demand type, whose run times lead along the timing links its pattern
+  names onward from each point — through a timing point that is no stop —,
+  with the wait times at a stop point and at a timing point. Line 2 runs a
+  loop that passes one link twice, in another time each pass. One time demand
+  type states no run time for a link of its pattern. The calendar is
+  availability conditions of day bits in the timetable frame's
+  contentValidityConditions; the journeys name a day type of the calendar
+  frame beside them, which the profile states for information. One journey
+  is cancelled on one day, and is written as the profile's own example
+  writes it: its condition without that day, a condition not available for
+  that day beside it, and a journey naming only the condition not available,
+  to show the validity it no longer has. One stop point is assigned to a
+  quay the register no longer holds.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2" version="ntx:1.1">
+  <PublicationTimestamp>2026-11-01T12:00:00</PublicationTimestamp>
+  <ParticipantRef>EX</ParticipantRef>
+  <Description>EX timetable of 2026-11-01</Description>
+  <dataObjects>
+    <CompositeFrame id="NL:EX:CompositeFrame:1" version="7">
+      <ValidBetween>
+        <FromDate>2026-11-02T00:00:00</FromDate>
+        <ToDate>2026-11-15T00:00:00</ToDate>
+      </ValidBetween>
+      <TypeOfFrameRef ref="NL:BISON:TypeOfFrame:NL_TT_BASELINE" version="9.3.0"/>
+      <FrameDefaults>
+        <DefaultCodespaceRef ref="NL:BISON:Codespace:EX"/>
+        <DefaultLocale>
+          <TimeZone>Europe/Amsterdam</TimeZone>
+          <DefaultLanguage>nl</DefaultLanguage>
+        </DefaultLocale>
+        <DefaultLocationSystem>EPSG:28992</DefaultLocationSystem>
+        <DefaultSystemOfUnits>SiMetres</DefaultSystemOfUnits>
+        <DefaultCurrency>EUR</DefaultCurrency>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="NL:EX:ResourceFrame:1" version="7">
+          <TypeOfFrameRef ref="NL:BISON:TypeOfFrame:NL_TT_RESOURCE" version="9.3.0"/>
+          <organisations>
+            <Operator id="NL:EX:Operator:EX" version="7">
+              <Name>Voorbeeldvervoer</Name>
+              <ShortName>EX</ShortName>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <ServiceFrame id="NL:EX:ServiceFrame:1" version="7">
+          <TypeOfFrameRef ref="NL:BISON:TypeOfFrame:NL_TT_SERVICE" version="9.3.0"/>
+          <routes>
+            <Route id="NL:EX:Route:1-out" version="7">
+              <Name>Station - Ziekenhuis</Name>
+              <LineRef ref="NL:EX:Line:1" version="7"/>
+              <DirectionType>outbound</DirectionType>
+            </Route>
+            <Route id="NL:EX:Route:2-ronde" version="7">
+              <Name>Stadsronde</Name>
+              <LineRef ref="NL:EX:Line:2" version="7"/>
+              <DirectionType>outbound</DirectionType>
+            </Route>
+          </routes>
+          <lines>
+            <Line id="NL:EX:Line:1" version="7">
+              <privateCodes>
+                <PrivateCode type="LinePlanningNumber">1</PrivateCode>
+              </privateCodes>
+              <Name>Station - Ziekenhuis</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>1</PublicCode>
+              <OperatorRef ref="NL:EX:Operator:EX" version="7"/>
+            </Line>
+            <Line id="NL:EX:Line:2" version="7">
+              <privateCodes>
+                <PrivateCode type="LinePlanningNumber">2</PrivateCode>
+              </privateCodes>
+              <Name>Stadsronde</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>2</PublicCode>
+              <OperatorRef ref="NL:EX:Operator:EX" version="7"/>
+            </Line>
+          </lines>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="NL:EX:ScheduledStopPoint:10001" version="7">
+              <privateCodes>
+                <PrivateCode type="UserStopCode">10001</PrivateCode>
+              </privateCodes>
+              <Name>Station</Name>
+              <Location>
+                <gml:pos>155195 463455</gml:pos>
+              </Location>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="NL:EX:ScheduledStopPoint:10002" version="7">
+              <privateCodes>
+                <PrivateCode type="UserStopCode">10002</PrivateCode>
+              </privateCodes>
+              <Name>Markt</Name>
+              <Location>
+                <gml:pos>155640 462995</gml:pos>
+              </Location>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="NL:EX:ScheduledStopPoint:10003" version="7">
+              <privateCodes>
+                <PrivateCode type="UserStopCode">10003</PrivateCode>
+              </privateCodes>
+              <Name>Ziekenhuis</Name>
+              <Location>
+                <gml:pos>156410 462090</gml:pos>
+              </Location>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="NL:EX:ScheduledStopPoint:10004" version="7">
+              <privateCodes>
+                <PrivateCode type="UserStopCode">10004</PrivateCode>
+              </privateCodes>
+              <Name>Station perron 2</Name>
+              <Location>
+                <gml:pos>155225 463425</gml:pos>
+              </Location>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="NL:EX:ScheduledStopPoint:10005" version="7">
+              <privateCodes>
+                <PrivateCode type="UserStopCode">10005</PrivateCode>
+              </privateCodes>
+              <Name>Oude Haven</Name>
+              <Location>
+                <gml:pos>156900 461700</gml:pos>
+              </Location>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+          <stopAssignments>
+            <PassengerStopAssignment id="NL:EX:PassengerStopAssignment:10001" version="7" order="1">
+              <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10001" version="7"/>
+              <QuayRef ref="NL:CHB:Quay:99000101" version="any"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="NL:EX:PassengerStopAssignment:10002" version="7" order="2">
+              <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10002" version="7"/>
+              <QuayRef ref="NL:CHB:Quay:99000201" version="any"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="NL:EX:PassengerStopAssignment:10003" version="7" order="3">
+              <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10003" version="7"/>
+              <QuayRef ref="NL:CHB:Quay:99000301" version="any"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="NL:EX:PassengerStopAssignment:10004" version="7" order="4">
+              <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10004" version="7"/>
+              <QuayRef ref="NL:CHB:Quay:99000102" version="any"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="NL:EX:PassengerStopAssignment:10005" version="7" order="5">
+              <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10005" version="7"/>
+              <QuayRef ref="NL:CHB:Quay:99000501" version="any"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <timingPoints>
+            <TimingPoint id="NL:EX:TimingPoint:20001" version="7">
+              <privateCodes>
+                <PrivateCode type="UserStopCode">20001</PrivateCode>
+              </privateCodes>
+              <Name>Brug</Name>
+              <Location>
+                <gml:pos>155900 462600</gml:pos>
+              </Location>
+            </TimingPoint>
+          </timingPoints>
+          <timingLinks>
+            <TimingLink id="NL:EX:TimingLink:10001-20001" version="7">
+              <Distance>620</Distance>
+              <FromPointRef ref="NL:EX:ScheduledStopPoint:10001" version="7" nameOfRefClass="ScheduledStopPoint"/>
+              <ToPointRef ref="NL:EX:TimingPoint:20001" version="7" nameOfRefClass="TimingPoint"/>
+            </TimingLink>
+            <TimingLink id="NL:EX:TimingLink:20001-10002" version="7">
+              <Distance>480</Distance>
+              <FromPointRef ref="NL:EX:TimingPoint:20001" version="7" nameOfRefClass="TimingPoint"/>
+              <ToPointRef ref="NL:EX:ScheduledStopPoint:10002" version="7" nameOfRefClass="ScheduledStopPoint"/>
+            </TimingLink>
+            <TimingLink id="NL:EX:TimingLink:10002-10003" version="7">
+              <Distance>1190</Distance>
+              <FromPointRef ref="NL:EX:ScheduledStopPoint:10002" version="7" nameOfRefClass="ScheduledStopPoint"/>
+              <ToPointRef ref="NL:EX:ScheduledStopPoint:10003" version="7" nameOfRefClass="ScheduledStopPoint"/>
+            </TimingLink>
+            <TimingLink id="NL:EX:TimingLink:10004-10002" version="7">
+              <Distance>720</Distance>
+              <FromPointRef ref="NL:EX:ScheduledStopPoint:10004" version="7" nameOfRefClass="ScheduledStopPoint"/>
+              <ToPointRef ref="NL:EX:ScheduledStopPoint:10002" version="7" nameOfRefClass="ScheduledStopPoint"/>
+            </TimingLink>
+            <TimingLink id="NL:EX:TimingLink:10003-10004" version="7">
+              <Distance>1890</Distance>
+              <FromPointRef ref="NL:EX:ScheduledStopPoint:10003" version="7" nameOfRefClass="ScheduledStopPoint"/>
+              <ToPointRef ref="NL:EX:ScheduledStopPoint:10004" version="7" nameOfRefClass="ScheduledStopPoint"/>
+            </TimingLink>
+            <TimingLink id="NL:EX:TimingLink:10001-10002" version="7">
+              <Distance>650</Distance>
+              <FromPointRef ref="NL:EX:ScheduledStopPoint:10001" version="7" nameOfRefClass="ScheduledStopPoint"/>
+              <ToPointRef ref="NL:EX:ScheduledStopPoint:10002" version="7" nameOfRefClass="ScheduledStopPoint"/>
+            </TimingLink>
+            <TimingLink id="NL:EX:TimingLink:10002-10005" version="7">
+              <Distance>2010</Distance>
+              <FromPointRef ref="NL:EX:ScheduledStopPoint:10002" version="7" nameOfRefClass="ScheduledStopPoint"/>
+              <ToPointRef ref="NL:EX:ScheduledStopPoint:10005" version="7" nameOfRefClass="ScheduledStopPoint"/>
+            </TimingLink>
+          </timingLinks>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="NL:EX:ServiceJourneyPattern:1-out" version="7">
+              <RouteRef ref="NL:EX:Route:1-out" version="7"/>
+              <DirectionType>outbound</DirectionType>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="NL:EX:StopPointInJourneyPattern:1-out-1" version="7" order="1">
+                  <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10001" version="7"/>
+                  <OnwardTimingLinkRef ref="NL:EX:TimingLink:10001-20001" version="7"/>
+                  <IsWaitPoint>false</IsWaitPoint>
+                  <ForAlighting>false</ForAlighting>
+                </StopPointInJourneyPattern>
+                <TimingPointInJourneyPattern id="NL:EX:TimingPointInJourneyPattern:1-out-2" version="7" order="2">
+                  <TimingPointRef ref="NL:EX:TimingPoint:20001" version="7"/>
+                  <OnwardTimingLinkRef ref="NL:EX:TimingLink:20001-10002" version="7"/>
+                </TimingPointInJourneyPattern>
+                <StopPointInJourneyPattern id="NL:EX:StopPointInJourneyPattern:1-out-3" version="7" order="3">
+                  <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10002" version="7"/>
+                  <OnwardTimingLinkRef ref="NL:EX:TimingLink:10002-10003" version="7"/>
+                  <IsWaitPoint>true</IsWaitPoint>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="NL:EX:StopPointInJourneyPattern:1-out-4" version="7" order="4">
+                  <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10003" version="7"/>
+                  <IsWaitPoint>false</IsWaitPoint>
+                  <ForBoarding>false</ForBoarding>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+            <ServiceJourneyPattern id="NL:EX:ServiceJourneyPattern:2-ronde" version="7">
+              <RouteRef ref="NL:EX:Route:2-ronde" version="7"/>
+              <DirectionType>outbound</DirectionType>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="NL:EX:StopPointInJourneyPattern:2-ronde-1" version="7" order="1">
+                  <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10004" version="7"/>
+                  <OnwardTimingLinkRef ref="NL:EX:TimingLink:10004-10002" version="7"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="NL:EX:StopPointInJourneyPattern:2-ronde-2" version="7" order="2">
+                  <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10002" version="7"/>
+                  <OnwardTimingLinkRef ref="NL:EX:TimingLink:10002-10003" version="7"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="NL:EX:StopPointInJourneyPattern:2-ronde-3" version="7" order="3">
+                  <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10003" version="7"/>
+                  <OnwardTimingLinkRef ref="NL:EX:TimingLink:10003-10004" version="7"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="NL:EX:StopPointInJourneyPattern:2-ronde-4" version="7" order="4">
+                  <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10004" version="7"/>
+                  <OnwardTimingLinkRef ref="NL:EX:TimingLink:10004-10002" version="7"/>
+                  <IsWaitPoint>true</IsWaitPoint>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="NL:EX:StopPointInJourneyPattern:2-ronde-5" version="7" order="5">
+                  <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10002" version="7"/>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+            <ServiceJourneyPattern id="NL:EX:ServiceJourneyPattern:1-haven" version="7">
+              <RouteRef ref="NL:EX:Route:1-out" version="7"/>
+              <DirectionType>outbound</DirectionType>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="NL:EX:StopPointInJourneyPattern:1-haven-1" version="7" order="1">
+                  <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10001" version="7"/>
+                  <OnwardTimingLinkRef ref="NL:EX:TimingLink:10001-10002" version="7"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="NL:EX:StopPointInJourneyPattern:1-haven-2" version="7" order="2">
+                  <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10002" version="7"/>
+                  <OnwardTimingLinkRef ref="NL:EX:TimingLink:10002-10005" version="7"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="NL:EX:StopPointInJourneyPattern:1-haven-3" version="7" order="3">
+                  <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10005" version="7"/>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+          <timeDemandTypes>
+            <TimeDemandType id="NL:EX:TimeDemandType:1-out-dal" version="7">
+              <Name>1 outbound, off-peak</Name>
+              <runTimes>
+                <JourneyRunTime id="NL:EX:JourneyRunTime:1-out-dal-1" version="7">
+                  <TimingLinkRef ref="NL:EX:TimingLink:10001-20001" version="7"/>
+                  <RunTime>PT2M</RunTime>
+                </JourneyRunTime>
+                <JourneyRunTime id="NL:EX:JourneyRunTime:1-out-dal-2" version="7">
+                  <TimingLinkRef ref="NL:EX:TimingLink:20001-10002" version="7"/>
+                  <RunTime>PT1M29.6S</RunTime>
+                </JourneyRunTime>
+                <JourneyRunTime id="NL:EX:JourneyRunTime:1-out-dal-3" version="7">
+                  <TimingLinkRef ref="NL:EX:TimingLink:10002-10003" version="7"/>
+                  <RunTime>PT3M0.4S</RunTime>
+                </JourneyRunTime>
+              </runTimes>
+              <waitTimes>
+                <JourneyWaitTime id="NL:EX:JourneyWaitTime:1-out-dal-1" version="7">
+                  <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10001" version="7"/>
+                  <WaitTime>PT5M</WaitTime>
+                </JourneyWaitTime>
+                <JourneyWaitTime id="NL:EX:JourneyWaitTime:1-out-dal-2" version="7">
+                  <TimingPointRef ref="NL:EX:TimingPoint:20001" version="7"/>
+                  <WaitTime>PT30S</WaitTime>
+                </JourneyWaitTime>
+                <JourneyWaitTime id="NL:EX:JourneyWaitTime:1-out-dal-3" version="7">
+                  <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10002" version="7"/>
+                  <WaitTime>PT1M</WaitTime>
+                </JourneyWaitTime>
+              </waitTimes>
+            </TimeDemandType>
+            <TimeDemandType id="NL:EX:TimeDemandType:2-ronde" version="7">
+              <Name>2 loop</Name>
+              <runTimes>
+                <JourneyRunTime id="NL:EX:JourneyRunTime:2-ronde-1" version="7">
+                  <TimingLinkRef ref="NL:EX:TimingLink:10004-10002" version="7"/>
+                  <RunTime>PT3M</RunTime>
+                </JourneyRunTime>
+                <JourneyRunTime id="NL:EX:JourneyRunTime:2-ronde-2" version="7">
+                  <TimingLinkRef ref="NL:EX:TimingLink:10002-10003" version="7"/>
+                  <RunTime>PT2M</RunTime>
+                </JourneyRunTime>
+                <JourneyRunTime id="NL:EX:JourneyRunTime:2-ronde-3" version="7">
+                  <TimingLinkRef ref="NL:EX:TimingLink:10003-10004" version="7"/>
+                  <RunTime>PT4M</RunTime>
+                </JourneyRunTime>
+                <JourneyRunTime id="NL:EX:JourneyRunTime:2-ronde-4" version="7">
+                  <TimingLinkRef ref="NL:EX:TimingLink:10004-10002" version="7"/>
+                  <RunTime>PT5M</RunTime>
+                </JourneyRunTime>
+              </runTimes>
+              <waitTimes>
+                <JourneyWaitTime id="NL:EX:JourneyWaitTime:2-ronde-1" version="7">
+                  <ScheduledStopPointRef ref="NL:EX:ScheduledStopPoint:10004" version="7"/>
+                  <WaitTime>PT1M</WaitTime>
+                </JourneyWaitTime>
+              </waitTimes>
+            </TimeDemandType>
+            <TimeDemandType id="NL:EX:TimeDemandType:1-haven" version="7">
+              <Name>1 to the old harbour</Name>
+              <runTimes>
+                <JourneyRunTime id="NL:EX:JourneyRunTime:1-haven-1" version="7">
+                  <TimingLinkRef ref="NL:EX:TimingLink:10001-10002" version="7"/>
+                  <RunTime>PT4M</RunTime>
+                </JourneyRunTime>
+              </runTimes>
+            </TimeDemandType>
+          </timeDemandTypes>
+        </ServiceFrame>
+        <TimetableFrame id="NL:EX:TimetableFrame:werkdag" version="7">
+          <TypeOfFrameRef ref="NL:BISON:TypeOfFrame:NL_TT_TIMETABLE" version="9.3.0"/>
+          <contentValidityConditions>
+            <AvailabilityCondition id="NL:EX:AvailabilityCondition:werkdag" version="7">
+              <Name>Weekdays</Name>
+              <FromDate>2026-11-02T00:00:00</FromDate>
+              <ToDate>2026-11-15T00:00:00</ToDate>
+              <ValidDayBits>11111001111100</ValidDayBits>
+            </AvailabilityCondition>
+            <AvailabilityCondition id="NL:EX:AvailabilityCondition:werkdag-zonder-4" version="7">
+              <Name>Weekdays but 4 November</Name>
+              <FromDate>2026-11-02T00:00:00</FromDate>
+              <ToDate>2026-11-15T00:00:00</ToDate>
+              <IsAvailable>true</IsAvailable>
+              <ValidDayBits>11011001111100</ValidDayBits>
+            </AvailabilityCondition>
+            <AvailabilityCondition id="NL:EX:AvailabilityCondition:uitval-4" version="7">
+              <Name>Cancelled on 4 November</Name>
+              <FromDate>2026-11-02T00:00:00</FromDate>
+              <ToDate>2026-11-15T00:00:00</ToDate>
+              <IsAvailable>false</IsAvailable>
+              <ValidDayBits>00100000000000</ValidDayBits>
+            </AvailabilityCondition>
+          </contentValidityConditions>
+          <vehicleJourneys>
+            <ServiceJourney id="NL:EX:ServiceJourney:1-101" version="7">
+              <validityConditions>
+                <AvailabilityConditionRef ref="NL:EX:AvailabilityCondition:werkdag" version="7"/>
+              </validityConditions>
+              <privateCodes>
+                <PrivateCode type="JourneyNumber">101</PrivateCode>
+              </privateCodes>
+              <DepartureTime>08:00:00</DepartureTime>
+              <DepartureDayOffset>0</DepartureDayOffset>
+              <dayTypes>
+                <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="NL:EX:ServiceJourneyPattern:1-out" version="7"/>
+              <TimeDemandTypeRef ref="NL:EX:TimeDemandType:1-out-dal" version="7"/>
+            </ServiceJourney>
+            <ServiceJourney id="NL:EX:ServiceJourney:1-191" version="7">
+              <validityConditions>
+                <AvailabilityConditionRef ref="NL:EX:AvailabilityCondition:werkdag" version="7"/>
+              </validityConditions>
+              <privateCodes>
+                <PrivateCode type="JourneyNumber">191</PrivateCode>
+              </privateCodes>
+              <DepartureTime>23:58:00</DepartureTime>
+              <DepartureDayOffset>0</DepartureDayOffset>
+              <dayTypes>
+                <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="NL:EX:ServiceJourneyPattern:1-out" version="7"/>
+              <TimeDemandTypeRef ref="NL:EX:TimeDemandType:1-out-dal" version="7"/>
+            </ServiceJourney>
+            <ServiceJourney id="NL:EX:ServiceJourney:1-193" version="7">
+              <validityConditions>
+                <AvailabilityConditionRef ref="NL:EX:AvailabilityCondition:werkdag" version="7"/>
+              </validityConditions>
+              <privateCodes>
+                <PrivateCode type="JourneyNumber">193</PrivateCode>
+              </privateCodes>
+              <DepartureTime>00:20:00</DepartureTime>
+              <DepartureDayOffset>1</DepartureDayOffset>
+              <dayTypes>
+                <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="NL:EX:ServiceJourneyPattern:1-out" version="7"/>
+              <TimeDemandTypeRef ref="NL:EX:TimeDemandType:1-out-dal" version="7"/>
+            </ServiceJourney>
+            <ServiceJourney id="NL:EX:ServiceJourney:1-103" version="7">
+              <validityConditions>
+                <AvailabilityConditionRef ref="NL:EX:AvailabilityCondition:werkdag-zonder-4" version="7"/>
+                <AvailabilityConditionRef ref="NL:EX:AvailabilityCondition:uitval-4" version="7"/>
+              </validityConditions>
+              <privateCodes>
+                <PrivateCode type="JourneyNumber">103</PrivateCode>
+              </privateCodes>
+              <DepartureTime>12:00:00</DepartureTime>
+              <DepartureDayOffset>0</DepartureDayOffset>
+              <dayTypes>
+                <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="NL:EX:ServiceJourneyPattern:1-out" version="7"/>
+              <TimeDemandTypeRef ref="NL:EX:TimeDemandType:1-out-dal" version="7"/>
+            </ServiceJourney>
+            <ServiceJourney id="NL:EX:ServiceJourney:1-103-na" version="7">
+              <validityConditions>
+                <AvailabilityConditionRef ref="NL:EX:AvailabilityCondition:uitval-4" version="7"/>
+              </validityConditions>
+              <privateCodes>
+                <PrivateCode type="JourneyNumber">103</PrivateCode>
+              </privateCodes>
+              <DepartureTime>12:00:00</DepartureTime>
+              <DepartureDayOffset>0</DepartureDayOffset>
+              <dayTypes>
+                <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="NL:EX:ServiceJourneyPattern:1-out" version="7"/>
+              <TimeDemandTypeRef ref="NL:EX:TimeDemandType:1-out-dal" version="7"/>
+            </ServiceJourney>
+            <ServiceJourney id="NL:EX:ServiceJourney:1-301" version="7">
+              <validityConditions>
+                <AvailabilityConditionRef ref="NL:EX:AvailabilityCondition:werkdag" version="7"/>
+              </validityConditions>
+              <privateCodes>
+                <PrivateCode type="JourneyNumber">301</PrivateCode>
+              </privateCodes>
+              <DepartureTime>10:00:00</DepartureTime>
+              <DepartureDayOffset>0</DepartureDayOffset>
+              <dayTypes>
+                <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="NL:EX:ServiceJourneyPattern:1-haven" version="7"/>
+              <TimeDemandTypeRef ref="NL:EX:TimeDemandType:1-haven" version="7"/>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+        <TimetableFrame id="NL:EX:TimetableFrame:zondag" version="7">
+          <TypeOfFrameRef ref="NL:BISON:TypeOfFrame:NL_TT_TIMETABLE" version="9.3.0"/>
+          <contentValidityConditions>
+            <AvailabilityCondition id="NL:EX:AvailabilityCondition:zondag" version="7">
+              <Name>Sundays</Name>
+              <FromDate>2026-11-02T00:00:00</FromDate>
+              <ToDate>2026-11-15T00:00:00</ToDate>
+              <ValidDayBits>00000010000001</ValidDayBits>
+            </AvailabilityCondition>
+          </contentValidityConditions>
+          <vehicleJourneys>
+            <ServiceJourney id="NL:EX:ServiceJourney:2-201" version="7">
+              <validityConditions>
+                <AvailabilityConditionRef ref="NL:EX:AvailabilityCondition:zondag" version="7"/>
+              </validityConditions>
+              <privateCodes>
+                <PrivateCode type="JourneyNumber">201</PrivateCode>
+              </privateCodes>
+              <DepartureTime>09:00:00</DepartureTime>
+              <DepartureDayOffset>0</DepartureDayOffset>
+              <dayTypes>
+                <DayTypeRef ref="NL:EX:DayType:zondag" version="7"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="NL:EX:ServiceJourneyPattern:2-ronde" version="7"/>
+              <TimeDemandTypeRef ref="NL:EX:TimeDemandType:2-ronde" version="7"/>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+        <ServiceCalendarFrame id="NL:EX:ServiceCalendarFrame:1" version="7">
+          <TypeOfFrameRef ref="NL:BISON:TypeOfFrame:NL_TT_CALENDAR" version="9.3.0"/>
+          <dayTypes>
+            <DayType id="NL:EX:DayType:werkdag" version="7">
+              <Name>Weekday</Name>
+              <properties>
+                <PropertyOfDay>
+                  <DaysOfWeek>Monday</DaysOfWeek>
+                </PropertyOfDay>
+                <PropertyOfDay>
+                  <DaysOfWeek>Tuesday</DaysOfWeek>
+                </PropertyOfDay>
+                <PropertyOfDay>
+                  <DaysOfWeek>Wednesday</DaysOfWeek>
+                </PropertyOfDay>
+                <PropertyOfDay>
+                  <DaysOfWeek>Thursday</DaysOfWeek>
+                </PropertyOfDay>
+                <PropertyOfDay>
+                  <DaysOfWeek>Friday</DaysOfWeek>
+                </PropertyOfDay>
+              </properties>
+            </DayType>
+            <DayType id="NL:EX:DayType:zondag" version="7">
+              <Name>Sunday</Name>
+              <properties>
+                <PropertyOfDay>
+                  <DaysOfWeek>Sunday</DaysOfWeek>
+                </PropertyOfDay>
+              </properties>
+            </DayType>
+          </dayTypes>
+          <dayTypeAssignments>
+            <DayTypeAssignment id="NL:EX:DayTypeAssignment:werkdag-20261102" version="7" order="1">
+              <Date>2026-11-02</Date>
+              <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="NL:EX:DayTypeAssignment:werkdag-20261103" version="7" order="1">
+              <Date>2026-11-03</Date>
+              <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="NL:EX:DayTypeAssignment:werkdag-20261104" version="7" order="1">
+              <Date>2026-11-04</Date>
+              <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="NL:EX:DayTypeAssignment:werkdag-20261105" version="7" order="1">
+              <Date>2026-11-05</Date>
+              <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="NL:EX:DayTypeAssignment:werkdag-20261106" version="7" order="1">
+              <Date>2026-11-06</Date>
+              <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="NL:EX:DayTypeAssignment:werkdag-20261109" version="7" order="1">
+              <Date>2026-11-09</Date>
+              <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="NL:EX:DayTypeAssignment:werkdag-20261110" version="7" order="1">
+              <Date>2026-11-10</Date>
+              <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="NL:EX:DayTypeAssignment:werkdag-20261111" version="7" order="1">
+              <Date>2026-11-11</Date>
+              <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="NL:EX:DayTypeAssignment:werkdag-20261112" version="7" order="1">
+              <Date>2026-11-12</Date>
+              <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="NL:EX:DayTypeAssignment:werkdag-20261113" version="7" order="1">
+              <Date>2026-11-13</Date>
+              <DayTypeRef ref="NL:EX:DayType:werkdag" version="7"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="NL:EX:DayTypeAssignment:zondag-20261108" version="7" order="1">
+              <Date>2026-11-08</Date>
+              <DayTypeRef ref="NL:EX:DayType:zondag" version="7"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="NL:EX:DayTypeAssignment:zondag-20261115" version="7" order="1">
+              <Date>2026-11-15</Date>
+              <DayTypeRef ref="NL:EX:DayType:zondag" version="7"/>
+            </DayTypeAssignment>
+          </dayTypeAssignments>
+        </ServiceCalendarFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

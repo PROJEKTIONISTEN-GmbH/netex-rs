@@ -846,3 +846,79 @@ fn a_nordic_delivery_converts_with_its_register_its_dated_trains_and_its_interch
     );
     assert_eq!(report.index_findings.get("flexible-line-journey"), Some(&1));
 }
+
+#[test]
+fn a_dutch_delivery_converts_with_its_register_codes_rd_positions_and_demanded_times() {
+    let (Some(path), Some(register)) = (own_example("nl"), own_example("nl-register")) else {
+        return;
+    };
+    let source = Source::open(&path)
+        .and_then(|delivery| delivery.with(Source::open(&register)?))
+        .expect("the delivery and its register open");
+    let delivery = Delivery::read(&source, Reading::default()).expect("the delivery reads");
+    let feed = tempfile::tempdir().expect("a directory");
+    let options = Options {
+        stop_ids: StopIds::Global,
+        ..Options::default()
+    };
+    let report = convert(
+        &delivery,
+        &options,
+        output::at(feed.path()).expect("an output"),
+    )
+    .expect("converts");
+    assert_eq!(
+        table(feed.path(), "agency.txt", &["agency_id", "agency_timezone"]),
+        ["NL:EX:Operator:EX|Europe/Amsterdam"]
+    );
+    // Every stop the journeys call at is known by the code the register gives
+    // it, as the German delivery names Dutch stops, and placed where its RD New
+    // position says. The stop point the register holds no quay for is called
+    // at only after the journey to it runs out of times, and is no stop.
+    assert_eq!(
+        table(
+            feed.path(),
+            "stops.txt",
+            &["stop_id", "parent_station", "stop_lat", "stop_lon"]
+        ),
+        [
+            "NL:S:99000100||52.1591269|5.3902724",
+            "NL:S:99000200||52.1549922|5.3964094",
+            "NL:S:99000300||52.1470814|5.4076574",
+            "NL:Q:99000101|NL:S:99000100|52.1592618|5.3900532",
+            "NL:Q:99000102|NL:S:99000100|52.1589921|5.3904916",
+            "NL:Q:99000201|NL:S:99000200|52.1551270|5.3965556",
+            "NL:Q:99000301|NL:S:99000300|52.1469915|5.4078034",
+        ]
+    );
+    // The times the departure and the time demand type give, the timing
+    // point between Station and Markt no stop; the night journey past
+    // midnight.
+    let trip = |trip: &str| {
+        rows(feed.path(), "stop_times.txt")
+            .into_iter()
+            .filter(|row| row["trip_id"] == trip)
+            .map(|row| {
+                format!(
+                    "{} {}-{}",
+                    row["stop_id"], row["arrival_time"], row["departure_time"]
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        trip("NL:EX:ServiceJourney:1-191"),
+        [
+            "NL:Q:99000101 23:58:00-23:58:00",
+            "NL:Q:99000201 24:02:00-24:03:00",
+            "NL:Q:99000301 24:06:00-24:06:00",
+        ]
+    );
+    // The journey running on no day — it names only a condition not
+    // available — is no trip.
+    let trips = table(feed.path(), "trips.txt", &["trip_id"]);
+    assert_eq!(trips.len(), 6, "{trips:?}");
+    assert!(!trips.contains(&"NL:EX:ServiceJourney:1-103-na".to_owned()));
+    assert_eq!(report.index_findings.get("link-without-run-time"), Some(&1));
+    assert_eq!(report.index_findings.get("journey-without-days"), Some(&1));
+}

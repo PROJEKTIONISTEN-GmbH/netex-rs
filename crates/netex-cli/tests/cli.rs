@@ -335,6 +335,43 @@ fn a_stop_register_published_apart_is_read_along_with_the_delivery() {
     assert_eq!(stats["total"]["stops"], 5);
 }
 
+/// A Dutch operator's delivery, read with the national stop register: its
+/// journeys state their times by a time demand type, and the one whose type
+/// misses a run time is a finding of its own class; the statistics count the
+/// journeys running on a day, not the one naming only a condition not
+/// available.
+#[test]
+fn a_dutch_delivery_reports_a_link_without_a_run_time() {
+    let own = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/own");
+    let (delivery, register) = (
+        own.join("nl").display().to_string(),
+        own.join("nl-register").display().to_string(),
+    );
+    let output = netex(&[
+        "validate", &delivery, "--with", &register, "--format", "json",
+    ]);
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+    let report: Value = serde_json::from_str(&stdout(&output)).expect("the report is JSON");
+    let link = class(&report, "link-without-run-time");
+    assert_eq!(link["kind"], "index");
+    assert_eq!(link["count"], 1);
+    assert_eq!(link["examples"][0]["entity"], "NL:EX:ServiceJourney:1-301");
+    assert_eq!(link["examples"][0]["about"], "NL:EX:TimeDemandType:1-haven");
+    let output = netex(&[
+        "validate",
+        &delivery,
+        "--with",
+        &register,
+        "--refuse",
+        "link-without-run-time",
+    ]);
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    let output = netex(&["stats", &delivery, "--with", &register, "--format", "json"]);
+    let stats: Value = serde_json::from_str(&stdout(&output)).expect("JSON");
+    assert_eq!(stats["total"]["journeys"], 6);
+    assert_eq!(stats["total"]["journey_days"], 4 * 10 + 9 + 2);
+}
+
 #[test]
 fn a_delivery_converts_to_gtfs_with_its_report() {
     let source = defective();
