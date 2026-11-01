@@ -71,11 +71,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      # Until they are published the manifests say `publish = false`, and cargo
-      # packages a member that depends on another only where it may publish
-      # both. So the three are packaged and built as they will be published:
-      # in dependency order, each against the packages before it.
-      - run: sed --in-place '/^publish = false$/d' Cargo.toml crates/*/Cargo.toml
+      # The three are packaged and built as they will be published: in
+      # dependency order, each against the packages before it, so that a new
+      # version of the core need not be on crates.io for the others to build.
       - run: cargo package --locked --allow-dirty --workspace
       # crates.io takes at most 10 MB; the official schemas and examples, the
       # tools and the other members stay out of the core's package.
