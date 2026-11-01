@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!--
+  A line document of a Danish-style delivery, one of the national delivery's
+  documents per line: a line offer of the European Passenger Information
+  Profile with identifiers of the form DK::<type>:<number>::, a train calling
+  at stop points stating their own positions, and service links whose
+  geometries are written as GML positions with leading zeros. The second
+  link's geometry starts 178 m from its stop point, as the border trains' do.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, line and times are
+  invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="ntx:1.1">
+  <PublicationTimestamp>2026-10-30T14:00:00</PublicationTimestamp>
+  <ParticipantRef>DK</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="DK::CompositeFrame_EU_PI_LINE_OFFER:EX-000001-001" version="1">
+      <ValidBetween>
+        <FromDate>2026-10-30T00:00:00</FromDate>
+        <ToDate>2027-01-13T00:00:00</ToDate>
+      </ValidBetween>
+      <TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER" versionRef="1.0"/>
+      <codespaces>
+        <Codespace id="epip_data">
+          <Xmlns>epd</Xmlns>
+          <XmlnsUrl>http://netex-cen.eu/epip_data</XmlnsUrl>
+          <Description>EPIP data</Description>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultCodespaceRef ref="epip_data"/>
+        <DefaultLocale>
+          <TimeZone>Europe/Copenhagen</TimeZone>
+          <DefaultLanguage>da-DK</DefaultLanguage>
+        </DefaultLocale>
+        <DefaultLocationSystem>urn:ogc:def:crs:EPSG::4326</DefaultLocationSystem>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="DK::ResourceFrame_EU_PI_COMMON:EX-000001-001" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_COMMON" versionRef="1.0"/>
+          <organisations>
+            <Operator id="DK::Operator:1::" version="1">
+              <PublicCode>EXT</PublicCode>
+              <Name>Eksempel Tog</Name>
+              <OrganisationType>operator</OrganisationType>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <SiteFrame id="DK::SiteFrame_EU_PI_STOP:EX-000001-001" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_STOP" versionRef="1.0"/>
+          <stopPlaces>
+            <StopPlace id="DK::StopPlace:880000001_MASTER::" version="1">
+              <Name>Eksempelby St.</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>9.286401</Longitude>
+                  <Latitude>55.428217</Latitude>
+                </Location>
+              </Centroid>
+              <StopPlaceType>railStation</StopPlaceType>
+              <quays>
+                <Quay id="DK::Quay:8600001_MASTER::" version="1">
+                  <Name>Eksempelby St.</Name>
+                  <Centroid>
+                    <Location>
+                      <Longitude>9.286401</Longitude>
+                      <Latitude>55.428217</Latitude>
+                    </Location>
+                  </Centroid>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="DK::StopPlace:880000002_MASTER::" version="1">
+              <Name>Mellemby St.</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>9.330000</Longitude>
+                  <Latitude>55.120000</Latitude>
+                </Location>
+              </Centroid>
+              <StopPlaceType>railStation</StopPlaceType>
+              <quays>
+                <Quay id="DK::Quay:8600002_MASTER::" version="1">
+                  <Name>Mellemby St.</Name>
+                  <Centroid>
+                    <Location>
+                      <Longitude>9.330000</Longitude>
+                      <Latitude>55.120000</Latitude>
+                    </Location>
+                  </Centroid>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="DK::StopPlace:880000003_MASTER::" version="1">
+              <Name>Grænseby St.</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>9.361968</Longitude>
+                  <Latitude>54.816616</Latitude>
+                </Location>
+              </Centroid>
+              <StopPlaceType>railStation</StopPlaceType>
+              <quays>
+                <Quay id="DK::Quay:8600003_MASTER::" version="1">
+                  <Name>Grænseby St.</Name>
+                  <Centroid>
+                    <Location>
+                      <Longitude>9.361968</Longitude>
+                      <Latitude>54.816616</Latitude>
+                    </Location>
+                  </Centroid>
+                </Quay>
+              </quays>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+        <ServiceFrame id="DK::ServiceFrame_EU_PI_NETWORK:EX-000001-001" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_NETWORK" versionRef="1.0"/>
+          <lines>
+            <Line id="DK::Line:1::" version="1">
+              <Name>Eksempelby - Grænseby</Name>
+              <ShortName>RE</ShortName>
+              <TransportMode>rail</TransportMode>
+              <PublicCode>RE</PublicCode>
+              <OperatorRef ref="DK::Operator:1::" version="1"/>
+            </Line>
+          </lines>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="DK::ScheduledStopPoint:8600001_EX_1::" version="1">
+              <Name>Eksempelby St.</Name>
+              <Location>
+                <Longitude>9.286401</Longitude>
+                <Latitude>55.428217</Latitude>
+              </Location>
+              <StopType>railStation</StopType>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="DK::ScheduledStopPoint:8600002_EX_1::" version="1">
+              <Name>Mellemby St.</Name>
+              <Location>
+                <Longitude>9.330000</Longitude>
+                <Latitude>55.120000</Latitude>
+              </Location>
+              <StopType>railStation</StopType>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="DK::ScheduledStopPoint:8600003_EX_1::" version="1">
+              <Name>Grænseby St.</Name>
+              <Location>
+                <Longitude>9.361968</Longitude>
+                <Latitude>54.816616</Latitude>
+              </Location>
+              <StopType>railStation</StopType>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+          <serviceLinks>
+            <ServiceLink id="DK::ServiceLink:8600001_1_8600002_1::" version="1">
+              <LineString xmlns="http://www.opengis.net/gml/3.2" xmlns:n0="http://www.opengis.net/gml/3.2" n0:id="EX1_2_1">
+                <pos>055.428217 009.286401</pos>
+                <pos>055.300000 009.300000</pos>
+                <pos>055.120000 009.330000</pos>
+              </LineString>
+              <FromPointRef ref="DK::ScheduledStopPoint:8600001_EX_1::" version="1"/>
+              <ToPointRef ref="DK::ScheduledStopPoint:8600002_EX_1::" version="1"/>
+            </ServiceLink>
+            <ServiceLink id="DK::ServiceLink:8600002_1_8600003_1::" version="1">
+              <LineString xmlns="http://www.opengis.net/gml/3.2" xmlns:n0="http://www.opengis.net/gml/3.2" n0:id="EX2_3_1">
+                <pos>055.118400 009.330000</pos>
+                <pos>055.000000 009.340000</pos>
+                <pos>054.816616 009.361968</pos>
+              </LineString>
+              <FromPointRef ref="DK::ScheduledStopPoint:8600002_EX_1::" version="1"/>
+              <ToPointRef ref="DK::ScheduledStopPoint:8600003_EX_1::" version="1"/>
+            </ServiceLink>
+          </serviceLinks>
+          <stopAssignments>
+            <PassengerStopAssignment id="DK::PassengerStopAssignment:1::" order="1" version="1">
+              <ScheduledStopPointRef ref="DK::ScheduledStopPoint:8600001_EX_1::" version="1"/>
+              <StopPlaceRef ref="DK::StopPlace:880000001_MASTER::" version="1"/>
+              <QuayRef ref="DK::Quay:8600001_MASTER::" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="DK::PassengerStopAssignment:2::" order="2" version="1">
+              <ScheduledStopPointRef ref="DK::ScheduledStopPoint:8600002_EX_1::" version="1"/>
+              <StopPlaceRef ref="DK::StopPlace:880000002_MASTER::" version="1"/>
+              <QuayRef ref="DK::Quay:8600002_MASTER::" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="DK::PassengerStopAssignment:3::" order="3" version="1">
+              <ScheduledStopPointRef ref="DK::ScheduledStopPoint:8600003_EX_1::" version="1"/>
+              <StopPlaceRef ref="DK::StopPlace:880000003_MASTER::" version="1"/>
+              <QuayRef ref="DK::Quay:8600003_MASTER::" version="1"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="DK::ServiceJourneyPattern:9001_0::" version="1">
+              <RouteView>
+                <LineRef ref="DK::Line:1::" version="1"/>
+              </RouteView>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="DK::StopPointInJourneyPattern:9001_1_1::" version="1" order="1">
+                  <ScheduledStopPointRef ref="DK::ScheduledStopPoint:8600001_EX_1::" version="1"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="DK::StopPointInJourneyPattern:9001_1_2::" version="1" order="2">
+                  <ScheduledStopPointRef ref="DK::ScheduledStopPoint:8600002_EX_1::" version="1"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="DK::StopPointInJourneyPattern:9001_1_3::" version="1" order="3">
+                  <ScheduledStopPointRef ref="DK::ScheduledStopPoint:8600003_EX_1::" version="1"/>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <ServiceCalendarFrame id="DK::ServiceCalendarFrame_EU_PI_CALENDAR:EX-000001-001" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_CALENDAR" versionRef="1.0"/>
+          <ServiceCalendar id="DK::ServiceCalendar:EX-000001-001::" version="1">
+            <FromDate>2026-10-30</FromDate>
+            <ToDate>2027-01-13</ToDate>
+            <dayTypes>
+              <DayType id="DK::DayType:1::" version="1"/>
+            </dayTypes>
+            <operatingPeriods>
+              <UicOperatingPeriod id="DK::UicOperatingPeriod:1::" version="1">
+                <FromDate>2026-10-30T00:00:00</FromDate>
+                <ToDate>2026-11-05T00:00:00</ToDate>
+                <ValidDayBits>1110011</ValidDayBits>
+              </UicOperatingPeriod>
+            </operatingPeriods>
+            <dayTypeAssignments>
+              <DayTypeAssignment id="DK::DayTypeAssignment:1::" version="1" order="1">
+                <OperatingPeriodRef ref="DK::UicOperatingPeriod:1::" version="1"/>
+                <DayTypeRef ref="DK::DayType:1::" version="1"/>
+                <isAvailable>true</isAvailable>
+              </DayTypeAssignment>
+            </dayTypeAssignments>
+          </ServiceCalendar>
+        </ServiceCalendarFrame>
+        <TimetableFrame id="DK::TimetableFrame_EU_PI_TIMETABLE:EX-000001-001" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_TIMETABLE" versionRef="1.0"/>
+          <vehicleJourneys>
+            <ServiceJourney id="DK::ServiceJourney:9001_0::" version="1">
+              <TransportMode>rail</TransportMode>
+              <dayTypes>
+                <DayTypeRef ref="DK::DayType:1::" version="1"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="DK::ServiceJourneyPattern:9001_0::" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="DK::TimetabledPassingTime:1::" version="1">
+                  <StopPointInJourneyPatternRef ref="DK::StopPointInJourneyPattern:9001_1_1::" version="1"/>
+                  <DepartureTime>21:50:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="DK::TimetabledPassingTime:2::" version="1">
+                  <StopPointInJourneyPatternRef ref="DK::StopPointInJourneyPattern:9001_1_2::" version="1"/>
+                  <ArrivalTime>22:20:00</ArrivalTime>
+                  <DepartureTime>22:22:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="DK::TimetabledPassingTime:3::" version="1">
+                  <StopPointInJourneyPatternRef ref="DK::StopPointInJourneyPattern:9001_1_3::" version="1"/>
+                  <ArrivalTime>22:58:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

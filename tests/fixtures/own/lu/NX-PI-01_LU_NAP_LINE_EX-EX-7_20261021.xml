@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!--
+  A line document of a Luxembourg-style delivery, one of the national
+  delivery's documents per line: a line offer of the European Passenger
+  Information Profile with identifiers of the form LU::<type>:<number>::, a
+  walk between two quays of one stop place, a line naming its authority and,
+  as an additional operator, the operator that runs it, and times to the
+  second. Written for netex-rs's tests (MIT OR Apache-2.0); places, line,
+  operator and times are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="ntx:1.1">
+  <PublicationTimestamp>2026-10-21T07:00:00</PublicationTimestamp>
+  <ParticipantRef>LU</ParticipantRef>
+  <PublicationRequest>
+    <RequestTimestamp>2026-10-21T07:00:00</RequestTimestamp>
+    <topics>
+      <NetworkFrameTopic>
+        <Current/>
+        <NetworkFilterByValue>
+          <objectReferences>
+            <LineRef ref="LU::Line:7::" version="1"/>
+            <TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER" versionRef="1.0"/>
+          </objectReferences>
+        </NetworkFilterByValue>
+      </NetworkFrameTopic>
+    </topics>
+  </PublicationRequest>
+  <dataObjects>
+    <CompositeFrame id="LU::CompositeFrame_EU_PI_LINE_OFFER:EX-EX-7" version="1">
+      <ValidBetween>
+        <FromDate>2026-10-21T00:00:00</FromDate>
+        <ToDate>2026-12-12T00:00:00</ToDate>
+      </ValidBetween>
+      <TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER" versionRef="1.0"/>
+      <codespaces>
+        <Codespace id="epip_data">
+          <Xmlns>epd</Xmlns>
+          <XmlnsUrl>http://netex-cen.eu/epip_data</XmlnsUrl>
+          <Description>EPIP data</Description>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultCodespaceRef ref="epip_data"/>
+        <DefaultLocale>
+          <TimeZone>Europe/Berlin</TimeZone>
+          <DefaultLanguage>de-DE</DefaultLanguage>
+        </DefaultLocale>
+        <DefaultLocationSystem>urn:ogc:def:crs:EPSG::4326</DefaultLocationSystem>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="LU::ResourceFrame_EU_PI_COMMON:EX-EX-7" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_COMMON" versionRef="1.0"/>
+          <organisations>
+            <Authority id="LU::Authority:7::" version="1">
+              <PublicCode>EX</PublicCode>
+              <Name>Example Authority</Name>
+              <OrganisationType>authority</OrganisationType>
+            </Authority>
+            <Operator id="LU::Operator:7::" version="1">
+              <PublicCode>EXB</PublicCode>
+              <Name>Example Bus</Name>
+              <OrganisationType>operator</OrganisationType>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <SiteFrame id="LU::SiteFrame_EU_PI_STOP:EX-EX-7" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_STOP" versionRef="1.0"/>
+          <stopPlaces>
+            <StopPlace id="LU::StopPlace:100_CdT::" version="1">
+              <Name>Exempelstad, Gare</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>6.130000</Longitude>
+                  <Latitude>49.600000</Latitude>
+                </Location>
+              </Centroid>
+              <levels>
+                <Level id="LU::Level:100_0::" version="1">
+                  <ShortName>0</ShortName>
+                </Level>
+              </levels>
+              <StopPlaceType>other</StopPlaceType>
+              <quays>
+                <Quay id="LU::Quay:10001_MMCdT::" version="1">
+                  <Name>Exempelstad, Gare</Name>
+                  <Centroid>
+                    <Location>
+                      <Longitude>6.130100</Longitude>
+                      <Latitude>49.600100</Latitude>
+                    </Location>
+                  </Centroid>
+                  <LevelRef ref="LU::Level:100_0::" version="1"/>
+                  <PublicCode>1</PublicCode>
+                </Quay>
+                <Quay id="LU::Quay:10002_MMCdT::" version="1">
+                  <Name>Exempelstad, Gare</Name>
+                  <Centroid>
+                    <Location>
+                      <Longitude>6.130500</Longitude>
+                      <Latitude>49.600300</Latitude>
+                    </Location>
+                  </Centroid>
+                  <LevelRef ref="LU::Level:100_0::" version="1"/>
+                  <PublicCode>2</PublicCode>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="LU::StopPlace:200_CdT::" version="1">
+              <Name>Exempelstad, Place</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>6.140000</Longitude>
+                  <Latitude>49.610000</Latitude>
+                </Location>
+              </Centroid>
+              <StopPlaceType>other</StopPlaceType>
+              <quays>
+                <Quay id="LU::Quay:20001_MMCdT::" version="1">
+                  <Name>Exempelstad, Place</Name>
+                  <Centroid>
+                    <Location>
+                      <Longitude>6.140100</Longitude>
+                      <Latitude>49.610100</Latitude>
+                    </Location>
+                  </Centroid>
+                </Quay>
+              </quays>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+        <ServiceFrame id="LU::ServiceFrame_EU_PI_NETWORK:EX-EX-7" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_NETWORK" versionRef="1.0"/>
+          <directions>
+            <Direction id="LU::Direction:1::" version="1"/>
+          </directions>
+          <lines>
+            <Line id="LU::Line:7::" version="1">
+              <Name>7</Name>
+              <ShortName>7</ShortName>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>7</PublicCode>
+              <AuthorityRef ref="LU::Authority:7::" version="1"/>
+              <additionalOperators>
+                <OperatorRef ref="LU::Operator:7::" version="1"/>
+              </additionalOperators>
+            </Line>
+          </lines>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="LU::ScheduledStopPoint:10001_EX_::" version="1">
+              <Name>Exempelstad, Gare Quai 1</Name>
+              <Location>
+                <Longitude>6.130100</Longitude>
+                <Latitude>49.600100</Latitude>
+              </Location>
+              <StopType>busStation</StopType>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="LU::ScheduledStopPoint:20001_EX_::" version="1">
+              <Name>Exempelstad, Place</Name>
+              <Location>
+                <Longitude>6.140100</Longitude>
+                <Latitude>49.610100</Latitude>
+              </Location>
+              <StopType>onstreetBus</StopType>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+          <connections>
+            <SiteConnection id="LU::SiteConnection:1::" version="1">
+              <WalkTransferDuration>
+                <DefaultDuration>PT2M50S</DefaultDuration>
+              </WalkTransferDuration>
+              <BothWays>true</BothWays>
+              <From>
+                <StopPlaceRef ref="LU::StopPlace:100_CdT::" version="1"/>
+                <QuayRef ref="LU::Quay:10001_MMCdT::" version="1"/>
+              </From>
+              <To>
+                <StopPlaceRef ref="LU::StopPlace:100_CdT::" version="1"/>
+                <QuayRef ref="LU::Quay:10002_MMCdT::" version="1"/>
+              </To>
+            </SiteConnection>
+          </connections>
+          <stopAssignments>
+            <PassengerStopAssignment id="LU::PassengerStopAssignment:1::" version="1" order="1">
+              <ScheduledStopPointRef ref="LU::ScheduledStopPoint:10001_EX_::" version="1"/>
+              <StopPlaceRef ref="LU::StopPlace:100_CdT::" version="1"/>
+              <QuayRef ref="LU::Quay:10001_MMCdT::" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="LU::PassengerStopAssignment:2::" version="1" order="2">
+              <ScheduledStopPointRef ref="LU::ScheduledStopPoint:20001_EX_::" version="1"/>
+              <StopPlaceRef ref="LU::StopPlace:200_CdT::" version="1"/>
+              <QuayRef ref="LU::Quay:20001_MMCdT::" version="1"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="LU::ServiceJourneyPattern:7001_0::" version="1">
+              <RouteView>
+                <LineRef ref="LU::Line:7::" version="1"/>
+              </RouteView>
+              <DirectionRef ref="LU::Direction:1::" version="1"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="LU::StopPointInJourneyPattern:7001_1_0::" version="1" order="1">
+                  <ScheduledStopPointRef ref="LU::ScheduledStopPoint:10001_EX_::" version="1"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="LU::StopPointInJourneyPattern:7001_1_1::" version="1" order="2">
+                  <ScheduledStopPointRef ref="LU::ScheduledStopPoint:20001_EX_::" version="1"/>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <ServiceCalendarFrame id="LU::ServiceCalendarFrame_EU_PI_CALENDAR:EX-EX-7" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_CALENDAR" versionRef="1.0"/>
+          <ServiceCalendar id="LU::ServiceCalendar:EX-EX-7::" version="1">
+            <FromDate>2026-10-21</FromDate>
+            <ToDate>2026-12-12</ToDate>
+            <dayTypes>
+              <DayType id="LU::DayType:1::" version="1"/>
+            </dayTypes>
+            <operatingPeriods>
+              <UicOperatingPeriod id="LU::UicOperatingPeriod:1::" version="1">
+                <FromDate>2026-10-21T00:00:00</FromDate>
+                <ToDate>2026-10-27T00:00:00</ToDate>
+                <ValidDayBits>1110011</ValidDayBits>
+              </UicOperatingPeriod>
+            </operatingPeriods>
+            <dayTypeAssignments>
+              <DayTypeAssignment id="LU::DayTypeAssignment:1::" version="1" order="1">
+                <OperatingPeriodRef ref="LU::UicOperatingPeriod:1::" version="1"/>
+                <DayTypeRef ref="LU::DayType:1::" version="1"/>
+                <isAvailable>true</isAvailable>
+              </DayTypeAssignment>
+            </dayTypeAssignments>
+          </ServiceCalendar>
+        </ServiceCalendarFrame>
+        <TimetableFrame id="LU::TimetableFrame_EU_PI_TIMETABLE:EX-EX-7" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_TIMETABLE" versionRef="1.0"/>
+          <vehicleJourneys>
+            <ServiceJourney id="LU::ServiceJourney:7001_0::" version="1">
+              <keyList>
+                <KeyValue>
+                  <Key>TripNr</Key>
+                  <Value>701</Value>
+                </KeyValue>
+              </keyList>
+              <TransportMode>bus</TransportMode>
+              <DepartureTime>05:44:10</DepartureTime>
+              <JourneyDuration>PT6M50S</JourneyDuration>
+              <dayTypes>
+                <DayTypeRef ref="LU::DayType:1::" version="1"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="LU::ServiceJourneyPattern:7001_0::" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="LU::TimetabledPassingTime:1::" version="1">
+                  <StopPointInJourneyPatternRef ref="LU::StopPointInJourneyPattern:7001_1_0::" version="1"/>
+                  <DepartureTime>05:44:10</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="LU::TimetabledPassingTime:2::" version="1">
+                  <StopPointInJourneyPatternRef ref="LU::StopPointInJourneyPattern:7001_1_1::" version="1"/>
+                  <ArrivalTime>05:51:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

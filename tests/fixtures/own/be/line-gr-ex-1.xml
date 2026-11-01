@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A line document of a Belgian-style delivery (the deliveries name it
+  `line-gr:<operator>:<line>.xml`): its route points, routes, stop points and
+  patterns, and its journeys on the day types of the shared document. The
+  line names neither an operator nor a mode; each stop assignment names a
+  quay by a StopPlaceRef. Written for netex-rs's tests (MIT OR Apache-2.0);
+  the line and its times are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex">
+  <PublicationTimestamp>2026-10-21T04:00:00Z</PublicationTimestamp>
+  <ParticipantRef>enRoute</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="enRoute:CompositeFrame:1" version="any">
+      <frames>
+        <ServiceFrame id="enRoute:ServiceFrame:1" version="any">
+          <routePoints>
+            <RoutePoint id="gr:ex:1-gs:ex:1-gs:ex:2-1" version="any">
+              <projections>
+                <PointProjection id="gr:ex:1-gs:ex:1-gs:ex:2-1" version="any">
+                  <ProjectToPointRef ref="gr:ex:1-gs:ex:1-gs:ex:2_gs:ex:11"/>
+                </PointProjection>
+              </projections>
+            </RoutePoint>
+            <RoutePoint id="gr:ex:1-gs:ex:1-gs:ex:2-2" version="any">
+              <projections>
+                <PointProjection id="gr:ex:1-gs:ex:1-gs:ex:2-2" version="any">
+                  <ProjectToPointRef ref="gr:ex:1-gs:ex:1-gs:ex:2_gs:ex:21"/>
+                </PointProjection>
+              </projections>
+            </RoutePoint>
+          </routePoints>
+          <routes>
+            <Route id="Route:gr:ex:1-gs:ex:1-gs:ex:2" version="any">
+              <LineRef ref="gr:ex:1"/>
+            </Route>
+          </routes>
+          <lines>
+            <Line id="gr:ex:1" version="any">
+              <Name>Gare - Marché</Name>
+              <ShortName>1</ShortName>
+            </Line>
+          </lines>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="gr:ex:1-gs:ex:1-gs:ex:2_gs:ex:11" version="any"/>
+            <ScheduledStopPoint id="gr:ex:1-gs:ex:1-gs:ex:2_gs:ex:21" version="any"/>
+          </scheduledStopPoints>
+          <stopAssignments>
+            <PassengerStopAssignment id="gr:ex:1-gs:ex:1-gs:ex:2_gs:ex:11" version="any" order="1">
+              <ScheduledStopPointRef ref="gr:ex:1-gs:ex:1-gs:ex:2_gs:ex:11"/>
+              <StopPlaceRef ref="gs:ex:11"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="gr:ex:1-gs:ex:1-gs:ex:2_gs:ex:21" version="any" order="2">
+              <ScheduledStopPointRef ref="gr:ex:1-gs:ex:1-gs:ex:2_gs:ex:21"/>
+              <StopPlaceRef ref="gs:ex:21"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="ServiceJourneyPattern:gr:ex:1-gs:ex:1-gs:ex:2" version="any">
+              <RouteRef ref="Route:gr:ex:1-gs:ex:1-gs:ex:2" version="any"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="gr:ex:1-gs:ex:1-gs:ex:2-1" version="any" order="1">
+                  <ScheduledStopPointRef ref="gr:ex:1-gs:ex:1-gs:ex:2_gs:ex:11" version="any"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="gr:ex:1-gs:ex:1-gs:ex:2-2" version="any" order="2">
+                  <ScheduledStopPointRef ref="gr:ex:1-gs:ex:1-gs:ex:2_gs:ex:21" version="any"/>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <TimetableFrame id="enRoute:TimetableFrame:1" version="any">
+          <vehicleJourneys>
+            <ServiceJourney id="gt:ex:1-0800" version="any">
+              <dayTypes>
+                <DayTypeRef ref="gc:ex:weekdays"/>
+              </dayTypes>
+              <JourneyPatternRef ref="ServiceJourneyPattern:gr:ex:1-gs:ex:1-gs:ex:2" version="any"/>
+              <passingTimes>
+                <TimetabledPassingTime version="any" id="gt:ex:1-0800-1">
+                  <StopPointInJourneyPatternRef ref="gr:ex:1-gs:ex:1-gs:ex:2-1" version="any"/>
+                  <DepartureTime>08:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime version="any" id="gt:ex:1-0800-2">
+                  <StopPointInJourneyPatternRef ref="gr:ex:1-gs:ex:1-gs:ex:2-2" version="any"/>
+                  <ArrivalTime>08:09:00</ArrivalTime>
+                  <DepartureTime>08:09:00</DepartureTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="gt:ex:1-1000" version="any">
+              <dayTypes>
+                <DayTypeRef ref="gc:ex:sundays"/>
+              </dayTypes>
+              <JourneyPatternRef ref="ServiceJourneyPattern:gr:ex:1-gs:ex:1-gs:ex:2" version="any"/>
+              <passingTimes>
+                <TimetabledPassingTime version="any" id="gt:ex:1-1000-1">
+                  <StopPointInJourneyPatternRef ref="gr:ex:1-gs:ex:1-gs:ex:2-1" version="any"/>
+                  <DepartureTime>10:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime version="any" id="gt:ex:1-1000-2">
+                  <StopPointInJourneyPatternRef ref="gr:ex:1-gs:ex:1-gs:ex:2-2" version="any"/>
+                  <ArrivalTime>10:09:00</ArrivalTime>
+                  <DepartureTime>10:09:00</DepartureTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

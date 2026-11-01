@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The shared document of a Belgian-style delivery, as the Belgian operators'
+  deliveries are written by a conversion from GTFS: the operator and the
+  calendar of every line document, no TypeOfFrameRef, no version of the
+  publication. The bounds of the operating periods are written as instants in
+  UTC, each the midnight that begins a day in Brussels: 22:00 before the clocks
+  went back on 25 October 2026, 23:00 after. Written for netex-rs's tests
+  (MIT OR Apache-2.0); operator, lines and days are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex">
+  <PublicationTimestamp>2026-10-21T04:00:00Z</PublicationTimestamp>
+  <ParticipantRef>enRoute</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="enRoute:CompositeFrame:1" version="any">
+      <frames>
+        <ResourceFrame id="enRoute:ResourceFrame:1" version="any">
+          <organisations>
+            <Operator id="ex" version="any">
+              <Name>Exemple Bus</Name>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <ServiceCalendarFrame id="enRoute:ServiceCalendarFrame:1" version="any">
+          <ServiceCalendar id="1" version="any">
+            <FromDate>2026-10-19</FromDate>
+            <ToDate>2026-11-15</ToDate>
+          </ServiceCalendar>
+          <dayTypes>
+            <DayType id="gc:ex:weekdays" version="any">
+              <properties>
+                <PropertyOfDay>
+                  <DaysOfWeek>Monday Tuesday Wednesday Thursday Friday</DaysOfWeek>
+                </PropertyOfDay>
+              </properties>
+            </DayType>
+            <DayType id="gc:ex:sundays" version="any">
+              <properties>
+                <PropertyOfDay>
+                  <DaysOfWeek>Sunday</DaysOfWeek>
+                </PropertyOfDay>
+              </properties>
+            </DayType>
+          </dayTypes>
+          <operatingPeriods>
+            <UicOperatingPeriod id="gc:ex:weekdays" version="any">
+              <FromDate>2026-10-21T22:00:00Z</FromDate>
+              <ToDate>2026-10-29T23:00:00Z</ToDate>
+              <ValidDayBits>110011111</ValidDayBits>
+            </UicOperatingPeriod>
+            <UicOperatingPeriod id="gc:ex:sundays" version="any">
+              <FromDate>2026-10-31T23:00:00Z</FromDate>
+              <ToDate>2026-11-07T23:00:00Z</ToDate>
+              <ValidDayBits>10000001</ValidDayBits>
+            </UicOperatingPeriod>
+          </operatingPeriods>
+          <dayTypeAssignments>
+            <DayTypeAssignment id="gc:ex:weekdays-1" version="any" order="1">
+              <OperatingPeriodRef ref="gc:ex:weekdays" version="any"/>
+              <DayTypeRef ref="gc:ex:weekdays" version="any"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="gc:ex:weekdays-2" version="any" order="2">
+              <Date>2026-10-28</Date>
+              <DayTypeRef ref="gc:ex:weekdays" version="any"/>
+              <isAvailable>false</isAvailable>
+            </DayTypeAssignment>
+            <DayTypeAssignment id="gc:ex:sundays-1" version="any" order="1">
+              <OperatingPeriodRef ref="gc:ex:sundays" version="any"/>
+              <DayTypeRef ref="gc:ex:sundays" version="any"/>
+            </DayTypeAssignment>
+          </dayTypeAssignments>
+        </ServiceCalendarFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

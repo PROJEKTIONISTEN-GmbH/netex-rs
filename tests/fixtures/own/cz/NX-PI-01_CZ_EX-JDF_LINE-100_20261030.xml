@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A line document of a Czech-style delivery, converted from a timetable batch
+  of the national format for buses: the batch numbers its stop places from
+  one, so another document's CZ:ex_jdf:StopPlace:1 is another stop, and no
+  stop place or stop point states a position. Line 100's regular timetable.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, line, operator and
+  times are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1">
+  <PublicationTimestamp>2026-10-30T19:00:00</PublicationTimestamp>
+  <ParticipantRef>CZ:ex</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="CZ:ex_jdf:CompositeFrame-EU_PI_LINE_OFFER" version="1">
+      <TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER" />
+      <codespaces>
+        <Codespace id="epip_data">
+          <Xmlns>epd</Xmlns>
+          <XmlnsUrl>http://netex-cen.eu/epip_data</XmlnsUrl>
+          <Description>EPIP data</Description>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultLocale>
+          <TimeZone>Europe/Prague</TimeZone>
+          <DefaultLanguage>cs</DefaultLanguage>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="CZ:ex_jdf:ResourceFrame-EU_PI_COMMON" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_COMMON" />
+          <organisations>
+            <Operator id="CZ:ex_jdf:Operator:12345678_1" version="1">
+              <PublicCode>12345678</PublicCode>
+              <LegalName>Příkladová doprava s.r.o.</LegalName>
+              <OrganisationType>operator</OrganisationType>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <ServiceCalendarFrame id="CZ:ex_jdf:ServiceCalendarFrame-EU_PI_CALENDAR" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_CALENDAR" />
+          <ServiceCalendar id="CZ:ex_jdf:ServiceCalendar" version="1">
+            <dayTypes>
+              <DayType id="CZ:ex_jdf:DayType:1" version="1" />
+            </dayTypes>
+            <operatingPeriods>
+              <UicOperatingPeriod id="CZ:ex_jdf:UicOperatingPeriod:1" version="1">
+                <FromDate>2026-10-19T00:00:00</FromDate>
+                <ToDate>2026-10-25T00:00:00</ToDate>
+                <ValidDayBits>1111100</ValidDayBits>
+              </UicOperatingPeriod>
+            </operatingPeriods>
+            <dayTypeAssignments>
+              <DayTypeAssignment id="CZ:ex_jdf:DayTypeAssignment:1" version="1" order="1">
+                <OperatingPeriodRef nameOfRefClass="UicOperatingPeriod" version="1" ref="CZ:ex_jdf:UicOperatingPeriod:1" />
+                <DayTypeRef version="1" ref="CZ:ex_jdf:DayType:1" />
+                <isAvailable>true</isAvailable>
+              </DayTypeAssignment>
+            </dayTypeAssignments>
+          </ServiceCalendar>
+        </ServiceCalendarFrame>
+        <SiteFrame id="CZ:ex_jdf:SiteFrame-EU_PI_STOP" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_STOP" />
+          <stopPlaces>
+            <StopPlace id="CZ:ex_jdf:StopPlace:1" version="1">
+              <Name>Lhota,,náves</Name>
+              <StopPlaceType>other</StopPlaceType>
+            </StopPlace>
+            <StopPlace id="CZ:ex_jdf:StopPlace:2" version="1">
+              <Name>Lhota,,škola</Name>
+              <StopPlaceType>other</StopPlaceType>
+            </StopPlace>
+            <StopPlace id="CZ:ex_jdf:StopPlace:3" version="1">
+              <Name>Horní Ves</Name>
+              <StopPlaceType>other</StopPlaceType>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+        <ServiceFrame id="CZ:ex_jdf:ServiceFrame-EU_PI_NETWORK" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_NETWORK" />
+          <lines>
+            <Line id="CZ:ex_jdf:Line:100100_1" version="1">
+              <keyList>
+                <KeyValue>
+                  <Key>JdfDetourTimetable</Key>
+                  <Value>0</Value>
+                </KeyValue>
+              </keyList>
+              <Name>Lhota - Horní Ves</Name>
+              <ShortName>100</ShortName>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>100100</PublicCode>
+              <OperatorRef version="1" ref="CZ:ex_jdf:Operator:12345678_1" />
+            </Line>
+          </lines>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="CZ:ex_jdf:ScheduledStopPoint:100100_1_1" version="1">
+              <Name>Lhota,,náves</Name>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="CZ:ex_jdf:ScheduledStopPoint:100100_1_2" version="1">
+              <Name>Lhota,,škola</Name>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="CZ:ex_jdf:ScheduledStopPoint:100100_1_3" version="1">
+              <Name>Horní Ves</Name>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+          <stopAssignments>
+            <PassengerStopAssignment id="CZ:ex_jdf:PassengerStopAssignment:100100_1_1" version="1" order="1">
+              <ScheduledStopPointRef version="1" ref="CZ:ex_jdf:ScheduledStopPoint:100100_1_1" />
+              <StopPlaceRef version="1" ref="CZ:ex_jdf:StopPlace:1" />
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="CZ:ex_jdf:PassengerStopAssignment:100100_1_2" version="1" order="2">
+              <ScheduledStopPointRef version="1" ref="CZ:ex_jdf:ScheduledStopPoint:100100_1_2" />
+              <StopPlaceRef version="1" ref="CZ:ex_jdf:StopPlace:2" />
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="CZ:ex_jdf:PassengerStopAssignment:100100_1_3" version="1" order="3">
+              <ScheduledStopPointRef version="1" ref="CZ:ex_jdf:ScheduledStopPoint:100100_1_3" />
+              <StopPlaceRef version="1" ref="CZ:ex_jdf:StopPlace:3" />
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="CZ:ex_jdf:ServiceJourneyPattern:1_out" version="1">
+              <RouteView>
+                <LineRef version="1" ref="CZ:ex_jdf:Line:100100_1" />
+              </RouteView>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="CZ:ex_jdf:StopPointInJourneyPattern:1_out_1" version="1" order="1">
+                  <ScheduledStopPointRef version="1" ref="CZ:ex_jdf:ScheduledStopPoint:100100_1_1" />
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="CZ:ex_jdf:StopPointInJourneyPattern:1_out_2" version="1" order="2">
+                  <ScheduledStopPointRef version="1" ref="CZ:ex_jdf:ScheduledStopPoint:100100_1_2" />
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="CZ:ex_jdf:StopPointInJourneyPattern:1_out_3" version="1" order="3">
+                  <ScheduledStopPointRef version="1" ref="CZ:ex_jdf:ScheduledStopPoint:100100_1_3" />
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <TimetableFrame id="CZ:ex_jdf:TimetableFrame-EU_PI_TIMETABLE" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_TIMETABLE" />
+          <vehicleJourneys>
+            <ServiceJourney id="CZ:ex_jdf:ServiceJourney:100100_1_1" version="1">
+              <Name>1</Name>
+              <TransportMode>bus</TransportMode>
+              <dayTypes>
+                <DayTypeRef version="1" ref="CZ:ex_jdf:DayType:1" />
+              </dayTypes>
+              <ServiceJourneyPatternRef version="1" ref="CZ:ex_jdf:ServiceJourneyPattern:1_out" />
+              <OperatorRef version="1" ref="CZ:ex_jdf:Operator:12345678_1" />
+              <LineRef version="1" ref="CZ:ex_jdf:Line:100100_1" />
+              <passingTimes>
+                <TimetabledPassingTime id="CZ:ex_jdf:TimetabledPassingTime:100100_1_1_1" version="1">
+                  <StopPointInJourneyPatternRef version="1" ref="CZ:ex_jdf:StopPointInJourneyPattern:1_out_1" />
+                  <DepartureTime>07:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="CZ:ex_jdf:TimetabledPassingTime:100100_1_1_2" version="1">
+                  <StopPointInJourneyPatternRef version="1" ref="CZ:ex_jdf:StopPointInJourneyPattern:1_out_2" />
+                  <ArrivalTime>07:04:00</ArrivalTime>
+                  <DepartureTime>07:04:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="CZ:ex_jdf:TimetabledPassingTime:100100_1_1_3" version="1">
+                  <StopPointInJourneyPatternRef version="1" ref="CZ:ex_jdf:StopPointInJourneyPattern:1_out_3" />
+                  <ArrivalTime>07:10:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

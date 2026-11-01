@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The stops of a Belgian-style delivery: a site frame standing alone, stop
+  places with their quays. Written for netex-rs's tests (MIT OR Apache-2.0);
+  the places are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex">
+  <PublicationTimestamp>2026-10-21T04:00:00Z</PublicationTimestamp>
+  <ParticipantRef>enRoute</ParticipantRef>
+  <dataObjects>
+    <SiteFrame id="enRoute:SiteFrame:1" version="any">
+      <stopPlaces>
+        <StopPlace id="gs:ex:1" version="any">
+          <Name>GARE EXEMPLE</Name>
+          <Centroid version="any">
+            <Location>
+              <Longitude>4.3570</Longitude>
+              <Latitude>50.8450</Latitude>
+            </Location>
+          </Centroid>
+          <quays>
+            <Quay id="gs:ex:11" version="any">
+              <Name>GARE EXEMPLE</Name>
+              <Centroid version="any">
+                <Location>
+                  <Longitude>4.3572</Longitude>
+                  <Latitude>50.8451</Latitude>
+                </Location>
+              </Centroid>
+            </Quay>
+          </quays>
+        </StopPlace>
+        <StopPlace id="gs:ex:2" version="any">
+          <Name>PLACE DU MARCHE</Name>
+          <Centroid version="any">
+            <Location>
+              <Longitude>4.3650</Longitude>
+              <Latitude>50.8400</Latitude>
+            </Location>
+          </Centroid>
+          <quays>
+            <Quay id="gs:ex:21" version="any">
+              <Name>PLACE DU MARCHE</Name>
+              <Centroid version="any">
+                <Location>
+                  <Longitude>4.3651</Longitude>
+                  <Latitude>50.8401</Latitude>
+                </Location>
+              </Centroid>
+            </Quay>
+          </quays>
+        </StopPlace>
+      </stopPlaces>
+    </SiteFrame>
+  </dataObjects>
+</PublicationDelivery>

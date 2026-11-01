@@ -3,17 +3,20 @@
 //! (EPIP), a line offer of the Italian profile of South Tyrol (IT-ITH1), two
 //! line documents of an Austrian-style delivery, the shared and the
 //! timetable document of a Swiss-style one, the four documents of a
-//! delivery in the French profile (NeTEx France), and a delivery in the
-//! Nordic NeTEx Profile with the stop register it names, published apart.
-//! They are written for these
-//! tests and licensed as the crate is (`tests/fixtures/own/README.md`), so that
-//! the cases each profile poses are pinned without data under a licence of its
-//! own: identifiers that are each document's own, lines in versions, journeys
+//! delivery in the French profile (NeTEx France), a delivery in the Nordic
+//! NeTEx Profile with the stop register it names, published apart, and
+//! deliveries in the forms of Luxembourg's, Denmark's, the Belgian operators'
+//! and the Czech national one. They are written for these tests and licensed
+//! as the crate is (`tests/fixtures/own/README.md`), so that the cases each
+//! profile poses are pinned without data under a licence of its own:
+//! identifiers that are each document's own, lines in versions, journeys
 //! stating their calls, template journeys run at a headway, names in several
 //! languages, patterns naming their line only through their route, and
 //! everything in general frames — quays defined beside their stop place,
 //! passing times naming no point, day types given their days by a validity and
-//! days of the week —, and journeys dated by the dated journeys naming them.
+//! days of the week —, journeys dated by the dated journeys naming them,
+//! operating periods bounded by instants in UTC, and stop identifiers that
+//! name another stop in each document.
 //!
 //! Every example is read four ways — the full model one document after the
 //! other, in the reverse order, the lean stream one builder per document, and
@@ -115,8 +118,8 @@ fn every_own_example_reads_and_writes_back_element_for_element() {
     let fixtures = support::own_fixtures("");
     assert_eq!(
         fixtures.len(),
-        15,
-        "EPIP 1, Italy 1, Austria 2, Switzerland 2, France 4, Nordic 4 and its stop register"
+        22,
+        "EPIP 1, Italy 1, Austria 2, Switzerland 2, France 4, Nordic 4 and its stop register, Luxembourg 1, Denmark 1, Belgium 3, Czechia 2"
     );
     for fixture in &fixtures {
         let document = netex_rs::read(&fixture.xml)
@@ -1095,6 +1098,258 @@ fn the_nordic_delivery_carries_through_only_its_network_booking_and_weighting() 
             "nordic-stops/_stops.xml: StopPlace/Weighting",
             "nordic-stops/_stops.xml: StopPlace/Weighting",
         ]
+    );
+}
+
+/// The days a journey runs on, as dates.
+fn dates(index: &Index, journey: &str) -> Vec<String> {
+    let id = index.journey_by_id(journey).expect("the journey");
+    index
+        .days_of(id)
+        .map(|day| Date::from_days_since_epoch(day).to_string())
+        .collect()
+}
+
+/// The Luxembourg line document reads as the German deliveries do: its walk
+/// between the two quays of the station is a transfer both ways, and times to
+/// the second are kept to the second.
+#[test]
+fn the_luxembourg_line_offer_reads_its_walk_and_its_times_to_the_second() {
+    let index = index("lu");
+    assert_eq!(index.stop_count(), 2 + 3, "two stop places, three quays");
+    let first = index
+        .stop_by_id("LU::Quay:10001_MMCdT::")
+        .expect("the quay");
+    let walks: Vec<(&str, u32, bool)> = index
+        .transfers_from(first)
+        .iter()
+        .map(|walk| (index.stop(walk.to).id, walk.seconds, walk.both_ways))
+        .collect();
+    assert_eq!(walks, [("LU::Quay:10002_MMCdT::", 170, true)]);
+    assert_eq!(index.stop(first).level, Some("0"));
+    assert_eq!(
+        times(&index, "LU::ServiceJourney:7001_0::"),
+        [(None, Some(at(5, 44) + 10)), (Some(at(5, 51)), None)]
+    );
+    assert_eq!(
+        october(&index, "LU::ServiceJourney:7001_0::"),
+        [21, 22, 23, 26, 27]
+    );
+    assert!(index.unresolved().is_empty(), "{:?}", index.unresolved());
+    let findings: Vec<String> = index.findings().map(|f| f.to_string()).collect();
+    assert_eq!(
+        findings,
+        ["reference resolved to another class than it names: OperatingPeriodRef LU::UicOperatingPeriod:1:: in NX-PI-01_LU_NAP_LINE_EX-EX-7_20261021.xml (UicOperatingPeriod)"]
+    );
+}
+
+/// The Danish train calls at stop points stating their own positions; the
+/// geometry of its first link starts at its stop point and is read latitude
+/// first, that of its second starts 178 m away — farther than the axis order
+/// can be told by — and is a finding.
+#[test]
+fn the_danish_train_calls_at_positioned_stop_points_and_one_link_is_undecided() {
+    let index = index("dk");
+    let point = index.stop_point(
+        index
+            .stop_point_by_id("DK::ScheduledStopPoint:8600001_EX_1::")
+            .expect("the stop point"),
+    );
+    assert_eq!(
+        (point.latitude, point.longitude),
+        (Some(55.428217), Some(9.286401))
+    );
+    assert_eq!(
+        calls(&index, "DK::ServiceJourney:9001_0::"),
+        ["Eksempelby St.", "Mellemby St.", "Grænseby St."]
+    );
+    assert_eq!(
+        october(&index, "DK::ServiceJourney:9001_0::"),
+        [30, 31, 32, 35, 36],
+        "Friday to Sunday, Wednesday and Thursday"
+    );
+    assert_eq!(
+        findings(&index, Concern::AxisOrderUndecided),
+        ["link geometry whose axis order cannot be told: ServiceLink DK::ServiceLink:8600002_1_8600003_1:: in NX-PI-01_DK_NAP_LINE_EX-000001-001_20261030.xml"]
+    );
+    assert_eq!(index.finding_count(Concern::AxisOrderSwapped), 0);
+}
+
+/// The Belgian delivery writes the bounds of its operating periods as
+/// instants in UTC, each the midnight beginning a day in Brussels: the
+/// weekday period from 22 to 30 October and the Sunday period from 1 to
+/// 8 November, across the night the clocks went back. Its journeys run on
+/// those days, the weekday one but on the Wednesday its assignment takes
+/// away — not on the days before them that the dates of the instants name.
+#[test]
+fn a_belgian_period_written_in_utc_runs_on_the_days_of_its_local_midnights() {
+    let index = index("be");
+    assert_eq!(
+        dates(&index, "gt:ex:1-0800"),
+        [
+            "2026-10-22",
+            "2026-10-23",
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-29",
+            "2026-10-30"
+        ]
+    );
+    assert_eq!(dates(&index, "gt:ex:1-1000"), ["2026-11-01", "2026-11-08"]);
+    assert_eq!(index.finding_count(Concern::JourneyWithoutDays), 0);
+}
+
+/// The Belgian line document names its line without an operator or a mode
+/// and assigns its stop points to quays by a `StopPlaceRef`: the stop points
+/// are at the quays, and each such reference is a finding naming the class
+/// it resolved to, as each `OperatingPeriodRef` naming a UIC period is.
+#[test]
+fn a_belgian_stop_point_is_at_the_quay_its_stop_place_reference_names() {
+    let index = index("be");
+    let point = index
+        .stop_point_by_id("gr:ex:1-gs:ex:1-gs:ex:2_gs:ex:11")
+        .expect("the stop point");
+    let quay = index.stop(index.stop_of_stop_point(point).expect("a stop"));
+    assert_eq!((quay.id, quay.kind), ("gs:ex:11", StopKind::Quay));
+    let line = index.line(index.line_by_id("gr:ex:1").expect("the line"));
+    assert_eq!((line.name, line.mode), ("Gare - Marché", None));
+    assert_eq!(
+        calls(&index, "gt:ex:1-0800"),
+        ["", ""],
+        "the stop points state no name"
+    );
+    assert_eq!(
+        findings(&index, Concern::ResolvedAsOtherClass),
+        [
+            "reference resolved to another class than it names: OperatingPeriodRef gc:ex:sundays in common.xml (UicOperatingPeriod)",
+            "reference resolved to another class than it names: OperatingPeriodRef gc:ex:weekdays in common.xml (UicOperatingPeriod)",
+            "reference resolved to another class than it names: StopPlaceRef gs:ex:11 in line-gr-ex-1.xml (Quay)",
+            "reference resolved to another class than it names: StopPlaceRef gs:ex:21 in line-gr-ex-1.xml (Quay)",
+        ]
+    );
+    assert!(index.unresolved().is_empty(), "{:?}", index.unresolved());
+}
+
+/// The stop names of a journey's calls: of the stop each stop point is at.
+fn stops_called_at<'a>(index: &'a Index, journey: &str) -> Vec<&'a str> {
+    let id = index.journey_by_id(journey).expect("the journey");
+    index
+        .journey(id)
+        .stop_points
+        .iter()
+        .map(|&point| {
+            let stop = index.stop_of_stop_point(point).expect("a stop");
+            index.stop(stop).name
+        })
+        .collect()
+}
+
+/// Both Czech documents number their stop places from one, and state their
+/// stop points under the same identifiers: `CZ:ex_jdf:StopPlace:1` is Lhota's
+/// green in the regular timetable and Dolní Ves's junction in the detour's.
+/// Named otherwise, each is a stop of its own, and each journey calls at its
+/// own document's stops; stop place 3, named alike in both, is one stop.
+#[test]
+fn a_czech_identifier_named_otherwise_in_another_document_is_another_stop() {
+    let index = index("cz");
+    let mut stops: Vec<(&str, &str)> = index
+        .stops()
+        .map(|stop| (index.stop(stop).id, index.stop(stop).name))
+        .collect();
+    stops.sort_unstable();
+    assert_eq!(
+        stops,
+        [
+            ("CZ:ex_jdf:StopPlace:1", "Dolní Ves,,rozc."),
+            ("CZ:ex_jdf:StopPlace:1", "Lhota,,náves"),
+            ("CZ:ex_jdf:StopPlace:2", "Lhota,,náves"),
+            ("CZ:ex_jdf:StopPlace:2", "Lhota,,škola"),
+            ("CZ:ex_jdf:StopPlace:3", "Horní Ves"),
+        ]
+    );
+    assert_eq!(index.stop_point_count(), 5);
+    assert_eq!(
+        calls(&index, "CZ:ex_jdf:ServiceJourney:100100_1_1"),
+        ["Lhota,,náves", "Lhota,,škola", "Horní Ves"]
+    );
+    assert_eq!(
+        stops_called_at(&index, "CZ:ex_jdf:ServiceJourney:100100_1_1"),
+        ["Lhota,,náves", "Lhota,,škola", "Horní Ves"]
+    );
+    for journey in [
+        "CZ:ex_jdf:ServiceJourney:100100_1_3",
+        "CZ:ex_jdf:ServiceJourney:100100_1_5",
+    ] {
+        assert_eq!(
+            calls(&index, journey),
+            ["Dolní Ves,,rozc.", "Lhota,,náves", "Horní Ves"],
+            "{journey}"
+        );
+        assert_eq!(
+            stops_called_at(&index, journey),
+            ["Dolní Ves,,rozc.", "Lhota,,náves", "Horní Ves"],
+            "{journey}"
+        );
+    }
+    let delivery = index
+        .stop_by_id("CZ:ex_jdf:StopPlace:1")
+        .expect("the stop place");
+    assert_eq!(
+        index.stop(delivery).name,
+        "Lhota,,náves",
+        "the identifier alone names the stop of the document named first"
+    );
+    let regular = "NX-PI-01_CZ_EX-JDF_LINE-100_20261030.xml";
+    let detour = "NX-PI-01_CZ_EX-JDF_LINE-101_20261030.xml";
+    let expected: Vec<String> = [
+        "ScheduledStopPoint CZ:ex_jdf:ScheduledStopPoint:100100_1_1",
+        "ScheduledStopPoint CZ:ex_jdf:ScheduledStopPoint:100100_1_2",
+        "StopPlace CZ:ex_jdf:StopPlace:1",
+        "StopPlace CZ:ex_jdf:StopPlace:2",
+    ]
+    .iter()
+    .map(|entity| {
+        format!(
+            "identifier naming another stop than in another document, a stop of its own: {entity} in {detour} ({regular})"
+        )
+    })
+    .collect();
+    assert_eq!(findings(&index, Concern::LocalIdentifier), expected);
+    assert!(
+        index
+            .findings()
+            .filter(|finding| finding.concern == Concern::RedefinedOtherwise)
+            .all(|finding| finding.element == "Line"),
+        "only the line, a document's own, is redefined otherwise"
+    );
+    assert!(index.unresolved().is_empty(), "{:?}", index.unresolved());
+}
+
+/// The Czech deliveries state no position for a stop place or a stop point,
+/// and the times of a journey after midnight without a day offset: the index
+/// leaves the stops without a position and keeps the times as stated.
+#[test]
+fn a_czech_stop_has_no_position_and_a_late_journey_its_times_as_stated() {
+    let index = index("cz");
+    assert!(index.stops().all(|stop| {
+        let stop = index.stop(stop);
+        stop.latitude.is_none() && stop.longitude.is_none()
+    }));
+    assert!((0..index.stop_point_count() as u32).all(|point| {
+        let point = index.stop_point(netex_rs::index::StopPointId(point));
+        point.latitude.is_none() && point.longitude.is_none()
+    }));
+    assert_eq!(
+        times(&index, "CZ:ex_jdf:ServiceJourney:100100_1_5"),
+        [
+            (None, Some(at(23, 55))),
+            (Some(at(23, 59)), Some(at(23, 59))),
+            (Some(at(0, 6)), None)
+        ]
+    );
+    assert_eq!(
+        october(&index, "CZ:ex_jdf:ServiceJourney:100100_1_5"),
+        [19, 20, 21, 22, 23]
     );
 }
 
