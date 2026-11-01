@@ -42,6 +42,11 @@ enum Command {
     Validate {
         /// A zip archive or a directory of NeTEx documents.
         source: PathBuf,
+        /// A zip archive or a directory of documents read along with the
+        /// source: a stop register published apart, as Norway's; may be given
+        /// more than once.
+        #[arg(long, value_name = "PATH")]
+        with: Vec<PathBuf>,
         /// How the report is printed.
         #[arg(long, value_enum, default_value_t = Format::Human)]
         format: Format,
@@ -65,6 +70,11 @@ enum Command {
     Stats {
         /// A zip archive or a directory of NeTEx documents.
         source: PathBuf,
+        /// A zip archive or a directory of documents read along with the
+        /// source: a stop register published apart, as Norway's; may be given
+        /// more than once.
+        #[arg(long, value_name = "PATH")]
+        with: Vec<PathBuf>,
         /// The first day counted, `YYYY-MM-DD`.
         #[arg(long)]
         from: Option<String>,
@@ -79,6 +89,11 @@ enum Command {
     Convert {
         /// A zip archive or a directory of NeTEx documents.
         source: PathBuf,
+        /// A zip archive or a directory of documents read along with the
+        /// source: a stop register published apart, as Norway's; may be given
+        /// more than once.
+        #[arg(long, value_name = "PATH")]
+        with: Vec<PathBuf>,
         /// The format written.
         #[arg(long, value_enum)]
         to: Target,
@@ -112,6 +127,11 @@ enum Command {
     Extract {
         /// A zip archive or a directory of NeTEx documents.
         source: PathBuf,
+        /// A zip archive or a directory of documents read along with the
+        /// source: a stop register published apart, as Norway's; may be given
+        /// more than once.
+        #[arg(long, value_name = "PATH")]
+        with: Vec<PathBuf>,
         /// The directory the part is written to, new or empty.
         #[arg(long)]
         to: PathBuf,
@@ -213,6 +233,7 @@ fn run(command: Command) -> Result<u8, String> {
     match command {
         Command::Validate {
             source,
+            with,
             format,
             report,
             strict,
@@ -221,7 +242,7 @@ fn run(command: Command) -> Result<u8, String> {
             examples,
         } => {
             let limits = limits(strict, &refuse, &at_most)?;
-            let opened = open(&source)?;
+            let opened = open_with(&source, &with)?;
             let index = build_with_referrers(&opened).map_err(|e| e.to_string())?;
             let checked = validate::check(&index, &name_of(&source), &limits, examples);
             let json = serde_json::to_string_pretty(&checked).map_err(|e| e.to_string())?;
@@ -236,6 +257,7 @@ fn run(command: Command) -> Result<u8, String> {
         }
         Command::Stats {
             source,
+            with,
             from,
             to,
             format,
@@ -247,8 +269,8 @@ fn run(command: Command) -> Result<u8, String> {
                     date(to.as_deref().unwrap_or("9999-12-31"))?,
                 )),
             };
-            let delivery =
-                Delivery::read(&open(&source)?, Reading::default()).map_err(|e| e.to_string())?;
+            let delivery = Delivery::read(&open_with(&source, &with)?, Reading::default())
+                .map_err(|e| e.to_string())?;
             let figures = stats::stats(
                 &delivery,
                 &name_of(&source),
@@ -265,6 +287,7 @@ fn run(command: Command) -> Result<u8, String> {
         }
         Command::Convert {
             source,
+            with,
             to: Target::Gtfs,
             output,
             shapes,
@@ -279,7 +302,8 @@ fn run(command: Command) -> Result<u8, String> {
                 geometry: shapes,
                 ..Reading::default()
             };
-            let delivery = Delivery::read(&open(&source)?, reading).map_err(|e| e.to_string())?;
+            let delivery =
+                Delivery::read(&open_with(&source, &with)?, reading).map_err(|e| e.to_string())?;
             let publisher = publisher_name
                 .zip(publisher_url)
                 .map(|(name, url)| Publisher {
@@ -320,6 +344,7 @@ fn run(command: Command) -> Result<u8, String> {
         }
         Command::Extract {
             source,
+            with,
             to,
             operator,
             line,
@@ -361,7 +386,7 @@ fn run(command: Command) -> Result<u8, String> {
                 },
             };
             empty_directory(&to)?;
-            let opened = open(&source)?;
+            let opened = open_with(&source, &with)?;
             let delivery =
                 Delivery::read(&opened, Reading::default()).map_err(|e| e.to_string())?;
             let part =
@@ -442,6 +467,13 @@ fn empty_directory(path: &Path) -> Result<(), String> {
 
 fn open(path: &Path) -> Result<Source, String> {
     Source::open(path).map_err(|e| e.to_string())
+}
+
+/// The source at `path`, with the documents at each of `with` read along.
+fn open_with(path: &Path, with: &[PathBuf]) -> Result<Source, String> {
+    with.iter().try_fold(open(path)?, |source, other| {
+        source.with(open(other)?).map_err(|e| e.to_string())
+    })
 }
 
 /// The name a report gives the source: its file or directory name.

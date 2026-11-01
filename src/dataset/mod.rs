@@ -23,6 +23,10 @@
 //! saves depends on the publisher: the German delivery is regenerated every
 //! week, down to renumbered identifiers inside the files, and no file of one
 //! week is the same as in the week before.
+//!
+//! A delivery may name what another publication defines: the Nordic
+//! deliveries name the quays of a stop register published apart from them.
+//! [`Source::with`] reads several sources as one.
 
 mod manifest;
 
@@ -55,6 +59,18 @@ enum SourceKind {
     },
     /// A directory; the documents are the `.xml` files under it, at any depth.
     Directory(PathBuf),
+    /// Several sources read as one ([`Source::with`]), each a zip archive or
+    /// a directory; the documents of every part after the first are named
+    /// under the part's name.
+    Combined(Vec<Part>),
+}
+
+/// One source of several read as one.
+#[derive(Debug, Clone)]
+struct Part {
+    /// The name its documents are named under; none for the first part.
+    name: Option<String>,
+    source: Source,
 }
 
 /// A file read by position, so that clones — one per worker — share one
@@ -112,9 +128,19 @@ pub struct Entry {
     pub crc32: u32,
     /// Its position in the archive, or among the files.
     index: usize,
+    /// The part of a combined source it is from; 0 for any other source.
+    part: usize,
+    /// How much of `name` is the part's name, before the document's own.
+    prefix: usize,
 }
 
 impl Entry {
+    /// The document's name within its part: its path in the archive or under
+    /// the directory.
+    fn local_name(&self) -> &str {
+        &self.name[self.prefix..]
+    }
+
     /// The entry's fingerprint.
     pub fn fingerprint(&self) -> Fingerprint {
         Fingerprint {
@@ -163,10 +189,59 @@ impl Source {
         Ok(Source { kind })
     }
 
-    /// Where the source is.
+    /// This source with the documents of `other` read along with its own:
+    /// a delivery with the stop register it names its quays in, published
+    /// apart from it, as Norway's. The documents of `other` are named
+    /// `<its file or directory name>/<document>`, so that no two documents
+    /// of the parts share a name; a source whose name another part after
+    /// the first already has is refused.
+    ///
+    /// ```no_run
+    /// # fn main() -> netex_rs::Result<()> {
+    /// use netex_rs::dataset::Source;
+    /// let source = Source::open("rb_rut-aggregated-netex.zip")?
+    ///     .with(Source::open("Current_latest.zip")?)?;
+    /// # Ok(()) }
+    /// ```
+    pub fn with(self, other: Source) -> Result<Source> {
+        let mut parts = match self.kind {
+            SourceKind::Combined(parts) => parts,
+            kind => vec![Part {
+                name: None,
+                source: Source { kind },
+            }],
+        };
+        let added = match other.kind {
+            SourceKind::Combined(parts) => parts.into_iter().map(|part| part.source).collect(),
+            kind => vec![Source { kind }],
+        };
+        for source in added {
+            let path = source.path();
+            let name = path.file_name().map_or_else(
+                || path.display().to_string(),
+                |name| name.to_string_lossy().into_owned(),
+            );
+            if parts.iter().any(|part| part.name.as_deref() == Some(&name)) {
+                return Err(Error::new(Kind::Io(format!(
+                    "{}: another source read along is named {name} too",
+                    path.display()
+                ))));
+            }
+            parts.push(Part {
+                name: Some(name),
+                source,
+            });
+        }
+        Ok(Source {
+            kind: SourceKind::Combined(parts),
+        })
+    }
+
+    /// Where the source is: for several read as one, where the first is.
     pub fn path(&self) -> &Path {
         match &self.kind {
             SourceKind::Zip { path, .. } | SourceKind::Directory(path) => path,
+            SourceKind::Combined(parts) => parts[0].source.path(),
         }
     }
 
@@ -191,6 +266,8 @@ impl Source {
                         size: file.size(),
                         crc32: file.crc32(),
                         index,
+                        part: 0,
+                        prefix: 0,
                     });
                 }
                 Ok(entries)
@@ -215,9 +292,25 @@ impl Source {
                             size: bytes.len() as u64,
                             crc32: crc32fast::hash(&bytes),
                             index,
+                            part: 0,
+                            prefix: 0,
                         })
                     })
                     .collect()
+            }
+            SourceKind::Combined(parts) => {
+                let mut entries = Vec::new();
+                for (position, part) in parts.iter().enumerate() {
+                    for mut entry in part.source.entries()? {
+                        if let Some(name) = &part.name {
+                            entry.name = format!("{name}/{}", entry.name);
+                            entry.prefix = name.len() + 1;
+                        }
+                        entry.part = position;
+                        entries.push(entry);
+                    }
+                }
+                Ok(entries)
             }
         }
     }
@@ -327,13 +420,20 @@ impl Source {
         match &self.kind {
             SourceKind::Zip { archive, .. } => Reader::Archive(archive.clone()),
             SourceKind::Directory(path) => Reader::Directory(path.clone()),
+            SourceKind::Combined(parts) => {
+                Reader::Combined(parts.iter().map(|part| part.source.reader()).collect())
+            }
         }
     }
 }
 
 /// Largest first; equal sizes in the source's order.
 fn largest_first(entries: &mut [Entry]) {
-    entries.sort_by(|a, b| b.size.cmp(&a.size).then_with(|| a.index.cmp(&b.index)));
+    entries.sort_by(|a, b| {
+        b.size
+            .cmp(&a.size)
+            .then_with(|| (a.part, a.index).cmp(&(b.part, b.index)))
+    });
 }
 
 fn collect_xml(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
@@ -359,6 +459,8 @@ fn collect_xml(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
 enum Reader {
     Archive(zip::ZipArchive<SharedFile>),
     Directory(PathBuf),
+    /// One reader for each part of a combined source.
+    Combined(Vec<Reader>),
 }
 
 impl Reader {
@@ -393,12 +495,13 @@ impl Reader {
                     .map_err(|e| Error::new(Kind::Io(format!("{}: {e}", entry.name))))?;
             }
             Reader::Directory(root) => {
-                let path = root.join(&entry.name);
+                let path = root.join(entry.local_name());
                 let mut file = File::open(&path)
                     .map_err(|e| Error::new(Kind::Io(format!("{}: {e}", path.display()))))?;
                 file.read_to_end(bytes)
                     .map_err(|e| Error::new(Kind::Io(format!("{}: {e}", path.display()))))?;
             }
+            Reader::Combined(readers) => readers[entry.part].load_bytes(entry, bytes)?,
         }
         Ok(())
     }
