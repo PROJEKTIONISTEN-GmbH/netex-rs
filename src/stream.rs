@@ -104,6 +104,8 @@ entities! {
     Route(model::Route) = "Route",
     /// A line.
     Line(model::Line) = "Line",
+    /// A line served on demand.
+    FlexibleLine(model::Line) = "FlexibleLine",
     /// A destination display.
     DestinationDisplay(model::DestinationDisplay) = "DestinationDisplay",
     /// A scheduled stop point.
@@ -174,15 +176,18 @@ impl Selection {
     }
 
     /// What a routing importer reads: stops with their quays — and the quays
-    /// defined beside them —, routes and lines, stop points and their assignments, journey patterns, journeys
-    /// with their passing times or calls, template journeys, the calendar with
-    /// its availability conditions, walks, interchanges, and notices.
+    /// defined beside them —, routes and lines — flexible lines among them —,
+    /// stop points and their assignments, journey patterns, journeys with
+    /// their passing times or calls, template and dated journeys, the
+    /// calendar with its availability conditions, walks, interchanges, and
+    /// notices.
     pub fn routing() -> Self {
         [
             Kind::StopPlace,
             Kind::Quay,
             Kind::Route,
             Kind::Line,
+            Kind::FlexibleLine,
             Kind::ScheduledStopPoint,
             Kind::PassengerStopAssignment,
             Kind::ServiceJourneyPattern,
@@ -352,7 +357,7 @@ const SERVICE: Containers = &[
     ("directions", &[Kind::Direction]),
     ("routePoints", &[Kind::RoutePoint]),
     ("routes", &[Kind::Route]),
-    ("lines", &[Kind::Line]),
+    ("lines", &[Kind::Line, Kind::FlexibleLine]),
     ("destinationDisplays", &[Kind::DestinationDisplay]),
     ("scheduledStopPoints", &[Kind::ScheduledStopPoint]),
     ("serviceLinks", &[Kind::ServiceLink]),

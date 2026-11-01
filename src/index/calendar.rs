@@ -35,11 +35,20 @@ impl DayBits {
 
     /// Every operated day, from the first.
     pub(crate) fn days(&self) -> impl Iterator<Item = usize> + '_ {
-        self.words.iter().enumerate().flat_map(|(index, &word)| {
-            (0..64)
-                .filter(move |bit| word & (1 << bit) != 0)
-                .map(move |bit| index * 64 + bit)
-        })
+        self.words
+            .iter()
+            .enumerate()
+            .filter(|(_, &word)| word != 0)
+            .flat_map(|(index, &word)| {
+                let mut rest = word;
+                std::iter::from_fn(move || {
+                    let bit = rest.trailing_zeros() as usize;
+                    (rest != 0).then(|| {
+                        rest &= rest - 1;
+                        index * 64 + bit
+                    })
+                })
+            })
     }
 
     /// How many days are operated.
@@ -69,5 +78,22 @@ impl DayBits {
         for (word, more) in self.words.iter_mut().zip(&other.words) {
             *word |= more;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DayBits;
+
+    #[test]
+    fn the_days_are_those_set_in_order_across_words() {
+        let mut bits = DayBits::new(64 * 40);
+        for day in [3, 63, 64, 130, 64 * 39 + 7] {
+            bits.set(day, true);
+        }
+        bits.set(130, false);
+        let days: Vec<usize> = bits.days().collect();
+        assert_eq!(days, [3, 63, 64, 64 * 39 + 7]);
+        assert_eq!(bits.count(), days.len());
     }
 }

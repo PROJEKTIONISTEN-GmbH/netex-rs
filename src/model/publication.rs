@@ -165,6 +165,8 @@ netex_container! {
         Route(Route) = "Route",
         /// A line.
         Line(Line) = "Line",
+        /// A line served on demand.
+        FlexibleLine(Line) = "FlexibleLine",
         /// A destination display.
         DestinationDisplay(DestinationDisplay) = "DestinationDisplay",
         /// A scheduled stop point.

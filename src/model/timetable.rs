@@ -465,6 +465,9 @@ netex_element! {
             pub calls: Option<Calls> = "calls",
             /// For a dated journey: the journey it is a run of.
             pub journey_ref: Option<JourneyRef> = choice,
+            /// For a dated journey, as the Nordic profile writes it: the
+            /// dated journeys it replaces.
+            pub dated_service_journey_refs: Vec<Ref> = "DatedServiceJourneyRef",
             /// For a dated journey: the day.
             pub operating_day_ref: Option<OperatingDayRef> = choice,
             /// For a dated journey: the dated journey pattern.

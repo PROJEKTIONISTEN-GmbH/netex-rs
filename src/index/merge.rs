@@ -195,7 +195,6 @@ impl IndexBuilder {
             record.key = renumbered.key(record.key);
             record.origin = renumbered.sym(record.origin);
             record.line = record.line.map(|p| renumbered.pending(p));
-            record.flexible_line = record.flexible_line.map(|l| renumbered.sym(l));
             record.route = record.route.map(|p| renumbered.pending(p));
             record.pattern = record.pattern.map(|p| renumbered.pending(p));
             record.day_types = moved(record.day_types, day_type_offset);
@@ -204,6 +203,11 @@ impl IndexBuilder {
             record.headways = moved(record.headways, headway_offset);
             record.raw_times = moved(record.raw_times, time_offset);
             self.journeys.push(record);
+        }
+        for mut record in other.datings {
+            record.journey = renumbered.pending(record.journey);
+            record.day = renumbered.pending(record.day);
+            self.datings.push(record);
         }
         for mut record in other.day_types {
             record.key = renumbered.key(record.key);
@@ -229,6 +233,9 @@ impl IndexBuilder {
         let period = |mut record: PeriodRecord| {
             record.key = renumbered.key(record.key);
             record.origin = renumbered.sym(record.origin);
+            record.bounds = record
+                .bounds
+                .map(|bound| bound.map(|p| renumbered.pending(p)));
             record
         };
         self.periods.extend(other.periods.into_iter().map(period));

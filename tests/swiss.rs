@@ -354,9 +354,12 @@ fn a_journey_of_a_flexible_line_is_left_out() {
         findings(&index, Concern::FlexibleLineJourney),
         ["journey of a flexible line, not runs at fixed times: left out: ServiceJourney at:ktn:ServiceJourney:Berg-Bad-Bus_504 in PROD_NETEX_TT_1.10_CHE_SKI_2026_OEV-SCHWEIZ_TIMETABLE_1_515.xml (at:ktn:FlexibleLine:Berg-Bad-Bus:)"]
     );
-    assert!(
-        index.unresolved().is_empty(),
-        "the flexible line is not looked for"
+    // The flexible line is looked for as any line is, and this delivery
+    // defines none.
+    let unresolved: Vec<String> = index.unresolved().iter().map(|u| u.to_string()).collect();
+    assert_eq!(
+        unresolved,
+        ["PROD_NETEX_TT_1.10_CHE_SKI_2026_OEV-SCHWEIZ_TIMETABLE_1_515.xml: <FlexibleLineRef> in ServiceJourney at:ktn:ServiceJourney:Berg-Bad-Bus_504 refers to at:ktn:FlexibleLine:Berg-Bad-Bus: version any, which no document defines"]
     );
 }
 

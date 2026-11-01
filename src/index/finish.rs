@@ -56,7 +56,13 @@ pub(super) fn finish(builder: IndexBuilder) -> Index {
     let routes = work.routes(&scopes);
     let mut patterns = work.patterns(&scopes, &routes);
     let calendar = work.calendar(&scopes);
-    let journeys = work.journeys(&scopes, (&lines, &routes), &mut patterns, &calendar);
+    let dated = work.dated_days(&scopes);
+    let journeys = work.journeys(
+        &scopes,
+        (&lines, &routes),
+        &mut patterns,
+        (&calendar, &dated),
+    );
     let (line_journeys_offsets, line_journeys) = by_line(&journeys.records, lines.kept.len());
     let (transfer_offsets, transfers) = work.transfers();
     let (interchange_offsets, interchanges) = work.interchanges(&scopes, &journeys);
@@ -318,16 +324,23 @@ struct Calendars {
 }
 
 /// What a journey's calendar is made of, resolved: its day types and
-/// availability conditions by position, and its line definition.
-type CalendarParts = (Vec<u32>, Vec<u32>, Option<u32>);
+/// availability conditions by position, its line definition, and the days
+/// dated journeys give it.
+type CalendarParts = (Vec<u32>, Vec<u32>, Option<u32>, Vec<i64>);
 
 /// What gives a journey its days: the day types and the availability
-/// conditions it names, and the line definition it runs in.
+/// conditions it names, the line definition it runs in, and the days dated
+/// journeys give it.
 struct Days<'a> {
     day_types: &'a [Pending],
     conditions: &'a [Pending],
     line: Option<u32>,
+    dated: &'a [i64],
 }
+
+/// The days dated journeys give the journeys they name, by the position of
+/// the journey, in order.
+type DatedDays = FxHashMap<u32, Vec<i64>>;
 
 /// What a journey states of its own, as gathered: the references to its
 /// calendar, its passing times or calls, and a template's headway groups,
@@ -751,7 +764,12 @@ impl Finish {
         }
         recorder.begin(Kind::Line);
         for line in &b.lines {
-            recorder.define("Line", line.key.id, Some(line.origin));
+            let element = if line.flexible {
+                "FlexibleLine"
+            } else {
+                "Line"
+            };
+            recorder.define(element, line.key.id, Some(line.origin));
         }
         recorder.begin(Kind::Pattern);
         for pattern in &b.patterns {
@@ -1014,9 +1032,11 @@ impl Finish {
     /// condition, operating day or day type stated otherwise by another
     /// document is a finding.
     fn calendar(&mut self, scopes: &Scopes) -> Calendar {
+        self.period_bounds(scopes);
         let assignments = self.resolved_assignments(scopes);
         let by_properties = self.decided_by_properties(&assignments);
-        let (first_day, span) = self.span_of_days(&assignments, &by_properties);
+        let named_conditions = self.conditions_named_by_journeys(scopes);
+        let (first_day, span) = self.span_of_days(&assignments, &by_properties, &named_conditions);
         let periods = bits_of_periods(&self.b.periods, (first_day, span), &mut self.findings);
         let conditions = bits_of_periods(&self.b.conditions, (first_day, span), &mut self.findings);
         let mut week = WeekBits::new(first_day, span);
@@ -1099,6 +1119,25 @@ impl Finish {
             span,
             day_types: bits,
             conditions,
+        }
+    }
+
+    /// The first and last day of each operating period naming them as
+    /// operating days, the references resolved in the period's document
+    /// first; one that does not resolve leaves the period without that day.
+    fn period_bounds(&mut self, scopes: &Scopes) {
+        for position in 0..self.b.periods.len() {
+            let [first, last] = self.b.periods[position].bounds;
+            let day_of = |work: &mut Finish, bound: Option<Pending>| {
+                let index = work.resolve_in(&scopes.operating_days, &bound?)?;
+                Some(work.b.operating_days[index as usize].day)
+            };
+            if first.is_some() {
+                self.b.periods[position].from = day_of(self, first);
+            }
+            if last.is_some() {
+                self.b.periods[position].to = day_of(self, last);
+            }
         }
     }
 
@@ -1196,14 +1235,41 @@ impl Finish {
         decided
     }
 
+    /// The availability conditions some journey names or states, by
+    /// position, each as the journey's document resolves it. The references
+    /// are looked up here without a finding: the journey's own resolution
+    /// makes it.
+    fn conditions_named_by_journeys(&self, scopes: &Scopes) -> Vec<u32> {
+        let scope = &scopes.conditions;
+        let mut named: Vec<u32> = self
+            .b
+            .journey_conditions
+            .iter()
+            .filter_map(|pending| {
+                let validity = |position| scope.validity(position);
+                resolve(&self.b.strings, &scope.table, validity, self.b.at, pending).ok()
+            })
+            .map(|resolved| resolved.index)
+            .collect();
+        named.sort_unstable();
+        named.dedup();
+        named
+    }
+
     /// The first day of the dataset's calendar and how many days it spans:
-    /// from the first to the last day any period, condition, operating day,
-    /// day assigned or validity of a day type its properties decide
-    /// (`by_properties`, by position) states.
+    /// from the first to the last day that can give a journey a day — of a
+    /// period an assignment names, of a condition a journey names
+    /// (`named_conditions`, by position), an operating day, a day assigned, a
+    /// validity of a day type its properties decide (`by_properties`, by
+    /// position). A period or condition nothing names gives no journey a day,
+    /// however far it reaches: the frames of one delivery state conditions
+    /// up to the year 9999, which would make every calendar millions of days
+    /// long.
     fn span_of_days(
         &self,
         assignments: &[ResolvedAssignment],
         by_properties: &[bool],
+        named_conditions: &[u32],
     ) -> (i64, usize) {
         let mut first_day = i64::MAX;
         let mut last_day = i64::MIN;
@@ -1211,14 +1277,22 @@ impl Finish {
             first_day = first_day.min(first);
             last_day = last_day.max(last);
         };
-        for period in self.b.periods.iter().chain(&self.b.conditions) {
+        let conditions = named_conditions
+            .iter()
+            .map(|&position| &self.b.conditions[position as usize]);
+        for period in conditions {
             if let Some((first, last)) = period.span() {
                 extend(first, last);
             }
         }
         for assignment in assignments {
-            if let AssignmentDays::Day(day) = assignment.days {
-                extend(day, day);
+            match assignment.days {
+                AssignmentDays::Day(day) => extend(day, day),
+                AssignmentDays::Period(period) => {
+                    if let Some((first, last)) = self.b.periods[period as usize].span() {
+                        extend(first, last);
+                    }
+                }
             }
         }
         for day in &self.b.operating_days {
@@ -1237,6 +1311,30 @@ impl Finish {
         }
     }
 
+    /// The days the dated journeys give the journeys they name, each dated
+    /// journey's references resolved in its own document first. A dated
+    /// journey that is cancelled or replaced gives no day, and takes none
+    /// away: the Nordic deliveries date a journey running on a day anew
+    /// beside the dated journey they replace for that day. One whose
+    /// references do not both resolve gives no day either.
+    fn dated_days(&mut self, scopes: &Scopes) -> DatedDays {
+        let datings = std::mem::take(&mut self.b.datings);
+        let mut dated = DatedDays::default();
+        for dating in &datings {
+            let journey = self.resolve_in(&scopes.journeys, &dating.journey);
+            let day = self.resolve_in(&scopes.operating_days, &dating.day);
+            if let (true, Some(journey), Some(day)) = (dating.runs, journey, day) {
+                let day = self.b.operating_days[day as usize].day;
+                dated.entry(journey).or_default().push(day);
+            }
+        }
+        for days in dated.values_mut() {
+            days.sort_unstable();
+            days.dedup();
+        }
+        dated
+    }
+
     /// Every journey: its pattern, line and calendar, each as its document
     /// resolves them, its calls with their times — its pattern's, or those it
     /// states —, and a template's headway groups. A definition repeating an
@@ -1249,7 +1347,7 @@ impl Finish {
         scopes: &Scopes,
         (lines, routes): (&Lines, &[Option<u32>]),
         patterns: &mut Patterns,
-        calendar: &Calendar,
+        (calendar, dated): (&Calendar, &DatedDays),
     ) -> Journeys {
         let order = std::mem::take(&mut self.journey_order);
         let records = std::mem::take(&mut self.b.journeys);
@@ -1272,17 +1370,6 @@ impl Finish {
         let mut laid_out = LaidOut::default();
         for (position, &index) in order.iter().enumerate() {
             let record = &records[index as usize];
-            if let Some(line) = record.flexible_line {
-                let entity = (record.origin, record.key.id);
-                self.found(
-                    Concern::FlexibleLineJourney,
-                    "ServiceJourney",
-                    entity,
-                    Some(line),
-                );
-                journeys.of_position.push(None);
-                continue;
-            }
             let pattern = match &record.pattern {
                 Some(pending) => self.resolve_in(&scopes.patterns, pending),
                 None => None,
@@ -1294,10 +1381,28 @@ impl Finish {
                 (None, Some(route)) => self.line_of_route(scopes, routes, route),
                 (None, None) => pattern.and_then(|p| patterns.lines[p as usize]),
             };
+            let flexible = line.is_some_and(|line| self.b.lines[line as usize].flexible);
+            if record.names_flexible_line || flexible {
+                let entity = (record.origin, record.key.id);
+                let named = match (line, &record.line) {
+                    (Some(line), _) => Some(self.b.lines[line as usize].key.id),
+                    (None, Some(pending)) => Some(pending.key.id),
+                    (None, None) => None,
+                };
+                self.found(
+                    Concern::FlexibleLineJourney,
+                    "ServiceJourney",
+                    entity,
+                    named,
+                );
+                journeys.of_position.push(None);
+                continue;
+            }
             let days = Days {
                 day_types: range(&raw.day_types, record.day_types),
                 conditions: range(&raw.conditions, record.conditions),
                 line,
+                dated: dated.get(&position_of(position)).map_or(&[], Vec::as_slice),
             };
             let calendared = self.calendar_of(
                 days,
@@ -1392,9 +1497,9 @@ impl Finish {
     /// The calendar of a journey: the days of its day types, each resolved
     /// in the journey's document first — within the days of the availability
     /// conditions it names, or those days alone where it names no day type,
-    /// a condition that is not available taking its days away —, of which
-    /// the days its line version governs. Journeys of the same days share
-    /// one calendar.
+    /// a condition that is not available taking its days away —, with the
+    /// days dated journeys give it; of these, the days its line version
+    /// governs. Journeys of the same days share one calendar.
     fn calendar_of(
         &mut self,
         days: Days<'_>,
@@ -1415,11 +1520,12 @@ impl Finish {
             resolve(self, &scopes.day_types, days.day_types),
             resolve(self, &scopes.conditions, days.conditions),
             days.line,
+            days.dated.to_vec(),
         );
         if let Some(known) = calendars.of_parts.get(&parts) {
             return *known;
         }
-        let (day_types, conditions, line) = &parts;
+        let (day_types, conditions, line, dated) = &parts;
         let mut bits = DayBits::new(calendar.span);
         for &day_type in day_types {
             bits.union(&calendar.day_types[day_type as usize]);
@@ -1440,6 +1546,11 @@ impl Finish {
         }
         for &condition in &unavailable {
             bits.subtract(&calendar.conditions[condition as usize]);
+        }
+        for &day in dated {
+            if let Ok(offset) = usize::try_from(day - calendar.first_day) {
+                bits.set(offset, true);
+            }
         }
         let every = bits.count();
         if let Some(line) = *line {
@@ -1877,6 +1988,7 @@ fn bits_of_periods(
             for offset in days
                 .into_iter()
                 .filter_map(|day| usize::try_from(day - first_day).ok())
+                .filter(|&offset| offset < span)
             {
                 bits.set(offset, true);
             }
@@ -1899,5 +2011,78 @@ fn redefined_periods(records: &[PeriodRecord], scope: &Scoped, findings: &mut Ve
                 about: Some(records[first].origin),
             });
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::index::IndexBuilder;
+    use crate::model::Date;
+
+    /// A delivery whose composite frame states a condition from 1900 to 9999
+    /// that no journey names, and a journey running on the weekdays of an
+    /// October period.
+    const FAR_REACHING_FRAME: &str = r#"<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.15:NO-NeTEx-networktimetable:1.5">
+  <PublicationTimestamp>2026-10-01T00:00:00</PublicationTimestamp>
+  <ParticipantRef>EX</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame version="1" id="EX:CompositeFrame:1">
+      <validityConditions>
+        <AvailabilityCondition version="1" id="EX:AvailabilityCondition:always">
+          <FromDate>1900-01-01T00:00:00</FromDate>
+          <ToDate>9999-12-31T00:00:00</ToDate>
+        </AvailabilityCondition>
+      </validityConditions>
+      <frames>
+        <ServiceCalendarFrame version="1" id="EX:ServiceCalendarFrame:1">
+          <dayTypes>
+            <DayType version="1" id="EX:DayType:weekdays">
+              <properties><PropertyOfDay><DaysOfWeek>Monday Tuesday Wednesday Thursday Friday</DaysOfWeek></PropertyOfDay></properties>
+            </DayType>
+          </dayTypes>
+          <operatingPeriods>
+            <OperatingPeriod version="1" id="EX:OperatingPeriod:october">
+              <FromDate>2026-10-01T00:00:00</FromDate>
+              <ToDate>2026-10-31T00:00:00</ToDate>
+            </OperatingPeriod>
+          </operatingPeriods>
+          <dayTypeAssignments>
+            <DayTypeAssignment order="1" version="1" id="EX:DayTypeAssignment:1">
+              <OperatingPeriodRef ref="EX:OperatingPeriod:october"/>
+              <DayTypeRef ref="EX:DayType:weekdays"/>
+            </DayTypeAssignment>
+          </dayTypeAssignments>
+        </ServiceCalendarFrame>
+        <TimetableFrame version="1" id="EX:TimetableFrame:1">
+          <vehicleJourneys>
+            <ServiceJourney version="1" id="EX:ServiceJourney:1">
+              <dayTypes><DayTypeRef ref="EX:DayType:weekdays"/></dayTypes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>"#;
+
+    /// The calendar spans the days a journey can run on — the October period
+    /// assigned —, not the condition no journey names: its days could give
+    /// no journey a day, and would make every calendar of the delivery
+    /// three million days long.
+    #[test]
+    fn a_condition_no_journey_names_does_not_widen_the_calendar() {
+        let document = crate::read(FAR_REACHING_FRAME).expect("the document reads");
+        let mut builder = IndexBuilder::new();
+        builder.add(&document, "far.xml");
+        let index = builder.finish();
+        let first = Date::from("2026-10-01").days_since_epoch().expect("a date");
+        assert_eq!(index.first_day, first);
+        assert!(
+            index
+                .calendars
+                .iter()
+                .all(|calendar| calendar.days().all(|offset| offset < 31)),
+            "every day within October"
+        );
     }
 }

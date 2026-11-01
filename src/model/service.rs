@@ -184,6 +184,10 @@ netex_element! {
 
 netex_element! {
     /// A line: a named service passengers know.
+    ///
+    /// Read for `<Line>` and for `<FlexibleLine>`, a line served on demand,
+    /// which adds `FlexibleLineType` and its booking arrangements (carried
+    /// through).
     pub struct Line {
         attributes {
             /// The `id` attribute.
@@ -236,6 +240,9 @@ netex_element! {
             pub allowed_directions: Option<AllowedDirections> = "allowedDirections",
             /// Notices about it.
             pub notice_assignments: Option<NoticeAssignments> = "noticeAssignments",
+            /// For a flexible line: what kind it is (`flexibleAreasOnly`,
+            /// `hailAndRideSections`, `fixed`, …).
+            pub flexible_line_type: Option<Box<str>> = "FlexibleLineType",
         }
     }
 }
@@ -245,6 +252,8 @@ netex_container! {
     pub struct Lines of LineItem {
         /// A line.
         Line(Line) = "Line",
+        /// A line served on demand.
+        FlexibleLine(Line) = "FlexibleLine",
     }
 }
 

@@ -15,10 +15,11 @@ use crate::calendar::{assignment_rank, period_days, PeriodDays, Properties, Span
 use crate::geometry::first_position;
 use crate::model::{
     AssignedDayType, AssignedDays, AvailabilityCondition, Date, DateTime, DayType, Frame,
-    GeneralFrameMember, JourneyPatternItem, JourneyPatternRef, LineRef, OperatingDay,
-    OperatingPeriod, OperatingPeriodItem, PointInPatternRef, Quay, QuayItem, Ref, RouteRefOrView,
-    ServiceJourney, ServiceJourneyPattern, SiteConnectionEnd, StopPlace, StopPointRef, StopUse,
-    Time, ValidBetween, ValidityConditionItem, VehicleJourney,
+    GeneralFrameMember, JourneyPatternItem, JourneyPatternRef, JourneyRef, LineRef, OperatingDay,
+    OperatingDayRef, OperatingPeriod, OperatingPeriodItem, PeriodEnd, PeriodStart,
+    PointInPatternRef, Quay, QuayItem, Ref, RouteRefOrView, ServiceJourney, ServiceJourneyPattern,
+    SiteConnectionEnd, StopPlace, StopPointRef, StopUse, Time, ValidBetween, ValidityConditionItem,
+    VehicleJourney,
 };
 use crate::stream::{self, Entity, ReadOptions, Scope, Sink, Skipped};
 use crate::xml::{Child, Cursor};
@@ -160,6 +161,8 @@ pub(crate) struct LineRecord {
     pub(crate) name: Sym,
     pub(crate) public_code: Option<Sym>,
     pub(crate) mode: Option<Sym>,
+    /// Whether it is a flexible line, served on demand.
+    pub(crate) flexible: bool,
     /// The days the version is valid on, its frames' validity inherited.
     pub(crate) validity: Validity,
     /// The days the version states itself valid on: what it governs.
@@ -173,12 +176,14 @@ impl LineRecord {
             self.name,
             self.public_code,
             self.mode,
+            self.flexible,
             self.validity,
             self.span,
         ) == (
             other.name,
             other.public_code,
             other.mode,
+            other.flexible,
             other.validity,
             other.span,
         )
@@ -243,9 +248,11 @@ pub(crate) struct PatternRecord {
 pub(crate) struct JourneyRecord {
     pub(crate) key: Key,
     pub(crate) origin: Sym,
+    /// The line it names, by `LineRef` or `FlexibleLineRef`.
     pub(crate) line: Option<Pending>,
-    /// The flexible line it names (`FlexibleLineRef`), in place of a line.
-    pub(crate) flexible_line: Option<Sym>,
+    /// Whether it names its line by `FlexibleLineRef`: a journey of a
+    /// flexible line, whether the line resolves or not.
+    pub(crate) names_flexible_line: bool,
     /// The route it names.
     pub(crate) route: Option<Pending>,
     pub(crate) pattern: Option<Pending>,
@@ -333,6 +340,10 @@ pub(crate) struct PeriodRecord {
     pub(crate) element: &'static str,
     pub(crate) from: Option<i64>,
     pub(crate) to: Option<i64>,
+    /// The operating days an operating period names as its first and last
+    /// day in place of dates (`FromOperatingDayRef`, `ToOperatingDayRef`):
+    /// their dates become `from` and `to` once every document is in.
+    pub(crate) bounds: [Option<Pending>; 2],
     pub(crate) bits: Option<Box<str>>,
     /// Whether its days are available (`IsAvailable`); an operating period's are.
     pub(crate) available: bool,
@@ -367,6 +378,18 @@ pub(crate) struct OperatingDayRecord {
     pub(crate) key: Key,
     pub(crate) origin: Sym,
     pub(crate) day: i64,
+}
+
+/// A dated journey that dates a journey rather than stating one, as the
+/// Nordic profile writes every `DatedServiceJourney`: the journey it names,
+/// the operating day it names, and whether it runs.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct DatingRecord {
+    pub(crate) journey: Pending,
+    pub(crate) day: Pending,
+    /// Whether the dated journey runs: not where it is cancelled, or
+    /// replaced by another.
+    pub(crate) runs: bool,
 }
 
 /// A service link with a geometry, as gathered: where it starts, and the two
@@ -543,6 +566,7 @@ pub struct IndexBuilder {
     pub(crate) periods: Vec<PeriodRecord>,
     pub(crate) conditions: Vec<PeriodRecord>,
     pub(crate) operating_days: Vec<OperatingDayRecord>,
+    pub(crate) datings: Vec<DatingRecord>,
     pub(crate) links: Vec<LinkRecord>,
     pub(crate) transfers: Vec<TransferRecord>,
     pub(crate) interchanges: Vec<InterchangeRecord>,
@@ -786,8 +810,12 @@ impl Visit<'_> {
                         }
                     }
                     for item in service.lines.iter().flat_map(|l| &l.items) {
-                        if let crate::model::LineItem::Line(line) = item {
-                            self.line(line, validity);
+                        match item {
+                            crate::model::LineItem::Line(line) => self.line(line, false, validity),
+                            crate::model::LineItem::FlexibleLine(line) => {
+                                self.line(line, true, validity)
+                            }
+                            crate::model::LineItem::Unprocessed(_) => {}
                         }
                     }
                     for item in service.scheduled_stop_points.iter().flat_map(|s| &s.items) {
@@ -848,9 +876,11 @@ impl Visit<'_> {
                     for item in timetable.vehicle_journeys.iter().flat_map(|v| &v.items) {
                         match item {
                             VehicleJourney::ServiceJourney(journey)
-                            | VehicleJourney::DatedServiceJourney(journey)
                             | VehicleJourney::TemplateServiceJourney(journey) => {
                                 self.journey(journey, validity)
+                            }
+                            VehicleJourney::DatedServiceJourney(journey) => {
+                                self.dated_journey(journey, validity)
                             }
                             VehicleJourney::Unprocessed(_) => {}
                         }
@@ -918,7 +948,8 @@ impl Visit<'_> {
             Entity::StopPlace(place) => self.stop_place(place, validity),
             Entity::Quay(quay) => self.quay_on_its_own(quay, validity),
             Entity::Route(route) => self.route(route, validity),
-            Entity::Line(line) => self.line(line, validity),
+            Entity::Line(line) => self.line(line, false, validity),
+            Entity::FlexibleLine(line) => self.line(line, true, validity),
             Entity::ScheduledStopPoint(point) => self.stop_point(point, validity),
             Entity::ServiceLink(link) => self.service_link(link),
             Entity::SiteConnection(connection) => self.connection(connection),
@@ -934,9 +965,10 @@ impl Visit<'_> {
             Entity::AvailabilityCondition(condition) => {
                 self.condition(condition);
             }
-            Entity::ServiceJourney(journey)
-            | Entity::DatedServiceJourney(journey)
-            | Entity::TemplateServiceJourney(journey) => self.journey(journey, validity),
+            Entity::ServiceJourney(journey) | Entity::TemplateServiceJourney(journey) => {
+                self.journey(journey, validity)
+            }
+            Entity::DatedServiceJourney(journey) => self.dated_journey(journey, validity),
             Entity::ServiceJourneyInterchange(interchange) => self.interchange(interchange),
             _ => {}
         }
@@ -950,7 +982,8 @@ impl Visit<'_> {
             GeneralFrameMember::StopPlace(place) => self.stop_place(place, validity),
             GeneralFrameMember::Quay(quay) => self.quay_on_its_own(quay, validity),
             GeneralFrameMember::Route(route) => self.route(route, validity),
-            GeneralFrameMember::Line(line) => self.line(line, validity),
+            GeneralFrameMember::Line(line) => self.line(line, false, validity),
+            GeneralFrameMember::FlexibleLine(line) => self.line(line, true, validity),
             GeneralFrameMember::ScheduledStopPoint(point) => self.stop_point(point, validity),
             GeneralFrameMember::ServiceLink(link) => self.service_link(link),
             GeneralFrameMember::SiteConnection(connection) => self.connection(connection),
@@ -970,9 +1003,11 @@ impl Visit<'_> {
                 self.condition(condition);
             }
             GeneralFrameMember::ServiceJourney(journey)
-            | GeneralFrameMember::DatedServiceJourney(journey)
             | GeneralFrameMember::TemplateServiceJourney(journey) => {
                 self.journey(journey, validity)
+            }
+            GeneralFrameMember::DatedServiceJourney(journey) => {
+                self.dated_journey(journey, validity)
             }
             GeneralFrameMember::ServiceJourneyInterchange(interchange) => {
                 self.interchange(interchange)
@@ -1195,15 +1230,15 @@ impl Visit<'_> {
     /// The line `line_ref` names, a line or a flexible line, as a reference
     /// of `referrer` to resolve.
     fn line_ref(&mut self, line_ref: Option<&LineRef>, referrer: Referrer) -> Option<Pending> {
-        match line_ref {
-            Some(LineRef::Line(r) | LineRef::FlexibleLine(r)) => {
-                Some(self.builder.pending(r, "LineRef", referrer, self.origin))
-            }
-            None => None,
-        }
+        let (r, element) = match line_ref? {
+            LineRef::Line(r) => (r, "LineRef"),
+            LineRef::FlexibleLine(r) => (r, "FlexibleLineRef"),
+        };
+        Some(self.builder.pending(r, element, referrer, self.origin))
     }
 
-    fn line(&mut self, line: &crate::model::Line, inherited: Validity) {
+    /// A line, or a flexible line: a line served on demand.
+    fn line(&mut self, line: &crate::model::Line, flexible: bool, inherited: Validity) {
         let validity = Validity::of(&line.valid_between, inherited);
         let key = self.builder.key(&line.id, &line.version);
         let record = LineRecord {
@@ -1221,6 +1256,7 @@ impl Visit<'_> {
                 .transport_mode
                 .as_ref()
                 .map(|m| self.builder.strings.intern(m.as_str())),
+            flexible,
             validity,
             span: Span::of(&line.valid_between),
         };
@@ -1344,21 +1380,8 @@ impl Visit<'_> {
         let key = self.builder.key(&journey.id, &journey.version);
         let referrer = self.referrer("ServiceJourney", &journey.id);
         let origin = self.origin;
-        let (line, flexible_line) = match &journey.line_ref {
-            Some(LineRef::Line(r)) => (
-                Some(self.builder.pending(r, "LineRef", referrer, origin)),
-                None,
-            ),
-            Some(LineRef::FlexibleLine(r)) => (
-                None,
-                Some(
-                    self.builder
-                        .strings
-                        .intern(r.r#ref.as_ref().map_or("", |id| id.as_str())),
-                ),
-            ),
-            None => (None, None),
-        };
+        let line = self.line_ref(journey.line_ref.as_ref(), referrer);
+        let names_flexible_line = matches!(journey.line_ref, Some(LineRef::FlexibleLine(_)));
         let route = journey
             .route_ref
             .as_ref()
@@ -1422,7 +1445,7 @@ impl Visit<'_> {
             key,
             origin,
             line,
-            flexible_line,
+            names_flexible_line,
             route,
             pattern,
             day_types: (day_types_start, day_types_end),
@@ -1432,6 +1455,46 @@ impl Visit<'_> {
             raw_times: (times_start, times_end),
             validity,
         });
+    }
+
+    /// A dated journey. One naming a service journey and an operating day
+    /// and stating no pattern, passing times or calls of its own — as the
+    /// Nordic profile writes every one — dates the journey it names: the
+    /// journey runs on that day, unless the dated journey is cancelled or
+    /// replaced (`ServiceAlteration`), when it gives no day. Any other is a
+    /// journey of its own.
+    fn dated_journey(&mut self, journey: &ServiceJourney, inherited: Validity) {
+        let states_its_own = journey.journey_pattern_ref.is_some()
+            || journey.passing_times.is_some()
+            || journey.calls.is_some();
+        let (
+            false,
+            Some(JourneyRef::ServiceJourney(dated)),
+            Some(OperatingDayRef::OperatingDayRef(day)),
+        ) = (
+            states_its_own,
+            &journey.journey_ref,
+            &journey.operating_day_ref,
+        )
+        else {
+            self.journey(journey, inherited);
+            return;
+        };
+        let referrer = self.referrer("DatedServiceJourney", &journey.id);
+        let origin = self.origin;
+        let dating = DatingRecord {
+            journey: self
+                .builder
+                .pending(dated, "ServiceJourneyRef", referrer, origin),
+            day: self
+                .builder
+                .pending(day, "OperatingDayRef", referrer, origin),
+            runs: !matches!(
+                journey.service_alteration.as_deref(),
+                Some("cancellation" | "replaced")
+            ),
+        };
+        self.builder.datings.push(dating);
     }
 
     /// The availability conditions a journey names, and those it states in
@@ -1559,6 +1622,7 @@ impl Visit<'_> {
             element: "AvailabilityCondition",
             from: day(&condition.from_date),
             to: day(&condition.to_date),
+            bounds: [None, None],
             bits: condition.valid_day_bits.clone(),
             available: condition.is_available.unwrap_or(true),
         });
@@ -1631,26 +1695,42 @@ impl Visit<'_> {
         }
     }
 
+    /// An operating period, its first and last day given as dates or as
+    /// operating days.
     fn period(&mut self, period: &OperatingPeriod, element: &'static str) {
         let key = self.builder.key(&period.id, &period.version);
-        let from = match &period.start {
-            Some(crate::model::PeriodStart::FromDate(date)) => {
-                date.date().and_then(|d| d.days_since_epoch())
-            }
-            _ => None,
+        let referrer = self.referrer(element, &period.id);
+        let origin = self.origin;
+        let date = |date: &DateTime| date.date().and_then(|d| d.days_since_epoch());
+        let (from, first) = match &period.start {
+            Some(PeriodStart::FromDate(start)) => (date(start), None),
+            Some(PeriodStart::FromOperatingDayRef(r)) => (
+                None,
+                Some(
+                    self.builder
+                        .pending(r, "FromOperatingDayRef", referrer, origin),
+                ),
+            ),
+            None => (None, None),
         };
-        let to = match &period.end {
-            Some(crate::model::PeriodEnd::ToDate(date)) => {
-                date.date().and_then(|d| d.days_since_epoch())
-            }
-            _ => None,
+        let (to, last) = match &period.end {
+            Some(PeriodEnd::ToDate(end)) => (date(end), None),
+            Some(PeriodEnd::ToOperatingDayRef(r)) => (
+                None,
+                Some(
+                    self.builder
+                        .pending(r, "ToOperatingDayRef", referrer, origin),
+                ),
+            ),
+            None => (None, None),
         };
         self.builder.periods.push(PeriodRecord {
             key,
-            origin: self.origin,
+            origin,
             element,
             from,
             to,
+            bounds: [first, last],
             bits: period.valid_day_bits.clone(),
             available: true,
         });
