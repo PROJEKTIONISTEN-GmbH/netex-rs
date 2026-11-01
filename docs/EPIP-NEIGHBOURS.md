@@ -49,7 +49,7 @@ Czech journeys' facilities and stop points' tariff zones.
 
 Luxembourg and Denmark read as they did: they are written as the German
 delivery is. Three things the Belgian and Czech deliveries pose are read
-since this change (`docs/INTERPRETATION.md` §§ 33–35):
+since 0.8.0 (`docs/INTERPRETATION.md` §§ 33–35):
 
 - **Bounds of a period written in UTC.** The Belgian operators write the
   first and last day of every operating period as the instant in UTC of the

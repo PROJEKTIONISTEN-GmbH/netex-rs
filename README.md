@@ -12,8 +12,8 @@ document up to a whole national delivery.
 Official timetable data in Europe is published as NeTEx: across the EU, the
 national access points are to provide timetables in it (Delegated Regulation
 (EU) 2017/1926). Germany's complete national timetable comes from DELFI as
-NeTEx, and so do the timetables of Austria, Switzerland, South Tyrol and
-France.
+NeTEx, and so do the timetables of Austria, Switzerland, South Tyrol, France,
+Norway, Luxembourg, Denmark, Belgium, Czechia and the Netherlands.
 Building on that data means getting past three things:
 
 - **Size.** A national delivery is tens of thousands of XML files — Germany's

@@ -692,7 +692,7 @@ its windows and booking, into the model of a planner of on-demand services,
 not as fixed journeys: read as fixed journeys, an on-demand service would be
 shown as a bus at fixed times. Effort **M**.
 
-**Built (unreleased, after 0.7.2)**, as far as § 29: a flexible line is a line
+**Built in 0.8.0**, as far as § 29: a flexible line is a line
 of the index; a journey of one is left out and counted, whether it names the
 line or reaches it through its route or pattern.
 
@@ -798,7 +798,7 @@ of them.
 
 **Proposal: adopt.** Effort **S**.
 
-**Built (unreleased, after 0.7.2).** `GeneralFrame` is typed, its `members` hold
+**Built in 0.8.0.** `GeneralFrame` is typed, its `members` hold
 every kind of entity the specific frames hold that the model types, and a quay
 standing on its own (§ 24); the lean stream reads them in document order
 (`FrameKind::General`), and the index takes each as it takes the same entity in a
@@ -828,7 +828,7 @@ through, and a quay outside a stop place was not read.
 
 **Proposal: adopt** a quay's stop place from both references. Effort **S**.
 
-**Built (unreleased, after 0.7.2).** A quay standing on its own is an entity of
+**Built in 0.8.0.** A quay standing on its own is an entity of
 its own (`stream::Kind::Quay`), a quay of the stop place naming it among its
 quays, else of the one its `SiteRef` names; each reference resolves as any other,
 a `QuayRef` to nothing is a reference to nothing. A quay two stop places claim
@@ -859,7 +859,7 @@ journey with none left was left out with it.
 
 **Proposal: adopt** the reading by position. Effort **S**.
 
-**Built (unreleased, after 0.7.2).** A passing time naming no point is at the
+**Built in 0.8.0.** A passing time naming no point is at the
 point of its position, in the order the pattern states its points; one naming a
 point is read as before. Times other in number than the points are read as far
 as both go, and are a finding (`Concern::PassingTimesOtherThanPoints`; none in
@@ -903,7 +903,7 @@ their assignments (§ 3).
 
 **Proposal: adopt**, as a rule every reader of the crate applies. Effort **S**.
 
-**Built (unreleased, after 0.7.2)** (`calendar`, the index). Properties are read
+**Built in 0.8.0** (`calendar`, the index). Properties are read
 where they name days of the week and nothing else: an assignment to a period
 without day bits gives the period's days on those days of the week; a day type
 with a validity of a first and a last day, none of whose assignments gives it a
@@ -939,7 +939,7 @@ without a duration out without a word.
 **Proposal: count it**; turning a distance into a time needs a walking speed,
 which is the reader's choice, not the delivery's. Effort **S**.
 
-**Built (unreleased, after 0.7.2).** A walk without a duration is a finding
+**Built in 0.8.0.** A walk without a duration is a finding
 (`Concern::WalkWithoutDuration`), and still no transfer of the index.
 
 ## 28. Journeys dated by dated journeys
@@ -970,7 +970,7 @@ without a day.
 
 **Proposal: adopt.** Effort **S**.
 
-**Built (unreleased, after 0.7.2)** (the index). A dated journey naming a
+**Built in 0.8.0** (the index). A dated journey naming a
 service journey and an operating day and stating no pattern, passing times
 or calls of its own dates the journey it names: the journey runs on the
 operating day, beside the days of its day types. A cancelled or replaced
@@ -997,7 +997,7 @@ only where they stated no fixed times (1 191), kept where they did (41).
 
 **Proposal: adopt.** Effort **S**.
 
-**Built (unreleased, after 0.7.2).** A flexible line is a line of the index,
+**Built in 0.8.0.** A flexible line is a line of the index,
 its `FlexibleLineType` typed and its booking carried through; a reference to
 it resolves as any reference to a line. A journey whose line is flexible — the
 one it names, its route's or its pattern's — is left out and counted
@@ -1020,7 +1020,7 @@ ends on one (`netex_framework/netex_reusableComponents/netex_serviceCalendar_ver
 
 **Proposal: adopt.** Effort **S**.
 
-**Built (unreleased, after 0.7.2).** A period stated by operating days takes
+**Built in 0.8.0.** A period stated by operating days takes
 their dates, each reference resolved in the period's document first; a
 reference to nothing is a finding, and leaves the period without that day.
 
@@ -1038,7 +1038,7 @@ asking for the days of each journey took five minutes.
 
 **Proposal: better.** Effort **S**.
 
-**Built (unreleased, after 0.7.2).** The calendar spans the days that can give
+**Built in 0.8.0.** The calendar spans the days that can give
 a journey a day: periods an assignment names, conditions a journey names,
 operating days, assigned dates and the validities of day types their days of
 the week decide. A period or condition nothing names gives no journey a day
@@ -1060,7 +1060,7 @@ archive or directory.
 
 **Proposal: adopt.** Effort **S**.
 
-**Built (unreleased, after 0.7.2)** (`dataset::Source::with`, `--with` of the
+**Built in 0.8.0** (`dataset::Source::with`, `--with` of the
 `netex` command). Several sources are read as one: a delivery with its
 register, the documents of each source after the first named under its file
 or directory name, so that no two documents share a name. The register's
@@ -1087,7 +1087,7 @@ day an instant names; the deliveries name no time zone
 
 **Proposal: adopt.** Effort **S**.
 
-**Built (unreleased, after 0.7.2)** (`calendar::bound_day`). A bound written
+**Built in 0.8.0** (`calendar::bound_day`). A bound written
 with a zone (`Z`, `+01:00`) at noon or later names the next day: the local
 midnight it is lies within twelve hours of UTC — every European zone — and
 is nearest the UTC midnight of its own day. A bound without a zone, or
@@ -1119,7 +1119,7 @@ first was kept.
 
 **Proposal: adopt.** Effort **S**.
 
-**Built (unreleased, after 0.7.2).** A stop place, quay or stop point is
+**Built in 0.8.0.** A stop place, quay or stop point is
 gathered by identifier, version and name: definitions naming it alike are
 one stop, as before; a definition naming it otherwise is a stop of its own
 (`Concern::LocalIdentifier`, naming the first document stating that name
@@ -1149,7 +1149,7 @@ the delivery means, and nothing was said.
 
 **Proposal: keep, and count.** Effort **S**.
 
-**Built (unreleased, after 0.7.2).** The stop point is at the stop the
+**Built in 0.8.0.** The stop point is at the stop the
 reference names, as before; a `StopPlaceRef` naming a quay, or a `QuayRef`
 naming a stop place, is a finding that it resolved to another class
 (`Concern::ResolvedAsOtherClass`, § 1), as a `QuayRef` naming a stop place
@@ -1182,7 +1182,7 @@ timing points in a pattern, and no frame's `contentValidityConditions`.
 
 **Proposal: adopt.** Effort **M**.
 
-**Built (unreleased, after 0.7.2).** The model types them (`TimeDemandType`,
+**Built in 0.8.0.** The model types them (`TimeDemandType`,
 `JourneyRunTime`, `JourneyWaitTime`, `TimingPointInJourneyPattern`, every
 frame's `content_validity_conditions`), the lean stream yields time demand
 types (`Kind::TimeDemandType`, in `Selection::routing`) and the conditions of
@@ -1212,7 +1212,7 @@ have a fraction.
 
 **Proposal: adopt.** Effort **S**.
 
-**Built (unreleased, after 0.7.2)** (`Duration::milliseconds`). The times of
+**Built in 0.8.0** (`Duration::milliseconds`). The times of
 a journey add up to the millisecond, and each passing time is rounded to the
 nearest second, a half up. GVB's 420 798 trip-days of the comparison window
 are, to the second, GTFS-NL's in 92 %, and within one second in all others:
@@ -1237,7 +1237,7 @@ neither names the pass.
 
 **Proposal: adopt.** Effort **S**.
 
-**Built (unreleased, after 0.7.2).** The n-th pass of a link takes the n-th
+**Built in 0.8.0.** The n-th pass of a link takes the n-th
 run time stated for it, else the last stated: a type stating one run time
 for a link a pattern runs twice means it for both. The waits stated for a
 point are those of its last visits, in order: one wait for a point visited
@@ -1268,7 +1268,7 @@ available.
 
 **Proposal: adopt.** Effort **S**.
 
-**Built (unreleased, after 0.7.2).** A journey naming conditions none of
+**Built in 0.8.0.** A journey naming conditions none of
 which is available runs on no day, whatever its day types say
 (`Concern::JourneyWithoutDays`). Where it names one available, nothing
 changed. Every delivery of the other profiles the crate is checked on gives
@@ -1293,7 +1293,7 @@ and the model did not type `privateCodes`.
 
 **Proposal: adopt.** Effort **S**.
 
-**Built (unreleased, after 0.7.2).** The model types `privateCodes` beside
+**Built in 0.8.0.** The model types `privateCodes` beside
 `keyList` (`PrivateCodes`), but on a passing time and a stop point in a pattern,
 where it stays untyped. A stop place's or quay's global
 identifier (`Stop::dhid`, `Index::stop_by_dhid`) is its `GlobalID`, else its
@@ -1327,21 +1327,21 @@ as by `GlobalID` and `SLOID`.
 | 20 | On-demand services | better: flexible lines into a planner of on-demand services | M | left out, counted |
 | 21 | Who refers to an object | adopt the reverse adjacency, only when asked for | S | ✓ (0.5.0) |
 | 22 | A line named through a route | adopt: the line stated nearest the journey first | S | ✓ (0.6.0) |
-| 23 | Frames that hold everything | adopt: general frames typed, read as the specific frames | S | ✓ (unreleased) |
-| 24 | Quays beside their stop place | adopt: the stop place naming the quay, else the quay's `SiteRef` | S | ✓ (unreleased) |
-| 25 | Passing times naming no point | adopt: by position in the pattern | S | ✓ (unreleased) |
-| 26 | A day type's properties | adopt: days of the week within the validity where no assignment gives a day of its own; plain periods by days of the week | S | ✓ (unreleased) |
-| 27 | Walks stating a distance alone | count them; no walking speed chosen | S | counted (unreleased) |
-| 28 | Journeys dated by dated journeys | adopt: a dated journey stating no journey dates the one it names; cancelled or replaced, no day | S | ✓ (unreleased) |
-| 29 | A flexible line named by a route | adopt: a flexible line is a line; its journeys, however they reach it, left out | S | ✓ (unreleased) |
-| 30 | Periods stated by operating days | adopt: their dates | S | ✓ (unreleased) |
-| 31 | A condition no journey names | better: the calendar spans what can give a day | S | ✓ (unreleased) |
-| 32 | Stops a delivery does not define | adopt: several sources read as one | S | ✓ (unreleased) |
-| 33 | Bounds of a period written as instants | adopt: from noon on, the next day | S | ✓ (unreleased) |
-| 34 | Stop identifiers each document numbers anew | adopt: a stop per name, found in its own document | S | ✓ (unreleased) |
-| 35 | An assignment naming a quay by `StopPlaceRef` | keep, and count | S | counted (unreleased) |
-| 36 | Passing times from a departure and a time demand type | adopt: from the departure along the timing links, run and wait times of the type | M | ✓ (unreleased) |
-| 37 | Run times to a tenth of a second | adopt: add up to the millisecond, round each time to the second | S | ✓ (unreleased) |
-| 38 | A link or a point passed twice | adopt: each pass its own run time in order; the waits of a point its last visits' | S | ✓ (unreleased) |
-| 39 | A journey naming only conditions not available | adopt: no day | S | ✓ (unreleased) |
-| 40 | A stop known by the register's code | adopt: the code a global identifier where no `GlobalID` | S | ✓ (unreleased) |
+| 23 | Frames that hold everything | adopt: general frames typed, read as the specific frames | S | ✓ (0.8.0) |
+| 24 | Quays beside their stop place | adopt: the stop place naming the quay, else the quay's `SiteRef` | S | ✓ (0.8.0) |
+| 25 | Passing times naming no point | adopt: by position in the pattern | S | ✓ (0.8.0) |
+| 26 | A day type's properties | adopt: days of the week within the validity where no assignment gives a day of its own; plain periods by days of the week | S | ✓ (0.8.0) |
+| 27 | Walks stating a distance alone | count them; no walking speed chosen | S | counted (0.8.0) |
+| 28 | Journeys dated by dated journeys | adopt: a dated journey stating no journey dates the one it names; cancelled or replaced, no day | S | ✓ (0.8.0) |
+| 29 | A flexible line named by a route | adopt: a flexible line is a line; its journeys, however they reach it, left out | S | ✓ (0.8.0) |
+| 30 | Periods stated by operating days | adopt: their dates | S | ✓ (0.8.0) |
+| 31 | A condition no journey names | better: the calendar spans what can give a day | S | ✓ (0.8.0) |
+| 32 | Stops a delivery does not define | adopt: several sources read as one | S | ✓ (0.8.0) |
+| 33 | Bounds of a period written as instants | adopt: from noon on, the next day | S | ✓ (0.8.0) |
+| 34 | Stop identifiers each document numbers anew | adopt: a stop per name, found in its own document | S | ✓ (0.8.0) |
+| 35 | An assignment naming a quay by `StopPlaceRef` | keep, and count | S | counted (0.8.0) |
+| 36 | Passing times from a departure and a time demand type | adopt: from the departure along the timing links, run and wait times of the type | M | ✓ (0.8.0) |
+| 37 | Run times to a tenth of a second | adopt: add up to the millisecond, round each time to the second | S | ✓ (0.8.0) |
+| 38 | A link or a point passed twice | adopt: each pass its own run time in order; the waits of a point its last visits' | S | ✓ (0.8.0) |
+| 39 | A journey naming only conditions not available | adopt: no day | S | ✓ (0.8.0) |
+| 40 | A stop known by the register's code | adopt: the code a global identifier where no `GlobalID` | S | ✓ (0.8.0) |

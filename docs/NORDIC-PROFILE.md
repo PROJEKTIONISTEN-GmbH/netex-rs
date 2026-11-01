@@ -73,7 +73,7 @@ change (§ 30); before, it gave no day.
 and nothing else. 3 359 are cancelled and 6 681 replaced
 (`ServiceAlteration`); the replacing ones name the dated journey they replace
 by a `DatedServiceJourneyRef` (17 613), where NeTEx 2.0 has `replacedJourneys`.
-Since this change a dated journey stating no journey of its own dates the one
+Since 0.8.0 a dated journey stating no journey of its own dates the one
 it names, a cancelled or replaced one giving no day (§ 28). 106 259 journeys
 run on dated journeys alone; 1 989 of them on none, every dated journey naming
 them cancelled or replaced.
@@ -95,7 +95,7 @@ through.
 
 **A condition to the year 9999.** Flytoget's documents (`FLT`) state the
 validity of their frames as an availability condition from 2026-10-28 to
-9999-12-31. No journey names it; before this change every calendar of the
+9999-12-31. No journey names it; before 0.8.0 every calendar of the
 delivery spanned the first to the last day of any condition, 2.9 million days
 (§ 31).
 

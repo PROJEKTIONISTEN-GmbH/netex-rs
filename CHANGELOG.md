@@ -1,6 +1,33 @@
 # Changelog
 
-## Unreleased
+## 0.8.0 — 2026-11-01
+
+Four profiles more, each read in full on its publishers' deliveries, several
+of them checked trip for trip against GTFS feeds published from the same data:
+NeTEx France; the Nordic NeTEx Profile with the stop register it names; the
+European Passenger Information Profile as Luxembourg, Denmark, Belgium and
+Czechia publish it; and the Dutch profile with the national stop register (the
+README's table of profiles, a page under `docs/` for each).
+
+Not compatible with 0.7. Four of the model's exhaustive enumerations have a
+variant more (`Frame`, `QuayItem`, `LineItem`, `PointInSequenceItem`); its
+entities and frames have fields more (`private_codes` on most, every frame's
+`content_validity_conditions`, the service and timetable frames'
+`time_demand_types`, `Line::flexible_line_type`,
+`ServiceJourney::dated_service_journey_refs`); `stream::Kind` places its new
+kinds among the others, so its order changed. The index gives journeys of
+earlier deliveries other days where it reads more of them: a day type's days of
+the week within its validity, a period's bounds written as instants in UTC,
+journeys dated by dated journeys.
+
+Two readings are the crate's own choice where the standard leaves it open,
+each with its reasons: when a day type's days of the week decide its days and
+when its assignments do (`docs/INTERPRETATION.md` § 26); and that netex2gtfs
+gives a French delivery naming no time zone none of its profile, France having
+more than one — the caller names it (`docs/FR-PROFILE.md`).
+
+netex2gtfs 0.2.0 and netex-cli 0.2.0 are published alongside, on netex-rs
+0.8.0.
 
 The French profile, NeTEx France (`docs/FR-PROFILE.md`): deliveries that write
 everything in general frames, define quays beside their stop place, state
@@ -100,8 +127,9 @@ the German delivery names Dutch stops by (`docs/INTERPRETATION.md`
 §§ 36–40). Not compatible with 0.7 either: `PointInSequenceItem` and
 `GeneralFrameMember` have a variant more, and the entities a field more each.
 
-- **model**: `PrivateCodes`, NeTEx 2.0's `privateCodes`, typed wherever
-  `keyList` is (`private_codes`); every frame's `contentValidityConditions`
+- **model**: `PrivateCodes`, NeTEx 2.0's `privateCodes`, typed beside
+  `keyList` (`private_codes`) but on a passing time and a stop point in a
+  pattern, where it stays among the untyped children; every frame's `contentValidityConditions`
   (`content_validity_conditions`); `TimeDemandType` with `JourneyRunTime` and
   `JourneyWaitTime`, in service and timetable frames (`time_demand_types`) and
   among a general frame's members; `TimingPointInJourneyPattern` among a
@@ -122,30 +150,32 @@ the German delivery names Dutch stops by (`docs/INTERPRETATION.md`
 - Own example `tests/fixtures/own/nl/` with its stop register
   `tests/fixtures/own/nl-register/`.
 
-### netex2gtfs
+### netex2gtfs 0.2.0
 
-A delivery read with the stop register it names converts with its stops
-(`Source::with`); journeys dated by dated journeys run on their days. Flexible
-lines, typed now, are reported as not carried, as they were untyped.
+Built on netex-rs 0.8.0, whose types its interface names.
 
 A quay defined beside its stop place gives its platform code, level and
 accessibility to its stop; train numbers are read wherever they stand, among a
 general frame's members as well. A French delivery naming no time zone takes
 none from its profile: France has more than one.
 
-### netex-cli
+A delivery read with the stop register it names converts with its stops
+(`Source::with`); journeys dated by dated journeys run on their days. Flexible
+lines, typed now, are reported as not carried, as they were untyped.
+
+### netex-cli 0.2.0
+
+Built on netex-rs 0.8.0 and netex2gtfs 0.2.0.
+
+`netex validate` reports the four new findings of the French profile
+(`quay-of-two-stop-places`, `passing-times-other-than-points`,
+`properties-of-day-unread`, `walk-without-duration`), the class
+`local-identifier`, with the journeys calling at such stops, and the class
+`link-without-run-time`; its JSON schema names all six.
 
 `netex validate`, `stats`, `convert` and `extract` read documents along with
-the source: `--with PATH`, a stop register published apart, as Norway's.
-`netex validate` reports the class `local-identifier`, with the journeys
-calling at such stops.
-`netex validate` reports the class `link-without-run-time`, in its JSON
-schema too. With global stop identifiers, `netex convert` writes a Dutch
-stop's register code.
-
-`netex validate` reports the four new findings (`quay-of-two-stop-places`,
-`passing-times-other-than-points`, `properties-of-day-unread`,
-`walk-without-duration`), in its JSON schema too.
+the source: `--with PATH`, a stop register published apart, as Norway's. With
+global stop identifiers, `netex convert` writes a Dutch stop's register code.
 
 ## 0.7.2 — 2026-10-29
 

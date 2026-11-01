@@ -34,7 +34,7 @@ under the ODbL; it was read to count, and only counts of it are given here.
 
 **Frames.** Fluo, Naolib and Normandy write everything in general frames: 103 in
 Fluo's 53 documents, 198 in Naolib's, 1 276 in Normandy's. The crate types a
-general frame since this change (`model::GeneralFrame`): its `members` hold every
+general frame since 0.8.0 (`model::GeneralFrame`): its `members` hold every
 kind of entity the specific frames hold, read in document order, and the lean
 stream yields them as it yields the same entities of a specific frame
 (`stream::FrameKind::General`). TBM writes the specific frames and types each by
@@ -56,7 +56,7 @@ UIC station code.
 place, which names it among its quays by a `QuayRef`; the quay names the stop
 place back by its `SiteRef`. 1 035 quays in Fluo, 2 939 in Naolib, 12 604 in
 Normandy, each named by exactly one stop place, its `SiteRef` naming the same.
-Since this change a quay so defined is a quay of the stop place naming it, else
+Since 0.8.0 a quay so defined is a quay of the stop place naming it, else
 of the one its `SiteRef` names (§ 24); TBM nests its quays in their stop places;
 SNCF states stop places without quays and assigns each of its 3 425 stop points
 to one.
@@ -69,7 +69,7 @@ carry a `Presentation` and, in Fluo, Naolib and Normandy, an
 **Journeys and passing times.** Fluo, Naolib and Normandy write the passing
 times of a journey without the point of the pattern each is at, in the order of
 the points: 1 771, 124 908 and 85 356 journeys, each with as many passing times
-as its pattern has points. NeTEx 1.x allows it, 2.0 does not. Since this change
+as its pattern has points. NeTEx 1.x allows it, 2.0 does not. Since 0.8.0
 a passing time naming no point is at the point of its position (§ 25). TBM and
 SNCF name the point.
 
@@ -86,7 +86,7 @@ SNCF name the point.
 
 SNCF gives each of its 8 449 day types one UIC operating period with a bit per
 day, named by an `OperatingPeriodRef` (`Concern::ResolvedAsOtherClass`, 8 449
-times). Since this change the index reads days of the week where they decide
+times). Since 0.8.0 the index reads days of the week where they decide
 the days: a plain period gives the days of the week its day type names, and a
 day type with a validity none of whose assignments gives it a day of its own
 runs on its validity's days of the week, the assignments its exceptions. A day
