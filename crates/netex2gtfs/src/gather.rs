@@ -766,8 +766,10 @@ impl<'i> Sink<'i> for Gather {
             | Entity::TemplateServiceJourney(journey) => self.journey(journey),
             Entity::ServiceLink(link) => self.link(link),
             // Read for the index or for the feed's furniture, but not carried:
-            // GTFS has no notices, and its transfers name stops and trips,
-            // not the lines and stop areas a rule names.
+            // GTFS has no notices, its transfers name stops and trips, not
+            // the lines and stop areas a rule names, and the journeys of a
+            // line served on demand are left out of the index.
+            Entity::FlexibleLine(_) => self.not_carried("FlexibleLine"),
             Entity::Notice(_) => self.not_carried("Notice"),
             Entity::NoticeAssignment(_) => self.not_carried("NoticeAssignment"),
             Entity::InterchangeRule(_) => self.not_carried("InterchangeRule"),
