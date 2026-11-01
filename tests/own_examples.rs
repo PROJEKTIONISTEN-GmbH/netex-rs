@@ -2,8 +2,10 @@
 //! with most: a line offer of the European Passenger Information Profile
 //! (EPIP), a line offer of the Italian profile of South Tyrol (IT-ITH1), two
 //! line documents of an Austrian-style delivery, the shared and the
-//! timetable document of a Swiss-style one, and the four documents of a
-//! delivery in the French profile (NeTEx France). They are written for these
+//! timetable document of a Swiss-style one, the four documents of a
+//! delivery in the French profile (NeTEx France), and a delivery in the
+//! Nordic NeTEx Profile with the stop register it names, published apart.
+//! They are written for these
 //! tests and licensed as the crate is (`tests/fixtures/own/README.md`), so that
 //! the cases each profile poses are pinned without data under a licence of its
 //! own: identifiers that are each document's own, lines in versions, journeys
@@ -11,7 +13,7 @@
 //! languages, patterns naming their line only through their route, and
 //! everything in general frames — quays defined beside their stop place,
 //! passing times naming no point, day types given their days by a validity and
-//! days of the week.
+//! days of the week —, and journeys dated by the dated journeys naming them.
 //!
 //! Every example is read four ways — the full model one document after the
 //! other, in the reverse order, the lean stream one builder per document, and
@@ -104,13 +106,17 @@ const fn at(hours: u32, minutes: u32) -> u32 {
     hours * 3600 + minutes * 60
 }
 
+/// Every example reads and writes back as it is written, and writes for
+/// either release without a loss — but the Nordic train's dated journeys for
+/// NeTEx 1.x, where a dated journey names no journey: those references are
+/// left out, and said to be.
 #[test]
 fn every_own_example_reads_and_writes_back_element_for_element() {
     let fixtures = support::own_fixtures("");
     assert_eq!(
         fixtures.len(),
-        10,
-        "EPIP 1, Italy 1, Austria 2, Switzerland 2, France 4"
+        15,
+        "EPIP 1, Italy 1, Austria 2, Switzerland 2, France 4, Nordic 4 and its stop register"
     );
     for fixture in &fixtures {
         let document = netex_rs::read(&fixture.xml)
@@ -120,16 +126,14 @@ fn every_own_example_reads_and_writes_back_element_for_element() {
         }
         for release in [Release::V1, Release::V2] {
             let written = document.write_for(release);
-            assert!(
-                written.report.is_lossless(),
-                "{} written for {release:?}: {:?}",
-                fixture.name,
-                written
-                    .report
-                    .losses()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>()
-            );
+            let losses: Vec<String> = written.report.losses().map(ToString::to_string).collect();
+            let expected: &[&str] = match (fixture.name.as_str(), release) {
+                ("nordic/EX_EX-Line-R1_R1_Eksempelby-Fjellstua.xml", Release::V1) => &[
+                    "<ServiceJourneyRef> under <DatedServiceJourney> is not in NeTEx 1.x: left out 6 times, first at line 115",
+                ],
+                _ => &[],
+            };
+            assert_eq!(losses, expected, "{} written for {release:?}", fixture.name);
         }
     }
 }
@@ -142,7 +146,12 @@ fn every_own_example_reads_and_writes_back_element_for_element() {
 /// French line document states passing times as NeTEx 1.x allows them, the
 /// release its profile is written for — without the point they are at, and
 /// without an identifier —, which NeTEx 2.0 requires: against 2.0 its passing
-/// times are its only complaints.
+/// times are its only complaints. The Nordic train's dated journeys are
+/// written for the schemas the Nordic profile is published with: they name
+/// their journey, which NeTEx 1.x does not let a dated journey do, and the
+/// replacing one names the one it replaces as a plain reference, where NeTEx
+/// 2.0 asks for `replacedJourneys`. Against 1.x the line file's complaints
+/// are about these two references, against 2.0 about the second alone.
 #[test]
 fn every_own_example_is_valid_for_both_releases_but_for_references_into_another_document() {
     let shared = documents("ch")
@@ -188,6 +197,26 @@ fn every_own_example_is_valid_for_both_releases_but_for_references_into_another_
                         .iter()
                         .any(|element| line.contains(&format!("netex}}{element}'"))),
                     "not about a passing time: {line}"
+                );
+            }
+        }
+        let (elements, release_name): (&[&str], _) = match release {
+            Release::V1 => (&["ServiceJourneyRef", "DatedServiceJourneyRef"], "1.x"),
+            Release::V2 => (&["DatedServiceJourneyRef"], "2.0"),
+        };
+        for name in [
+            "nordic/EX_EX-Line-R1_R1_Eksempelby-Fjellstua.xml".to_owned(),
+            format!("nordic/EX_EX-Line-R1_R1_Eksempelby-Fjellstua.xml written for {release:?}"),
+        ] {
+            let complaint = complaints
+                .remove(&name)
+                .unwrap_or_else(|| panic!("{name} is not valid for NeTEx {release_name}"));
+            for line in complaint.lines().filter(|l| *l != "fails to validate") {
+                assert!(
+                    elements
+                        .iter()
+                        .any(|element| line.contains(&format!("netex}}{element}'"))),
+                    "not about the dated journeys' references: {line}"
                 );
             }
         }
@@ -805,6 +834,266 @@ fn the_french_delivery_carries_through_only_its_kinds_of_place_and_its_network()
             "stop.xml: StopPlace/placeTypes",
             "stop.xml: StopPlace/placeTypes",
             "stop.xml: StopPlace/placeTypes",
+        ]
+    );
+}
+
+/// The documents of the Nordic delivery, and those of the stop register it
+/// names, published apart, under the register's directory as a source read
+/// along with the delivery names them.
+fn nordic_documents() -> Vec<(String, String)> {
+    let mut documents = documents("nordic");
+    documents.extend(
+        support::own_fixtures("nordic-stops")
+            .into_iter()
+            .map(|fixture| (format!("nordic-stops/{}", fixture.name), fixture.xml)),
+    );
+    documents
+}
+
+/// The index of the Nordic delivery with its stop register, after checking
+/// that every way of reading them gives the same — the dataset reader over
+/// the delivery's directory with the register's read along.
+fn nordic_index() -> Index {
+    let documents = nordic_documents();
+    let own = support::fixtures_dir().join("own");
+    let source = Source::open(own.join("nordic"))
+        .and_then(|delivery| delivery.with(Source::open(own.join("nordic-stops"))?))
+        .expect("the delivery and its register open");
+    let streamed = Index::build(&source, &ReadOptions::new(Selection::routing()))
+        .expect("the delivery indexes");
+    let full = serially(&documents);
+    let expected = render(&full);
+    assert_same(
+        &expected,
+        &render(&serially(&reversed(&documents))),
+        "in reverse order",
+    );
+    assert_same(&expected, &render(&merged(&documents)), "lean, merged");
+    assert_same(&expected, &render(&streamed), "from the directories");
+    full
+}
+
+/// The Nordic line files define no site: their stop points are assigned to
+/// quays of the stop register, which the delivery does not hold. Read with
+/// the register, every assignment finds its quay; read alone, none does.
+#[test]
+fn the_nordic_stop_points_are_at_the_quays_of_the_register_published_apart() {
+    let index = nordic_index();
+    assert_eq!(index.stop_count(), 11, "five stop places, six quays");
+    let quay_of = |point: &str| {
+        let point = index.stop_point_by_id(point).expect("the stop point");
+        index.stop_of_stop_point(point).map(|stop| {
+            let quay = index.stop(stop);
+            (quay.id, quay.parent.map(|parent| index.stop(parent).id))
+        })
+    };
+    assert_eq!(
+        quay_of("EX:ScheduledStopPoint:torget"),
+        Some(("NSR:Quay:9101", Some("NSR:StopPlace:910")))
+    );
+    assert_eq!(
+        quay_of("EX:ScheduledStopPoint:stasjon-1"),
+        Some(("NSR:Quay:9011", Some("NSR:StopPlace:901")))
+    );
+    assert!(index.unresolved().is_empty(), "{:?}", index.unresolved());
+
+    let alone = serially(&documents("nordic"));
+    let mut unresolved: Vec<String> = alone
+        .unresolved()
+        .iter()
+        .map(|u| format!("<{}> {}", u.element, u.id))
+        .collect();
+    unresolved.sort_unstable();
+    assert_eq!(
+        unresolved,
+        [
+            "<QuayRef> NSR:Quay:9011",
+            "<QuayRef> NSR:Quay:9021",
+            "<QuayRef> NSR:Quay:9101",
+            "<QuayRef> NSR:Quay:9201",
+            "<QuayRef> NSR:Quay:9202",
+        ]
+    );
+}
+
+/// The bus runs on the day types of the shared data: on the weekdays of the
+/// October period but the one not available, and the later journey on the
+/// Saturdays of a period stated by its first and last operating day as well.
+#[test]
+fn a_nordic_bus_runs_on_the_day_types_of_the_shared_data() {
+    let index = nordic_index();
+    let weekdays = [
+        1, 2, 5, 6, 7, 8, 9, 12, 13, 15, 16, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30,
+    ];
+    assert_eq!(october(&index, "EX:ServiceJourney:1-0750"), weekdays);
+    let mut with_market: Vec<i64> = weekdays.to_vec();
+    with_market.extend([17, 24]);
+    with_market.sort_unstable();
+    assert_eq!(october(&index, "EX:ServiceJourney:1-1000"), with_market);
+    assert_eq!(
+        calls(&index, "EX:ServiceJourney:1-0750"),
+        ["Torget", "Eksempelby bussterminal"]
+    );
+}
+
+/// The train names no day type: it runs on the days its dated journeys give
+/// it, but the day its dated journey is cancelled and the day it is replaced;
+/// the bus replacing it runs on that day. A dated journey is no journey of
+/// its own.
+#[test]
+fn a_nordic_train_runs_on_the_days_its_dated_journeys_give_it() {
+    let index = nordic_index();
+    assert_eq!(october(&index, "EX:ServiceJourney:R1-0812"), [12, 13, 16]);
+    assert_eq!(october(&index, "EX:ServiceJourney:R1-0812-bus"), [15]);
+    assert_eq!(
+        calls(&index, "EX:ServiceJourney:R1-0812"),
+        ["Eksempelby stasjon", "Fjellstua stasjon"]
+    );
+    assert_eq!(
+        times(&index, "EX:ServiceJourney:R1-0812"),
+        [(None, Some(at(8, 12))), (Some(at(8, 58)), None)]
+    );
+    assert_eq!(
+        index.journey_count(),
+        4,
+        "two buses, the train and its replacement"
+    );
+    assert_eq!(
+        index.journey_by_id("EX:DatedServiceJourney:R1-0812-2026-10-12"),
+        None
+    );
+    let findings: Vec<String> = index.findings().map(|f| f.to_string()).collect();
+    assert_eq!(
+        findings,
+        ["journey of a flexible line, not runs at fixed times: left out: ServiceJourney EX:ServiceJourney:hent in EX_FlexibleLine-hent_Hent-meg-Eksempelby.xml (EX:FlexibleLine:hent)"],
+        "the flexible line's journey alone"
+    );
+}
+
+/// The interchange of the train's line file names the bus of the other line
+/// file it waits for.
+#[test]
+fn a_nordic_interchange_names_a_journey_of_another_line_file() {
+    let index = nordic_index();
+    let terminal = index
+        .stop_point_by_id("EX:ScheduledStopPoint:terminal")
+        .expect("the stop point");
+    let interchanges: Vec<_> = index
+        .interchanges_at(terminal)
+        .iter()
+        .map(|interchange| {
+            (
+                index.journey(interchange.from_journey).id,
+                index.journey(interchange.to_journey).id,
+                index.stop_point(interchange.to_stop_point).id,
+                interchange.guaranteed,
+                interchange.maximum_wait_seconds,
+            )
+        })
+        .collect();
+    assert_eq!(
+        interchanges,
+        [(
+            "EX:ServiceJourney:1-0750",
+            "EX:ServiceJourney:R1-0812",
+            "EX:ScheduledStopPoint:stasjon-1",
+            true,
+            Some(180)
+        )]
+    );
+}
+
+/// The flexible line is a line of the index, which the route of its file
+/// names; its journey, which names only its pattern, is left out.
+#[test]
+fn a_nordic_flexible_line_is_a_line_whose_journey_is_left_out() {
+    let index = nordic_index();
+    let line = index
+        .line_by_id("EX:FlexibleLine:hent")
+        .expect("the flexible line");
+    assert_eq!(index.line(line).public_code, Some("Hent meg"));
+    assert!(index.journeys_of_line(line).is_empty());
+    assert_eq!(index.journey_by_id("EX:ServiceJourney:hent"), None);
+    assert_eq!(index.finding_count(Concern::FlexibleLineJourney), 1);
+    assert!(index.unresolved().is_empty(), "{:?}", index.unresolved());
+}
+
+/// The lean stream yields the dated journeys as written: the journey each
+/// names, its operating day, how it differs from the plan, and the one the
+/// replacing journey replaces.
+#[test]
+fn the_lean_stream_yields_the_nordic_dated_journeys_as_written() {
+    let (_, train) = documents("nordic")
+        .into_iter()
+        .find(|(name, _)| name.starts_with("EX_EX-Line-R1"))
+        .expect("the train's line file");
+    let options = ReadOptions::new(Selection::none().with(Kind::DatedServiceJourney));
+    let mut dated = Vec::new();
+    netex_rs::stream::read(&train, &options, |entity, _| {
+        let Entity::DatedServiceJourney(journey) = entity else {
+            panic!("only dated journeys are selected");
+        };
+        let id =
+            |r: &netex_rs::model::Ref| r.r#ref.as_ref().map_or("-", |id| id.as_str()).to_owned();
+        let journey_ref = match &journey.journey_ref {
+            Some(netex_rs::model::JourneyRef::ServiceJourney(r)) => id(r),
+            other => panic!("not a service journey: {other:?}"),
+        };
+        let Some(netex_rs::model::OperatingDayRef::OperatingDayRef(day)) =
+            &journey.operating_day_ref
+        else {
+            panic!("no operating day");
+        };
+        dated.push(format!(
+            "{} {} {} {:?} {:?}",
+            journey.id.as_ref().map_or("-", |id| id.as_str()),
+            journey_ref,
+            id(day),
+            journey.service_alteration.as_deref(),
+            journey
+                .dated_service_journey_refs
+                .iter()
+                .map(id)
+                .collect::<Vec<_>>(),
+        ));
+        Ok(())
+    })
+    .expect("the line file reads");
+    assert_eq!(
+        dated,
+        [
+            "EX:DatedServiceJourney:R1-0812-2026-10-12 EX:ServiceJourney:R1-0812 EX:OperatingDay:2026-10-12 None []",
+            "EX:DatedServiceJourney:R1-0812-2026-10-13 EX:ServiceJourney:R1-0812 EX:OperatingDay:2026-10-13 None []",
+            "EX:DatedServiceJourney:R1-0812-2026-10-14 EX:ServiceJourney:R1-0812 EX:OperatingDay:2026-10-14 Some(\"cancellation\") []",
+            "EX:DatedServiceJourney:R1-0812-2026-10-15 EX:ServiceJourney:R1-0812 EX:OperatingDay:2026-10-15 Some(\"replaced\") []",
+            "EX:DatedServiceJourney:R1-0812-2026-10-16 EX:ServiceJourney:R1-0812 EX:OperatingDay:2026-10-16 None []",
+            "EX:DatedServiceJourney:R1-0812-bus-2026-10-15 EX:ServiceJourney:R1-0812-bus EX:OperatingDay:2026-10-15 None [\"EX:DatedServiceJourney:R1-0812-2026-10-15\"]",
+        ]
+    );
+}
+
+/// What the model does not type in the Nordic delivery — the network, how
+/// the flexible line is booked, and the weighting of the register's stop
+/// places for interchanges — is carried through as written.
+#[test]
+fn the_nordic_delivery_carries_through_only_its_network_booking_and_weighting() {
+    let mut untyped = Vec::new();
+    for (name, xml) in nordic_documents() {
+        let document = netex_rs::read(&xml).expect("the document reads");
+        document.for_each_unprocessed(&mut |parent, fragment| {
+            untyped.push(format!("{name}: {parent}/{}", fragment.name));
+        });
+    }
+    assert_eq!(
+        untyped,
+        [
+            "EX_FlexibleLine-hent_Hent-meg-Eksempelby.xml: FlexibleLine/BookingContact",
+            "EX_FlexibleLine-hent_Hent-meg-Eksempelby.xml: FlexibleLine/BookingMethods",
+            "EX_FlexibleLine-hent_Hent-meg-Eksempelby.xml: FlexibleLine/BookWhen",
+            "_EX_shared_data.xml: ServiceFrame/Network",
+            "nordic-stops/_stops.xml: StopPlace/Weighting",
+            "nordic-stops/_stops.xml: StopPlace/Weighting",
         ]
     );
 }

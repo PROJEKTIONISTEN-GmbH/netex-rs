@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A flexible line file of a delivery in the Nordic NeTEx Profile: a line
+  served on demand (FlexibleLine), whose route names it by FlexibleLineRef;
+  its journey names neither line, only its pattern, and states the window it
+  may be booked for (EarliestDepartureTime, LatestArrivalTime).
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2" version="1.15:NO-NeTEx-networktimetable:1.5">
+  <PublicationTimestamp>2026-10-01T02:00:00</PublicationTimestamp>
+  <ParticipantRef>EX</ParticipantRef>
+  <Description>Hent meg Eksempelby</Description>
+  <dataObjects>
+    <CompositeFrame version="1" id="EX:CompositeFrame:flexible-hent">
+      <validityConditions>
+        <AvailabilityCondition version="1" id="EX:AvailabilityCondition:flexible-hent">
+          <FromDate>2026-10-01T00:00:00</FromDate>
+          <ToDate>2026-10-31T00:00:00</ToDate>
+        </AvailabilityCondition>
+      </validityConditions>
+      <codespaces>
+        <Codespace id="ex">
+          <Xmlns>EX</Xmlns>
+          <XmlnsUrl>http://www.example.org/ns/ex</XmlnsUrl>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultLocale>
+          <TimeZone>Europe/Oslo</TimeZone>
+          <DefaultLanguage>no</DefaultLanguage>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <ServiceFrame version="1" id="EX:ServiceFrame:flexible-hent">
+          <routes>
+            <Route version="1" id="EX:Route:hent">
+              <Name>Hent meg Eksempelby</Name>
+              <FlexibleLineRef ref="EX:FlexibleLine:hent" version="1"/>
+            </Route>
+          </routes>
+          <lines>
+            <FlexibleLine version="1" id="EX:FlexibleLine:hent">
+              <Name>Hent meg Eksempelby</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>Hent meg</PublicCode>
+              <OperatorRef ref="EX:Operator:1"/>
+              <RepresentedByGroupRef ref="EX:Network:1"/>
+              <FlexibleLineType>flexibleAreasOnly</FlexibleLineType>
+              <BookingContact>
+                <Phone>+47 00 00 00 00</Phone>
+              </BookingContact>
+              <BookingMethods>callOffice online</BookingMethods>
+              <BookWhen>dayOfTravelOnly</BookWhen>
+            </FlexibleLine>
+          </lines>
+          <journeyPatterns>
+            <JourneyPattern version="1" id="EX:JourneyPattern:hent">
+              <RouteRef ref="EX:Route:hent" version="1"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern order="1" version="1" id="EX:StopPointInJourneyPattern:hent-1">
+                  <ScheduledStopPointRef ref="EX:ScheduledStopPoint:torget"/>
+                  <ForAlighting>false</ForAlighting>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern order="2" version="1" id="EX:StopPointInJourneyPattern:hent-2">
+                  <ScheduledStopPointRef ref="EX:ScheduledStopPoint:terminal"/>
+                  <ForBoarding>false</ForBoarding>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </JourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <TimetableFrame version="1" id="EX:TimetableFrame:flexible-hent">
+          <vehicleJourneys>
+            <ServiceJourney version="1" id="EX:ServiceJourney:hent">
+              <dayTypes>
+                <DayTypeRef ref="EX:DayType:weekdays"/>
+              </dayTypes>
+              <JourneyPatternRef ref="EX:JourneyPattern:hent" version="1"/>
+              <OperatorRef ref="EX:Operator:1"/>
+              <passingTimes>
+                <TimetabledPassingTime version="1" id="EX:TimetabledPassingTime:hent-1">
+                  <StopPointInJourneyPatternRef ref="EX:StopPointInJourneyPattern:hent-1" version="1"/>
+                  <LatestArrivalTime>16:00:00</LatestArrivalTime>
+                  <EarliestDepartureTime>09:00:00</EarliestDepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime version="1" id="EX:TimetabledPassingTime:hent-2">
+                  <StopPointInJourneyPatternRef ref="EX:StopPointInJourneyPattern:hent-2" version="1"/>
+                  <LatestArrivalTime>16:30:00</LatestArrivalTime>
+                  <EarliestDepartureTime>09:00:00</EarliestDepartureTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

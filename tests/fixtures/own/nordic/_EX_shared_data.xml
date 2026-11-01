@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The shared data of a delivery in the Nordic NeTEx Profile, as each
+  codespace publishes it beside its line files (_<codespace>_shared_data.xml):
+  the authority and operator, the stop points with their assignments to
+  quays of the stop register, and the calendar — day types by their days of
+  the week, assigned a period stated by dates, a period stated by operating
+  days, and a date that is not available; and the operating days the dated
+  journeys of the line files name. Identifiers of the form
+  <codespace>:<type>:<id>.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2" version="1.15:NO-NeTEx-networktimetable:1.5">
+  <PublicationTimestamp>2026-10-01T02:00:00</PublicationTimestamp>
+  <ParticipantRef>EX</ParticipantRef>
+  <Description>Shared data used across line files</Description>
+  <dataObjects>
+    <CompositeFrame version="1" id="EX:CompositeFrame:shared">
+      <validityConditions>
+        <AvailabilityCondition version="1" id="EX:AvailabilityCondition:shared">
+          <FromDate>2026-10-01T00:00:00</FromDate>
+          <ToDate>2026-10-31T00:00:00</ToDate>
+        </AvailabilityCondition>
+      </validityConditions>
+      <codespaces>
+        <Codespace id="ex">
+          <Xmlns>EX</Xmlns>
+          <XmlnsUrl>http://www.example.org/ns/ex</XmlnsUrl>
+        </Codespace>
+        <Codespace id="nsr">
+          <Xmlns>NSR</Xmlns>
+          <XmlnsUrl>http://www.example.org/ns/nsr</XmlnsUrl>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultLocale>
+          <TimeZone>Europe/Oslo</TimeZone>
+          <DefaultLanguage>no</DefaultLanguage>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame version="1" id="EX:ResourceFrame:shared">
+          <organisations>
+            <Authority version="1" id="EX:Authority:1">
+              <CompanyNumber>000000001</CompanyNumber>
+              <Name>Eksempel fylke</Name>
+              <LegalName>EKSEMPEL FYLKESKOMMUNE</LegalName>
+              <ContactDetails>
+                <Url>https://www.example.org/</Url>
+              </ContactDetails>
+              <OrganisationType>authority</OrganisationType>
+            </Authority>
+            <Operator version="1" id="EX:Operator:1">
+              <CompanyNumber>000000002</CompanyNumber>
+              <Name>Eksempel Trafikk</Name>
+              <LegalName>EKSEMPEL TRAFIKK AS</LegalName>
+              <OrganisationType>operator</OrganisationType>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <ServiceFrame version="1" id="EX:ServiceFrame:shared">
+          <Network version="1" id="EX:Network:1">
+            <Name>Eksempel</Name>
+            <AuthorityRef ref="EX:Authority:1"/>
+          </Network>
+          <scheduledStopPoints>
+            <ScheduledStopPoint version="1" id="EX:ScheduledStopPoint:torget">
+              <Name>Torget</Name>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint version="1" id="EX:ScheduledStopPoint:terminal">
+              <Name>Eksempelby bussterminal</Name>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint version="1" id="EX:ScheduledStopPoint:stasjon-1">
+              <Name>Eksempelby stasjon</Name>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint version="1" id="EX:ScheduledStopPoint:fjell-1">
+              <Name>Fjellstua stasjon</Name>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint version="1" id="EX:ScheduledStopPoint:fjell-buss">
+              <Name>Fjellstua stasjon</Name>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+          <stopAssignments>
+            <PassengerStopAssignment order="1" version="1" id="EX:PassengerStopAssignment:torget">
+              <ScheduledStopPointRef ref="EX:ScheduledStopPoint:torget"/>
+              <QuayRef ref="NSR:Quay:9101"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment order="2" version="1" id="EX:PassengerStopAssignment:terminal">
+              <ScheduledStopPointRef ref="EX:ScheduledStopPoint:terminal"/>
+              <QuayRef ref="NSR:Quay:9021"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment order="3" version="1" id="EX:PassengerStopAssignment:stasjon-1">
+              <ScheduledStopPointRef ref="EX:ScheduledStopPoint:stasjon-1"/>
+              <QuayRef ref="NSR:Quay:9011"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment order="4" version="1" id="EX:PassengerStopAssignment:fjell-1">
+              <ScheduledStopPointRef ref="EX:ScheduledStopPoint:fjell-1"/>
+              <QuayRef ref="NSR:Quay:9201"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment order="5" version="1" id="EX:PassengerStopAssignment:fjell-buss">
+              <ScheduledStopPointRef ref="EX:ScheduledStopPoint:fjell-buss"/>
+              <QuayRef ref="NSR:Quay:9202"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+        </ServiceFrame>
+        <ServiceCalendarFrame version="1" id="EX:ServiceCalendarFrame:shared">
+          <dayTypes>
+            <DayType version="1" id="EX:DayType:weekdays">
+              <properties>
+                <PropertyOfDay>
+                  <DaysOfWeek>Monday Tuesday Wednesday Thursday Friday</DaysOfWeek>
+                </PropertyOfDay>
+              </properties>
+            </DayType>
+            <DayType version="1" id="EX:DayType:market-saturday">
+              <properties>
+                <PropertyOfDay>
+                  <DaysOfWeek>Saturday</DaysOfWeek>
+                </PropertyOfDay>
+              </properties>
+            </DayType>
+          </dayTypes>
+          <operatingDays>
+            <OperatingDay version="1" id="EX:OperatingDay:2026-10-12">
+              <CalendarDate>2026-10-12</CalendarDate>
+            </OperatingDay>
+            <OperatingDay version="1" id="EX:OperatingDay:2026-10-13">
+              <CalendarDate>2026-10-13</CalendarDate>
+            </OperatingDay>
+            <OperatingDay version="1" id="EX:OperatingDay:2026-10-14">
+              <CalendarDate>2026-10-14</CalendarDate>
+            </OperatingDay>
+            <OperatingDay version="1" id="EX:OperatingDay:2026-10-15">
+              <CalendarDate>2026-10-15</CalendarDate>
+            </OperatingDay>
+            <OperatingDay version="1" id="EX:OperatingDay:2026-10-16">
+              <CalendarDate>2026-10-16</CalendarDate>
+            </OperatingDay>
+            <OperatingDay version="1" id="EX:OperatingDay:2026-10-17">
+              <CalendarDate>2026-10-17</CalendarDate>
+            </OperatingDay>
+            <OperatingDay version="1" id="EX:OperatingDay:2026-10-24">
+              <CalendarDate>2026-10-24</CalendarDate>
+            </OperatingDay>
+          </operatingDays>
+          <operatingPeriods>
+            <OperatingPeriod version="1" id="EX:OperatingPeriod:october">
+              <FromDate>2026-10-01T00:00:00</FromDate>
+              <ToDate>2026-10-31T00:00:00</ToDate>
+            </OperatingPeriod>
+            <OperatingPeriod version="1" id="EX:OperatingPeriod:market-weeks">
+              <FromOperatingDayRef ref="EX:OperatingDay:2026-10-17"/>
+              <ToOperatingDayRef ref="EX:OperatingDay:2026-10-24"/>
+            </OperatingPeriod>
+          </operatingPeriods>
+          <dayTypeAssignments>
+            <DayTypeAssignment order="1" version="1" id="EX:DayTypeAssignment:weekdays">
+              <OperatingPeriodRef ref="EX:OperatingPeriod:october"/>
+              <DayTypeRef ref="EX:DayType:weekdays"/>
+            </DayTypeAssignment>
+            <DayTypeAssignment order="2" version="1" id="EX:DayTypeAssignment:holiday">
+              <Date>2026-10-14</Date>
+              <DayTypeRef ref="EX:DayType:weekdays"/>
+              <isAvailable>false</isAvailable>
+            </DayTypeAssignment>
+            <DayTypeAssignment order="3" version="1" id="EX:DayTypeAssignment:market">
+              <OperatingPeriodRef ref="EX:OperatingPeriod:market-weeks"/>
+              <DayTypeRef ref="EX:DayType:market-saturday"/>
+            </DayTypeAssignment>
+          </dayTypeAssignments>
+        </ServiceCalendarFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

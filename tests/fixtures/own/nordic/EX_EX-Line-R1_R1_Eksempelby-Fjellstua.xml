@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A line file of a delivery in the Nordic NeTEx Profile, for a train: its
+  journeys name no day type and run on the days their dated journeys
+  (DatedServiceJourney) name — one cancelled, one replaced by a bus, whose
+  dated journey names the one it replaces as the Nordic deliveries write it
+  (DatedServiceJourneyRef). An interchange from a journey of another line
+  file.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2" version="1.15:NO-NeTEx-networktimetable:1.5">
+  <PublicationTimestamp>2026-10-01T02:00:00</PublicationTimestamp>
+  <ParticipantRef>EX</ParticipantRef>
+  <Description>Eksempelby - Fjellstua</Description>
+  <dataObjects>
+    <CompositeFrame version="1" id="EX:CompositeFrame:line-R1">
+      <validityConditions>
+        <AvailabilityCondition version="1" id="EX:AvailabilityCondition:line-R1">
+          <FromDate>2026-10-01T00:00:00</FromDate>
+          <ToDate>2026-10-31T00:00:00</ToDate>
+        </AvailabilityCondition>
+      </validityConditions>
+      <codespaces>
+        <Codespace id="ex">
+          <Xmlns>EX</Xmlns>
+          <XmlnsUrl>http://www.example.org/ns/ex</XmlnsUrl>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultLocale>
+          <TimeZone>Europe/Oslo</TimeZone>
+          <DefaultLanguage>no</DefaultLanguage>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <ServiceFrame version="1" id="EX:ServiceFrame:line-R1">
+          <routes>
+            <Route version="1" id="EX:Route:R1-out">
+              <Name>Eksempelby - Fjellstua</Name>
+              <LineRef ref="EX:Line:R1" version="1"/>
+            </Route>
+          </routes>
+          <lines>
+            <Line version="1" id="EX:Line:R1">
+              <Name>Eksempelby - Fjellstua</Name>
+              <TransportMode>rail</TransportMode>
+              <TransportSubmode>
+                <RailSubmode>regionalRail</RailSubmode>
+              </TransportSubmode>
+              <PublicCode>R1</PublicCode>
+              <OperatorRef ref="EX:Operator:1"/>
+              <RepresentedByGroupRef ref="EX:Network:1"/>
+            </Line>
+          </lines>
+          <journeyPatterns>
+            <JourneyPattern version="1" id="EX:JourneyPattern:R1-out">
+              <RouteRef ref="EX:Route:R1-out" version="1"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern order="1" version="1" id="EX:StopPointInJourneyPattern:R1-out-1">
+                  <ScheduledStopPointRef ref="EX:ScheduledStopPoint:stasjon-1"/>
+                  <ForAlighting>false</ForAlighting>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern order="2" version="1" id="EX:StopPointInJourneyPattern:R1-out-2">
+                  <ScheduledStopPointRef ref="EX:ScheduledStopPoint:fjell-1"/>
+                  <ForBoarding>false</ForBoarding>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </JourneyPattern>
+            <JourneyPattern version="1" id="EX:JourneyPattern:R1-bus">
+              <RouteRef ref="EX:Route:R1-out" version="1"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern order="1" version="1" id="EX:StopPointInJourneyPattern:R1-bus-1">
+                  <ScheduledStopPointRef ref="EX:ScheduledStopPoint:terminal"/>
+                  <ForAlighting>false</ForAlighting>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern order="2" version="1" id="EX:StopPointInJourneyPattern:R1-bus-2">
+                  <ScheduledStopPointRef ref="EX:ScheduledStopPoint:fjell-buss"/>
+                  <ForBoarding>false</ForBoarding>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </JourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <TimetableFrame version="1" id="EX:TimetableFrame:line-R1">
+          <vehicleJourneys>
+            <ServiceJourney version="1" id="EX:ServiceJourney:R1-0812">
+              <PrivateCode>812</PrivateCode>
+              <TransportMode>rail</TransportMode>
+              <JourneyPatternRef ref="EX:JourneyPattern:R1-out" version="1"/>
+              <OperatorRef ref="EX:Operator:1"/>
+              <LineRef ref="EX:Line:R1" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime version="1" id="EX:TimetabledPassingTime:R1-0812-1">
+                  <StopPointInJourneyPatternRef ref="EX:StopPointInJourneyPattern:R1-out-1" version="1"/>
+                  <DepartureTime>08:12:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime version="1" id="EX:TimetabledPassingTime:R1-0812-2">
+                  <StopPointInJourneyPatternRef ref="EX:StopPointInJourneyPattern:R1-out-2" version="1"/>
+                  <ArrivalTime>08:58:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney version="1" id="EX:ServiceJourney:R1-0812-bus">
+              <PrivateCode>812</PrivateCode>
+              <TransportMode>bus</TransportMode>
+              <TransportSubmode>
+                <BusSubmode>railReplacementBus</BusSubmode>
+              </TransportSubmode>
+              <JourneyPatternRef ref="EX:JourneyPattern:R1-bus" version="1"/>
+              <OperatorRef ref="EX:Operator:1"/>
+              <LineRef ref="EX:Line:R1" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime version="1" id="EX:TimetabledPassingTime:R1-0812-bus-1">
+                  <StopPointInJourneyPatternRef ref="EX:StopPointInJourneyPattern:R1-bus-1" version="1"/>
+                  <DepartureTime>08:05:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime version="1" id="EX:TimetabledPassingTime:R1-0812-bus-2">
+                  <StopPointInJourneyPatternRef ref="EX:StopPointInJourneyPattern:R1-bus-2" version="1"/>
+                  <ArrivalTime>09:10:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <DatedServiceJourney version="1" id="EX:DatedServiceJourney:R1-0812-2026-10-12">
+              <ServiceJourneyRef ref="EX:ServiceJourney:R1-0812" version="1"/>
+              <OperatingDayRef ref="EX:OperatingDay:2026-10-12"/>
+            </DatedServiceJourney>
+            <DatedServiceJourney version="1" id="EX:DatedServiceJourney:R1-0812-2026-10-13">
+              <ServiceJourneyRef ref="EX:ServiceJourney:R1-0812" version="1"/>
+              <OperatingDayRef ref="EX:OperatingDay:2026-10-13"/>
+            </DatedServiceJourney>
+            <DatedServiceJourney version="1" id="EX:DatedServiceJourney:R1-0812-2026-10-14">
+              <ServiceAlteration>cancellation</ServiceAlteration>
+              <ServiceJourneyRef ref="EX:ServiceJourney:R1-0812" version="1"/>
+              <OperatingDayRef ref="EX:OperatingDay:2026-10-14"/>
+            </DatedServiceJourney>
+            <DatedServiceJourney version="1" id="EX:DatedServiceJourney:R1-0812-2026-10-15">
+              <ServiceAlteration>replaced</ServiceAlteration>
+              <ServiceJourneyRef ref="EX:ServiceJourney:R1-0812" version="1"/>
+              <OperatingDayRef ref="EX:OperatingDay:2026-10-15"/>
+            </DatedServiceJourney>
+            <DatedServiceJourney version="1" id="EX:DatedServiceJourney:R1-0812-2026-10-16">
+              <ServiceJourneyRef ref="EX:ServiceJourney:R1-0812" version="1"/>
+              <OperatingDayRef ref="EX:OperatingDay:2026-10-16"/>
+            </DatedServiceJourney>
+            <DatedServiceJourney version="1" id="EX:DatedServiceJourney:R1-0812-bus-2026-10-15">
+              <ServiceJourneyRef ref="EX:ServiceJourney:R1-0812-bus" version="1"/>
+              <DatedServiceJourneyRef ref="EX:DatedServiceJourney:R1-0812-2026-10-15" version="1"/>
+              <OperatingDayRef ref="EX:OperatingDay:2026-10-15"/>
+            </DatedServiceJourney>
+          </vehicleJourneys>
+          <journeyInterchanges>
+            <ServiceJourneyInterchange version="1" id="EX:ServiceJourneyInterchange:1-0750-R1-0812">
+              <StaySeated>false</StaySeated>
+              <Guaranteed>true</Guaranteed>
+              <MaximumWaitTime>PT3M</MaximumWaitTime>
+              <FromPointRef ref="EX:ScheduledStopPoint:terminal"/>
+              <ToPointRef ref="EX:ScheduledStopPoint:stasjon-1"/>
+              <FromJourneyRef ref="EX:ServiceJourney:1-0750"/>
+              <ToJourneyRef ref="EX:ServiceJourney:R1-0812" version="1"/>
+            </ServiceJourneyInterchange>
+          </journeyInterchanges>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

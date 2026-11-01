@@ -347,3 +347,53 @@ fn a_quay_pairs_by_its_own_identifier_or_global_identifier_and_a_place_kept_apar
     assert!(read.stop_by_id("b:at:ex:StopPlace:9").is_some());
     assert!(read.stop_by_id("at:ex:Quay:1:eins").is_none());
 }
+
+/// A delivery in the Nordic profile, with the stop register it names read
+/// along, merged with a delivery of the European profile, in either rank:
+/// no identifier of the one is the other's, so nothing is paired, left out
+/// or renamed; every stop and journey of both is in the merge, as each
+/// delivery reads alone.
+#[test]
+fn a_nordic_delivery_and_an_epip_delivery_merge_without_touching_each_other() {
+    let own = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/own");
+    let nordic = || {
+        Source::open(own.join("nordic"))
+            .and_then(|delivery| delivery.with(Source::open(own.join("nordic-stops"))?))
+            .expect("the delivery and its register open")
+    };
+    let epip = || Source::open(own.join("epip")).expect("the delivery opens");
+    let alone = |source: Source| {
+        Index::build(&source, &ReadOptions::new(Selection::routing())).expect("reads")
+    };
+    let mut expected = journeys(&alone(nordic()));
+    expected.extend(journeys(&alone(epip())));
+    expected.sort();
+    let stops = alone(nordic()).stop_count() + alone(epip()).stop_count();
+    for nordic_first in [true, false] {
+        let (nordic, epip) = (
+            Input::new("nordic", nordic()).expect("a label"),
+            Input::new("epip", epip()).expect("a label"),
+        );
+        let inputs = if nordic_first {
+            [nordic, epip]
+        } else {
+            [epip, nordic]
+        };
+        let to = tempfile::tempdir().expect("a directory");
+        let report = merge::merge(&inputs, to.path()).expect("merges");
+        let classes: Vec<&str> = report.findings.iter().map(|f| f.class).collect();
+        assert_eq!(
+            classes,
+            Vec::<&str>::new(),
+            "nothing paired, alike or renamed"
+        );
+        for delivery in &report.deliveries {
+            assert_eq!(delivery.objects_left_out, 0, "{}", delivery.label);
+            assert_eq!(delivery.objects_renamed, 0, "{}", delivery.label);
+        }
+        let read = index(to.path());
+        assert!(read.unresolved().is_empty(), "{:?}", read.unresolved());
+        assert_eq!(read.stop_count(), stops);
+        assert_eq!(journeys(&read), expected);
+    }
+}

@@ -270,6 +270,52 @@ fn statistics_count_by_operator_over_the_whole_calendar_or_a_period() {
     assert!(stderr(&output).contains("`14.10.2026` is no date"));
 }
 
+/// netex-rs's own example of the Nordic profile, and the stop register it
+/// names, published apart.
+fn nordic() -> (String, String) {
+    let own = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/own");
+    (
+        own.join("nordic").display().to_string(),
+        own.join("nordic-stops").display().to_string(),
+    )
+}
+
+#[test]
+fn a_stop_register_published_apart_is_read_along_with_the_delivery() {
+    let (delivery, register) = nordic();
+    let unresolved = |arguments: &[&str]| {
+        let output = netex(arguments);
+        assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+        let report: Value = serde_json::from_str(&stdout(&output)).expect("the report is JSON");
+        report["classes"]
+            .as_array()
+            .expect("classes")
+            .iter()
+            .find(|class| class["class"] == "unresolved")
+            .map_or(0, |class| class["count"].as_u64().expect("a count"))
+    };
+    // Alone, the delivery's stop assignments name quays it does not define.
+    assert_eq!(unresolved(&["validate", &delivery, "--format", "json"]), 5);
+    assert_eq!(
+        unresolved(&["validate", &delivery, "--with", &register, "--format", "json"]),
+        0
+    );
+    // Two sources read along under one name would give documents one name.
+    let output = netex(&[
+        "validate", &delivery, "--with", &register, "--with", &register,
+    ]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        stderr(&output).contains("another source read along is named nordic-stops too"),
+        "{}",
+        stderr(&output)
+    );
+    let output = netex(&["stats", &delivery, "--with", &register, "--format", "json"]);
+    let stats: Value = serde_json::from_str(&stdout(&output)).expect("JSON");
+    assert_eq!(stats["total"]["journeys"], 4);
+    assert_eq!(stats["total"]["stops"], 5);
+}
+
 #[test]
 fn a_delivery_converts_to_gtfs_with_its_report() {
     let source = defective();

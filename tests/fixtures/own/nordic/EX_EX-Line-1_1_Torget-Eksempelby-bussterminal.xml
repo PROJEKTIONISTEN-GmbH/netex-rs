@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A line file of a delivery in the Nordic NeTEx Profile: one line with its
+  route, pattern and journeys, the journeys running on day types of the
+  shared data. No site frame: the stops are the register's.
+  Written for netex-rs's tests (MIT OR Apache-2.0); places, lines and times
+  are invented.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2" version="1.15:NO-NeTEx-networktimetable:1.5">
+  <PublicationTimestamp>2026-10-01T02:00:00</PublicationTimestamp>
+  <ParticipantRef>EX</ParticipantRef>
+  <Description>Torget - Eksempelby bussterminal</Description>
+  <dataObjects>
+    <CompositeFrame version="1" id="EX:CompositeFrame:line-1">
+      <validityConditions>
+        <AvailabilityCondition version="1" id="EX:AvailabilityCondition:line-1">
+          <FromDate>2026-10-01T00:00:00</FromDate>
+          <ToDate>2026-10-31T00:00:00</ToDate>
+        </AvailabilityCondition>
+      </validityConditions>
+      <codespaces>
+        <Codespace id="ex">
+          <Xmlns>EX</Xmlns>
+          <XmlnsUrl>http://www.example.org/ns/ex</XmlnsUrl>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultLocale>
+          <TimeZone>Europe/Oslo</TimeZone>
+          <DefaultLanguage>no</DefaultLanguage>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <ServiceFrame version="1" id="EX:ServiceFrame:line-1">
+          <routes>
+            <Route version="1" id="EX:Route:1-out">
+              <Name>Torget - Eksempelby bussterminal</Name>
+              <LineRef ref="EX:Line:1" version="1"/>
+            </Route>
+          </routes>
+          <lines>
+            <Line version="1" id="EX:Line:1">
+              <Name>Torget - Eksempelby bussterminal</Name>
+              <TransportMode>bus</TransportMode>
+              <TransportSubmode>
+                <BusSubmode>localBus</BusSubmode>
+              </TransportSubmode>
+              <PublicCode>1</PublicCode>
+              <OperatorRef ref="EX:Operator:1"/>
+              <RepresentedByGroupRef ref="EX:Network:1"/>
+            </Line>
+          </lines>
+          <destinationDisplays>
+            <DestinationDisplay version="1" id="EX:DestinationDisplay:1-terminal">
+              <FrontText>Bussterminalen</FrontText>
+            </DestinationDisplay>
+          </destinationDisplays>
+          <journeyPatterns>
+            <JourneyPattern version="1" id="EX:JourneyPattern:1-out">
+              <RouteRef ref="EX:Route:1-out" version="1"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern order="1" version="1" id="EX:StopPointInJourneyPattern:1-out-1">
+                  <ScheduledStopPointRef ref="EX:ScheduledStopPoint:torget"/>
+                  <ForAlighting>false</ForAlighting>
+                  <DestinationDisplayRef ref="EX:DestinationDisplay:1-terminal"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern order="2" version="1" id="EX:StopPointInJourneyPattern:1-out-2">
+                  <ScheduledStopPointRef ref="EX:ScheduledStopPoint:terminal"/>
+                  <ForBoarding>false</ForBoarding>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </JourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <TimetableFrame version="1" id="EX:TimetableFrame:line-1">
+          <vehicleJourneys>
+            <ServiceJourney version="1" id="EX:ServiceJourney:1-0750">
+              <dayTypes>
+                <DayTypeRef ref="EX:DayType:weekdays"/>
+              </dayTypes>
+              <JourneyPatternRef ref="EX:JourneyPattern:1-out" version="1"/>
+              <OperatorRef ref="EX:Operator:1"/>
+              <LineRef ref="EX:Line:1" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime version="1" id="EX:TimetabledPassingTime:1-0750-1">
+                  <StopPointInJourneyPatternRef ref="EX:StopPointInJourneyPattern:1-out-1" version="1"/>
+                  <DepartureTime>07:50:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime version="1" id="EX:TimetabledPassingTime:1-0750-2">
+                  <StopPointInJourneyPatternRef ref="EX:StopPointInJourneyPattern:1-out-2" version="1"/>
+                  <ArrivalTime>08:02:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney version="1" id="EX:ServiceJourney:1-1000">
+              <dayTypes>
+                <DayTypeRef ref="EX:DayType:weekdays"/>
+                <DayTypeRef ref="EX:DayType:market-saturday"/>
+              </dayTypes>
+              <JourneyPatternRef ref="EX:JourneyPattern:1-out" version="1"/>
+              <OperatorRef ref="EX:Operator:1"/>
+              <LineRef ref="EX:Line:1" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime version="1" id="EX:TimetabledPassingTime:1-1000-1">
+                  <StopPointInJourneyPatternRef ref="EX:StopPointInJourneyPattern:1-out-1" version="1"/>
+                  <DepartureTime>10:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime version="1" id="EX:TimetabledPassingTime:1-1000-2">
+                  <StopPointInJourneyPatternRef ref="EX:StopPointInJourneyPattern:1-out-2" version="1"/>
+                  <ArrivalTime>10:12:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

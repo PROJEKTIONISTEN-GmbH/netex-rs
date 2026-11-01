@@ -11,11 +11,17 @@ are part of the crate and licensed as it is: **MIT OR Apache-2.0**.
 | `at/` | Austrian-style: one document per line, each with its own calendar | identifiers that are each document's own (both documents define `at:ex:DayType:1` for other days), a line in two versions with the journeys of each, a stop place stated in both documents with a quay in each |
 | `ch/` | Swiss-style: a shared document and a timetable document naming it | journeys stating their calls rather than a pattern with passing times, a point passed through, a call on the next day, availability conditions as the calendar, a template journey run at a headway, references resolved across documents |
 | `fr/` | French profile (NeTEx France): the profile's `stop.xml`, `resource.xml`, `network.xml` and a `line_xyz.xml`, every part in general frames | quays defined beside their stop place and named by it, identifiers of the profile's form `FR:…:LOC`, references into another document by `versionRef`, passing times naming no point of the pattern, day types in the three forms the French deliveries write — dates listing each day, a validity and days of the week with the dates as exceptions, a period without day bits —, a network carried through untyped |
+| `nordic/` | Nordic NeTEx Profile: the shared data of a codespace, two line files and a flexible line file, no site in any | stop points assigned to quays of a stop register published apart (`nordic-stops/`), day types assigned a period by dates, a period by operating days and a date not available, a train dated by dated journeys — one cancelled, one replaced by a bus naming the one it replaces —, an interchange from a journey of the other line file, a flexible line its route names and whose journey names only its pattern |
+| `nordic-stops/` | the stop register the Nordic line files name, as the national registers publish it | stop places with their quays, two of them within a parent stop place |
 
-All ten documents are valid against the schemas of NeTEx 1.x and 2.0, but for
-the references of `ch/ch-timetable.xml` into `ch/ch-service.xml` — an XML Schema
-key reference does not reach into another document — and for the passing times
-of `fr/line_10.xml`, written as NeTEx 1.x allows them and the French deliveries
-write them: without the point they are at, which NeTEx 2.0 requires. `tests/own_examples.rs`
+All fifteen documents are valid against the schemas of NeTEx 1.x and 2.0, but
+for the references of `ch/ch-timetable.xml` into `ch/ch-service.xml` — an XML
+Schema key reference does not reach into another document —, for the passing
+times of `fr/line_10.xml`, written as NeTEx 1.x allows them and the French
+deliveries write them: without the point they are at, which NeTEx 2.0
+requires —, and for the dated journeys of the Nordic train's line file, written
+as the Nordic deliveries write them: naming their journey, which NeTEx 1.x does
+not let a dated journey do, and the dated journey a replacing one replaces as a
+plain `DatedServiceJourneyRef`, where NeTEx 2.0 has `replacedJourneys`. `tests/own_examples.rs`
 reads them, writes them back, validates them where the official schemas are
 there, and asserts what the index makes of each.

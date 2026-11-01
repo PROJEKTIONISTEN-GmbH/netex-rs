@@ -743,3 +743,106 @@ fn a_train_number_among_a_general_frame_s_members_names_its_trip() {
         report.not_carried
     );
 }
+
+#[test]
+fn a_nordic_delivery_converts_with_its_register_its_dated_trains_and_its_interchange() {
+    let (Some(path), Some(register)) = (own_example("nordic"), own_example("nordic-stops")) else {
+        return;
+    };
+    let source = Source::open(&path)
+        .and_then(|delivery| delivery.with(Source::open(&register)?))
+        .expect("the delivery and its register open");
+    let delivery = Delivery::read(&source, Reading::default()).expect("the delivery reads");
+    let feed = tempfile::tempdir().expect("a directory");
+    let report = convert(
+        &delivery,
+        &Options::default(),
+        output::at(feed.path()).expect("an output"),
+    )
+    .expect("converts");
+    // The frames' time zone; the quays of the register under their stations,
+    // the outermost parent site where a stop place is within one.
+    assert_eq!(
+        table(feed.path(), "agency.txt", &["agency_id", "agency_timezone"]),
+        ["EX:Operator:1|Europe/Oslo"]
+    );
+    assert_eq!(
+        table(
+            feed.path(),
+            "stops.txt",
+            &["stop_id", "location_type", "parent_station"]
+        )[3..],
+        [
+            "NSR:Quay:9011|0|NSR:StopPlace:900",
+            "NSR:Quay:9021|0|NSR:StopPlace:900",
+            "NSR:Quay:9101|0|NSR:StopPlace:910",
+            "NSR:Quay:9201|0|NSR:StopPlace:920",
+            "NSR:Quay:9202|0|NSR:StopPlace:920",
+        ]
+    );
+    // The flexible line's journey is no trip; the train runs on the days of
+    // its dated journeys but the cancelled and the replaced, the bus
+    // replacing it on the day it is replaced.
+    assert_eq!(
+        table(feed.path(), "trips.txt", &["trip_id", "service_id"]),
+        [
+            "EX:ServiceJourney:1-0750|c0",
+            "EX:ServiceJourney:1-1000|c1",
+            "EX:ServiceJourney:R1-0812|c2",
+            "EX:ServiceJourney:R1-0812-bus|c3",
+        ]
+    );
+    assert_eq!(
+        table(
+            feed.path(),
+            "calendar.txt",
+            &[
+                "service_id",
+                "monday",
+                "tuesday",
+                "wednesday",
+                "thursday",
+                "friday",
+                "saturday",
+                "sunday",
+                "start_date",
+                "end_date"
+            ]
+        ),
+        [
+            "c0|1|1|1|1|1|0|0|20261001|20261030",
+            "c1|1|1|1|1|1|1|0|20261001|20261030",
+            "c2|1|1|0|0|1|0|0|20261012|20261016",
+            "c3|0|0|0|1|0|0|0|20261015|20261015",
+        ]
+    );
+    assert_eq!(
+        table(
+            feed.path(),
+            "calendar_dates.txt",
+            &["service_id", "date", "exception_type"]
+        ),
+        [
+            "c0|20261014|2",
+            "c1|20261003|2",
+            "c1|20261010|2",
+            "c1|20261014|2"
+        ]
+    );
+    // The interchange of the train's line file from the bus of the other.
+    assert_eq!(
+        table(
+            feed.path(),
+            "transfers.txt",
+            &[
+                "from_stop_id",
+                "to_stop_id",
+                "from_trip_id",
+                "to_trip_id",
+                "transfer_type"
+            ]
+        ),
+        ["NSR:Quay:9021|NSR:Quay:9011|EX:ServiceJourney:1-0750|EX:ServiceJourney:R1-0812|1"]
+    );
+    assert_eq!(report.index_findings.get("flexible-line-journey"), Some(&1));
+}
