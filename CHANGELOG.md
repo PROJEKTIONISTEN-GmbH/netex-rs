@@ -86,6 +86,42 @@ document's; it has 98 129 now, each journey calling at its own document's
   another class.
 - Own examples `tests/fixtures/own/lu/`, `dk/`, `be/` and `cz/`.
 
+The Dutch profile, BISON's TMI9 NeTEx-NL (`docs/NL-BISON-PROFILE.md`), with
+the national stop register published apart: six operators' deliveries were
+read before and after. Before, every journey was left out — none lists its
+passing times, and the calendar stood in a container the crate did not read;
+now each takes its times from its departure and its time demand type, on the
+days of its availability conditions. Converted to GTFS, RET's, GVB's and
+Arriva's have every trip-day the national GTFS feed GTFS-NL has of them, with
+its times but for differences each explained. Positions in RD New are
+within 0.24 m of RDNAPTRANS2018 at every stop of the register. A stop's
+global identifier is its register code where it has no `GlobalID`: the key
+the German delivery names Dutch stops by (`docs/INTERPRETATION.md`
+§§ 36–40). Not compatible with 0.7 either: `PointInSequenceItem` and
+`GeneralFrameMember` have a variant more, and the entities a field more each.
+
+- **model**: `PrivateCodes`, NeTEx 2.0's `privateCodes`, typed wherever
+  `keyList` is (`private_codes`); every frame's `contentValidityConditions`
+  (`content_validity_conditions`); `TimeDemandType` with `JourneyRunTime` and
+  `JourneyWaitTime`, in service and timetable frames (`time_demand_types`) and
+  among a general frame's members; `TimingPointInJourneyPattern` among a
+  pattern's points, `TimingPointRef`; `Duration::milliseconds`.
+- **stream**: `Kind::TimeDemandType`, in `Selection::routing`; the
+  availability conditions of `contentValidityConditions`.
+- **index**: a journey listing neither passing times nor calls takes its
+  times from its departure and the time demand type it names — along the
+  timing links its pattern names onward, through timing points that are no
+  stop, waiting where the type or the pattern says; each pass of a link
+  twice run its own run time, the waits of a point twice visited its last
+  visits'; to the millisecond, each time rounded to the second. A link
+  without a run time is a finding (`Concern::LinkWithoutRunTime`). A journey
+  naming conditions none of which is available runs on no day. A stop's
+  global identifier (`Stop::dhid`, `Index::stop_by_dhid`) is its `GlobalID`,
+  else its `StopPlaceCode` or `QuayCode`.
+- **merge**: stops pair by their register codes too.
+- Own example `tests/fixtures/own/nl/` with its stop register
+  `tests/fixtures/own/nl-register/`.
+
 ### netex2gtfs
 
 A delivery read with the stop register it names converts with its stops
@@ -103,6 +139,9 @@ none from its profile: France has more than one.
 the source: `--with PATH`, a stop register published apart, as Norway's.
 `netex validate` reports the class `local-identifier`, with the journeys
 calling at such stops.
+`netex validate` reports the class `link-without-run-time`, in its JSON
+schema too. With global stop identifiers, `netex convert` writes a Dutch
+stop's register code.
 
 `netex validate` reports the four new findings (`quay-of-two-stop-places`,
 `passing-times-other-than-points`, `properties-of-day-unread`,

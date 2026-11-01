@@ -237,6 +237,7 @@ profile relies on.
 | **Denmark** (EPIP, `ntx:1.1`, Rejseplanen) | one document per line, 1 560 in one archive | as the German delivery; stop points with positions of their own, link geometries in GML; a link starting farther from its stop than the axis order can be told by is a finding | yes, the national delivery |
 | **Belgium** (EPIP, converted from GTFS; SNCB, De Lijn, TEC, STIB) | per operator a `common.xml` with the calendar (SNCB's 1.08 GB), `stops.xml` and one document per line; no `TypeOfFrameRef`, no version | the bounds of operating periods written as instants in UTC, each the midnight beginning a day in Brussels; stop assignments naming a quay by a `StopPlaceRef`, counted; lines naming no operator and no mode, left so | yes, the four operators' deliveries |
 | **Czechia** (EPIP, CIS JŘ) | one document per batch of the national formats: a bus or city line, a line on a detour, a train; `version="1"`; no position anywhere | stop places and stop points each document numbers anew: a stop per name, found from its own document (`local-identifier`); stops without a position, journeys past midnight without a day offset, both reported | yes, buses, city transport and trains |
+| **Netherlands** (BISON, TMI9 NeTEx-NL, `ntx:1.1` with NeTEx 2.0's `privateCodes`) | one document per operator or concession, at the national access point NDOV Loket; no site in any, the stops being the national stop register's (CHB), published apart; positions in RD New | journeys stating a departure and a time demand type rather than passing times — run times to the tenth of a second along the timing links the pattern names, through timing points that are no stop, loops passing a link twice —; availability conditions in `contentValidityConditions`, day types beside them; private codes; the register's codes `NL:Q:…`, `NL:S:…` as global identifiers, the keys the German delivery names Dutch stops by | yes, six operators' deliveries (RET, GVB, Arriva, Connexxion, Qbuzz, HTM) with the stop register |
 
 `tests/fixtures/own/` has a small delivery of each kind but DELFI, written for
 the tests; `tests/fixtures/fragments/` has small sets of frames and entities,
@@ -248,9 +249,11 @@ distinct elements, of which the typed model covers all but four, which are
 carried through. `docs/IT-ITH1-PROFILE.md` does the same for South Tyrol's,
 with what it states and how the crate reads it, `docs/FR-PROFILE.md` for
 five French deliveries, checked against the GTFS feeds their producers publish,
-`docs/NORDIC-PROFILE.md` for Norway's, checked against Entur's GTFS feed, and
+`docs/NORDIC-PROFILE.md` for Norway's, checked against Entur's GTFS feed,
 `docs/EPIP-NEIGHBOURS.md` for the EPIP deliveries of Luxembourg, Denmark,
-Belgium and Czechia, with what each does not give.
+Belgium and Czechia, with what each does not give, and `docs/NL-BISON-PROFILE.md`
+for six Dutch operators' deliveries and the stop register, checked against the
+national GTFS feed.
 
 ## How conformant
 
@@ -456,7 +459,10 @@ national delivery at its national access point
 through the Danish national access point, CC BY 4.0), the Belgian operators'
 SNCB, De Lijn, TEC and STIB (Belgian Mobility Company, CC BY 4.0) and the
 Czech national timetables of CIS JŘ, which state no licence and were only
-measured. `docs/INTERPRETATION.md` and the profile pages name the
+measured; and in the Dutch profile, the timetables of RET, GVB, Arriva,
+Connexxion, Qbuzz and HTM with the national stop register (Centraal
+Haltebestand), at the national access point NDOV Loket
+([data.ndovloket.nl](https://data.ndovloket.nl/), CC0). `docs/INTERPRETATION.md` and the profile pages name the
 deliveries each figure was counted on. None of these deliveries is in the
 repository beyond the five DELFI files above.
 

@@ -1157,6 +1157,149 @@ among a stop place's quays was already.
 
 ---
 
+## 36. Passing times from a departure and a time demand type
+
+**Problem.** No journey of the Dutch deliveries lists its passing times.
+Each states its departure (`DepartureTime`, `DepartureDayOffset`) and names
+a `TimeDemandType`, which states how long its journeys take on each timing
+link (`runTimes/JourneyRunTime`) and wait at each timing point
+(`waitTimes/JourneyWaitTime`); the journey's pattern names, at each of its
+points, the timing link onward (`OnwardTimingLinkRef`), and passes timing
+points that are no stop (`TimingPointInJourneyPattern`). The calendar is an
+availability condition in the timetable frame's `contentValidityConditions`.
+Read as before, all 294 754 journeys of six operators' deliveries were left
+out: no passing time, and no day.
+
+**Standard.** A vehicle journey states its passing times, or its departure
+and a time demand type from which they follow
+(`netex_part_2/part2_journeyTimes/netex_vehicleJourney_version.xsd`:
+`DepartureTime`, `TimeDemandTypeRef`; `netex_part_1/part1_tacticalPlanning/netex_timeDemandType_version.xsd`).
+`contentValidityConditions` holds the validity conditions a frame's content
+shares (`netex_framework/netex_responsibility/netex_versionFrame_version.xsd`).
+
+**netex-rs.** Up to 0.7.2 the model typed neither time demand types nor
+timing points in a pattern, and no frame's `contentValidityConditions`.
+
+**Proposal: adopt.** Effort **M**.
+
+**Built (unreleased, after 0.7.2).** The model types them (`TimeDemandType`,
+`JourneyRunTime`, `JourneyWaitTime`, `TimingPointInJourneyPattern`, every
+frame's `content_validity_conditions`), the lean stream yields time demand
+types (`Kind::TimeDemandType`, in `Selection::routing`) and the conditions of
+`contentValidityConditions`. A journey listing neither passing times nor
+calls but naming a time demand type, resolved in its own document first,
+leaves the first point of its pattern at its departure and runs each timing
+link onward in the type's run time; at every later point it arrives and
+waits as long as the type says, else as long as the pattern's point says
+(`WaitTime`), before it leaves — but at the last, where it arrives. A wait
+the type states at the first point does not hold the departure back: the
+departure is when the journey leaves (one journey of the 294 754 has such a
+wait; GTFS-NL takes the departure for its arrival there). A point naming no
+timing link onward, or a link the type gives no run time, leaves the calls
+after it untimed (`Concern::LinkWithoutRunTime`, then `UntimedEnds`). Checked
+against GTFS-NL day by day (`docs/NL-BISON-PROFILE.md`).
+
+## 37. Run times to a tenth of a second
+
+**Problem.** GVB states run times to the tenth of a second (`PT1M3.4S`,
+`PT14.9S`). Read in whole seconds, the fractions were lost, and a journey's
+times ran up to several seconds early by its end.
+
+**Standard.** `RunTime` and `WaitTime` are `xsd:duration`, whose seconds may
+have a fraction.
+
+**netex-rs.** Up to 0.7.2 `Duration::seconds` read whole seconds.
+
+**Proposal: adopt.** Effort **S**.
+
+**Built (unreleased, after 0.7.2)** (`Duration::milliseconds`). The times of
+a journey add up to the millisecond, and each passing time is rounded to the
+nearest second, a half up. GVB's 420 798 trip-days of the comparison window
+are, to the second, GTFS-NL's in 92 %, and within one second in all others:
+where the exact sum falls on a half second, GTFS-NL rounds down in some
+places and up in others.
+
+## 38. A link or a point a pattern passes twice
+
+**Problem.** A pattern may run a link twice — RET's line 612 loops through a
+town and back, on the same links —, and its time demand type then states a
+run time for each pass, in the order of the pattern (30 s and 46 s). A
+pattern may visit a point twice too — the start and end of a loop, a timing
+point passed on the way out and at the end —, while its type states one wait
+for it. RET's line 29 passes the timing point HA7121 in the middle of its
+route and ends there; its type states a wait of 35 minutes there, which the
+identifiers of its waits number as the last point's.
+
+**Standard.** A run time names its timing link, a wait time its timing point;
+neither names the pass.
+
+**netex-rs.** New.
+
+**Proposal: adopt.** Effort **S**.
+
+**Built (unreleased, after 0.7.2).** The n-th pass of a link takes the n-th
+run time stated for it, else the last stated: a type stating one run time
+for a link a pattern runs twice means it for both. The waits stated for a
+point are those of its last visits, in order: one wait for a point visited
+twice is the layover at its end. RET's trips of line 29 wait at their end
+rather than 35 minutes in their middle. GTFS-NL gives line 1602's second
+pass the run times of the first (98 trip-days); the delivery states its own.
+
+## 39. A journey naming only conditions not available
+
+**Problem.** Connexxion writes a day a journey does not run as the profile's
+own example does (TMI9 *Dienstregeling* 9.3.0, § 9.3): the journey's
+condition without the day, a condition for the day not available beside it,
+and a journey naming only that condition — 1 544 of them —, there to show
+the validity the journey no longer has. Each also names the weekday day
+type. Read with its day types' days less the condition's, each ran on every
+other weekday, beside the journey it was written for: 14 433 trip-days a
+journey stated twice or three times.
+
+**Standard.** An availability condition not available (`IsAvailable` false)
+states days the entity is not valid on. The Dutch profile: such a condition
+gives a journey no validity (§§ 9.1.2, 9.2), and the day types of its
+calendar frame are for information, the day bits leading where they differ
+(§ 3.2, rule 7).
+
+**netex-rs.** Up to 0.7.2 a journey ran on its day types' days, within the
+days of the conditions available it names, less the days of those not
+available.
+
+**Proposal: adopt.** Effort **S**.
+
+**Built (unreleased, after 0.7.2).** A journey naming conditions none of
+which is available runs on no day, whatever its day types say
+(`Concern::JourneyWithoutDays`). Where it names one available, nothing
+changed. Every delivery of the other profiles the crate is checked on gives
+the same index as before. The day types of the three Dutch deliveries naming them give every
+journey each day of its conditions, so the rule of § 3.2.7 — the day bits
+lead — holds for them as read; a delivery whose day types gave fewer days
+would keep the fewer.
+
+## 40. A stop known by the register's code
+
+**Problem.** The German delivery names the Dutch stops it serves by
+`GlobalID` `NL:Q:66150540` and `NL:S:66150540`; the Dutch stop register
+names the same stops `NL:CHB:Quay:66150540` and states those keys as private
+codes (`privateCodes/PrivateCode type="QuayCode"`, `StopPlaceCode`). By
+identifier, the two are other stops.
+
+**Standard.** `privateCodes` (NeTEx 2.0) are codes an entity is known by in
+other systems, each with its type; `keyList` holds keys of any meaning.
+
+**netex-rs.** Up to 0.7.2 a stop's global identifier was its `GlobalID` key,
+and the model did not type `privateCodes`.
+
+**Proposal: adopt.** Effort **S**.
+
+**Built (unreleased, after 0.7.2).** The model types `privateCodes` wherever
+it types `keyList` (`PrivateCodes`). A stop place's or quay's global
+identifier (`Stop::dhid`, `Index::stop_by_dhid`) is its `GlobalID`, else its
+`StopPlaceCode` or `QuayCode`; `netex convert --stop-ids global` writes it,
+and `netex merge` pairs a stop of a later delivery with an earlier one by it,
+as by `GlobalID` and `SLOID`.
+
 ## Summary
 
 | § | Question | Proposal | Effort | Built (0.3.0 unless named) |
@@ -1196,3 +1339,8 @@ among a stop place's quays was already.
 | 33 | Bounds of a period written as instants | adopt: from noon on, the next day | S | ✓ (unreleased) |
 | 34 | Stop identifiers each document numbers anew | adopt: a stop per name, found in its own document | S | ✓ (unreleased) |
 | 35 | An assignment naming a quay by `StopPlaceRef` | keep, and count | S | counted (unreleased) |
+| 36 | Passing times from a departure and a time demand type | adopt: from the departure along the timing links, run and wait times of the type | M | ✓ (unreleased) |
+| 37 | Run times to a tenth of a second | adopt: add up to the millisecond, round each time to the second | S | ✓ (unreleased) |
+| 38 | A link or a point passed twice | adopt: each pass its own run time in order; the waits of a point its last visits' | S | ✓ (unreleased) |
+| 39 | A journey naming only conditions not available | adopt: no day | S | ✓ (unreleased) |
+| 40 | A stop known by the register's code | adopt: the code a global identifier where no `GlobalID` | S | ✓ (unreleased) |

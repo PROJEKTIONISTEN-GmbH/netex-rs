@@ -30,7 +30,10 @@
 //! lands within a metre (0.35 m at worst, MGI); at every stop of the two
 //! registers held back from fitting the corrections, within 0.61 m (MGI) and
 //! 0.74 m (LV03), where the Helmert transformations alone are 1.37 m and
-//! 1.79 m off.
+//! 1.79 m off. RD New is read by the Helmert transformation alone: at every
+//! stop of the Dutch register stating a position, within 0.24 m of
+//! RDNAPTRANS2018 through its correction grid, where the register states its
+//! positions to the metre.
 
 mod corrections;
 

@@ -7,7 +7,8 @@
 //! several timetables (`docs/INTERPRETATION.md` § 16):
 //!
 //! - **Stops pair by identifier, else by global identifier** (`GlobalID` —
-//!   the DHID —, `SLOID`): a stop place of a later delivery whose every quay
+//!   the DHID —, `SLOID`, the Dutch stop register's `QuayCode` and
+//!   `StopPlaceCode`): a stop place of a later delivery whose every quay
 //!   pairs with a quay of the stop place of an earlier one is that stop
 //!   place; its references point there. What differs — the name, the
 //!   position by more than 50 m — is a finding naming both. A stop place

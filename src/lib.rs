@@ -66,10 +66,11 @@
 //!
 //! [`merge::merge`] writes several deliveries as one, each under its rank and label, so that a
 //! reference resolves as they are ranked: a stop place pairs with an earlier delivery's by
-//! identifier, else by global identifier (`GlobalID`, `SLOID`); an object stated alike is kept once;
-//! an identifier taken with other content is renamed into the delivery's codespace; a journey stated
-//! in two deliveries is kept once. The documents are rewritten as they are written ([`written`]),
-//! every other byte kept, and what was found is reported by class ([`findings`]).
+//! identifier, else by global identifier (`GlobalID`, `SLOID`, the Dutch register's codes); an
+//! object stated alike is kept once; an identifier taken with other content is renamed into the
+//! delivery's codespace; a journey stated in two deliveries is kept once. The documents are
+//! rewritten as they are written ([`written`]), every other byte kept, and what was found is
+//! reported by class ([`findings`]).
 //!
 //! ```
 //! use netex_rs::dataset::Source;
