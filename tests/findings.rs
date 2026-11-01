@@ -74,8 +74,11 @@ fn a_journey_defined_again_with_other_content_is_a_finding_and_found_in_its_docu
     }
 }
 
+/// A stop place another document names otherwise is another stop, and so is
+/// its quay: the identifier is that document's own. A third document naming
+/// it as the first does is the first one's stop, and no finding.
 #[test]
-fn a_stop_place_named_otherwise_in_another_document_is_a_finding() {
+fn a_stop_place_named_otherwise_in_another_document_is_a_stop_of_its_own() {
     let documents = vec![
         (
             "A.xml".to_owned(),
@@ -95,20 +98,53 @@ fn a_stop_place_named_otherwise_in_another_document_is_a_finding() {
         serially(&reversed(&documents)),
         merged(&reversed(&documents)),
     ] {
+        assert_eq!(index.stop_count(), 4, "two stop places, two quays");
         let place = index.stop_by_id("SP").expect("the stop place");
         assert_eq!(
             index.stop(place).name,
             "Linz Hbf",
-            "as the document named first states it"
+            "the identifier alone names the stop of the document named first"
         );
         assert_eq!(
-            of(&index, Concern::RedefinedOtherwise),
+            of(&index, Concern::LocalIdentifier),
             [
-                "redefined with other content: Quay SP:1 in B.xml, kept as A.xml defines it",
-                "redefined with other content: StopPlace SP in B.xml, kept as A.xml defines it",
+                "identifier naming another stop than in another document, a stop of its own: Quay SP:1 in B.xml (A.xml)",
+                "identifier naming another stop than in another document, a stop of its own: StopPlace SP in B.xml (A.xml)",
             ],
-            "C repeats A and is no finding"
+            "C names it as A does"
         );
+        assert!(of(&index, Concern::RedefinedOtherwise).is_empty());
+    }
+}
+
+/// A stop place another document places otherwise under the same name is
+/// the same stop: one stop, as the document named first places it, and a
+/// finding.
+#[test]
+fn a_stop_place_placed_otherwise_in_another_document_is_one_and_a_finding() {
+    let documents = vec![
+        (
+            "A.xml".to_owned(),
+            Timetable::new()
+                .stop_place_at("SP", "Linz Hbf", (14.2913, 48.2901))
+                .xml(),
+        ),
+        (
+            "B.xml".to_owned(),
+            Timetable::new()
+                .stop_place_at("SP", "Linz Hbf", (14.2920, 48.2905))
+                .xml(),
+        ),
+    ];
+    for index in [serially(&documents), merged(&reversed(&documents))] {
+        assert_eq!(index.stop_count(), 1);
+        let place = index.stop(index.stop_by_id("SP").expect("the stop place"));
+        assert_eq!(place.longitude, Some(14.2913));
+        assert_eq!(
+            of(&index, Concern::RedefinedOtherwise),
+            ["redefined with other content: StopPlace SP in B.xml, kept as A.xml defines it"]
+        );
+        assert!(of(&index, Concern::LocalIdentifier).is_empty());
     }
 }
 

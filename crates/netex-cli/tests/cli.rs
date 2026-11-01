@@ -85,6 +85,7 @@ fn every_defect_is_a_class_with_its_count_examples_and_the_journeys_it_affects()
             "unresolved",
             "redefined-otherwise",
             "journey-without-days",
+            "local-identifier",
             "journey-without-travel-time",
             "time-goes-back",
             "stop-point-without-place",
@@ -119,6 +120,13 @@ fn every_defect_is_a_class_with_its_count_examples_and_the_journeys_it_affects()
     assert_eq!(redefined["examples"][0]["document"], "b-line-2.xml");
     assert_eq!(redefined["examples"][0]["about"], "a-line-1.xml");
     assert_eq!(redefined["affected_journeys"], 4);
+    // The second document names the first one's wasteland otherwise: a stop
+    // of its own, which no journey calls at.
+    let local = class(&report, "local-identifier");
+    assert_eq!(local["examples"][0]["entity"], "m:StopPlace:brache");
+    assert_eq!(local["examples"][0]["document"], "b-line-2.xml");
+    assert_eq!(local["examples"][0]["about"], "a-line-1.xml");
+    assert_eq!(local["affected_journeys"], 0);
     let flat = class(&report, "journey-without-travel-time");
     assert_eq!(flat["examples"][0]["entity"], "m:ServiceJourney:flach");
     assert_eq!(flat["affected_journeys"], Value::Null);
@@ -136,11 +144,22 @@ fn every_defect_is_a_class_with_its_count_examples_and_the_journeys_it_affects()
         .as_array()
         .expect("examples")
         .iter()
-        .map(|example| format!("{} {}", example["element"], example["entity"]).replace('"', ""))
+        .map(|example| {
+            format!(
+                "{} {} in {}",
+                example["element"], example["entity"], example["document"]
+            )
+            .replace('"', "")
+        })
         .collect();
     assert_eq!(
         unreferenced,
-        ["StopPlace m:StopPlace:brache", "Line m:Line:2"]
+        [
+            "StopPlace m:StopPlace:brache in a-line-1.xml",
+            "StopPlace m:StopPlace:brache in b-line-2.xml",
+            "Line m:Line:2 in b-line-2.xml"
+        ],
+        "each document's wasteland a stop of its own"
     );
 }
 
@@ -184,7 +203,7 @@ fn the_human_report_names_each_class_its_examples_and_the_verdict() {
     assert_eq!(output.status.code(), Some(1));
     let text = stdout(&output);
     assert!(
-        text.starts_with("mangelhaft: 2 documents, 4 stops, 3 stop points, 2 lines, 4 journeys"),
+        text.starts_with("mangelhaft: 2 documents, 5 stops, 3 stop points, 2 lines, 4 journeys"),
         "{text}"
     );
     assert!(

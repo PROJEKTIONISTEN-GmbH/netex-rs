@@ -11,7 +11,7 @@ use super::positions::{self, FrameSystems};
 use super::scope::Table;
 use super::strings::{Strings, Sym};
 use super::{CallUse, Index, PassingTime, StopId, StopKind, Unresolved};
-use crate::calendar::{assignment_rank, period_days, PeriodDays, Properties, Span};
+use crate::calendar::{assignment_rank, bound_day, period_days, PeriodDays, Properties, Span};
 use crate::geometry::first_position;
 use crate::model::{
     AssignedDayType, AssignedDays, AvailabilityCondition, Date, DateTime, DayType, Frame,
@@ -518,7 +518,10 @@ pub(crate) fn version_is_higher(strings: &Strings, a: Option<Sym>, b: Option<Sym
 /// where the repetitions contradict each other, the definition from the
 /// document whose name sorts first is kept, whatever order the documents come
 /// in, and every other content is a finding; a stop place's quays are the
-/// quays of all its definitions. Everything else — routes, lines, journey
+/// quays of all its definitions. A stop place, quay or stop point some
+/// documents name otherwise than others is one per name, each document's
+/// references resolving to the one it defines — the Czech deliveries number
+/// their stop places from one in every document. Everything else — routes, lines, journey
 /// patterns, journeys and their calendar — is the defining document's own,
 /// and a reference resolves in its own document first (see
 /// [`finish`](Self::finish)).
@@ -1041,16 +1044,15 @@ impl Visit<'_> {
         self.parts_of_stop_place(place, parent, validity);
     }
 
-    /// Gathers a stop place or quay: a new one appended, a repeated one put in
-    /// the place of the definition it takes precedence over, its content noted
-    /// where it differs. The stop as the index numbers it.
+    /// Gathers a stop place or quay: a new one appended, one repeated under its
+    /// key and name put in the place of the definition it takes precedence
+    /// over, its content noted where it differs. The stop as the index numbers
+    /// it.
     fn gather_stop(&mut self, record: StopRecord) -> StopId {
         let builder = &mut *self.builder;
         let index = u32::try_from(builder.stops.len()).expect("fewer than 2^32 stops");
-        match builder
-            .stop_table
-            .insert_or_kept(&builder.strings, record.key, index)
-        {
+        let (key, name, origin) = (record.key, record.name, record.origin);
+        let stop = match builder.stop_table.insert_or_kept(key, name, index) {
             Ok(()) => {
                 builder.stops.push(record);
                 StopId(index)
@@ -1069,7 +1071,9 @@ impl Visit<'_> {
                 }
                 StopId(kept)
             }
-        }
+        };
+        builder.stop_table.define(stop.0, origin);
+        stop
     }
 
     fn stop_place_record(&mut self, place: &StopPlace, key: Key, validity: Validity) -> StopRecord {
@@ -1285,11 +1289,12 @@ impl Visit<'_> {
         };
         let builder = &mut *self.builder;
         let index = u32::try_from(builder.stop_points.len()).expect("fewer than 2^32 stop points");
-        match builder
-            .stop_point_table
-            .insert_or_kept(&builder.strings, key, index)
-        {
-            Ok(()) => builder.stop_points.push(record),
+        let (name, origin) = (record.name, record.origin);
+        let point = match builder.stop_point_table.insert_or_kept(key, name, index) {
+            Ok(()) => {
+                builder.stop_points.push(record);
+                index
+            }
             Err(kept) => {
                 builder.redefinitions += 1;
                 let held = &builder.stop_points[kept as usize];
@@ -1302,8 +1307,10 @@ impl Visit<'_> {
                 if precedes(&builder.strings, record.origin, held.origin) {
                     builder.stop_points[kept as usize] = record;
                 }
+                kept
             }
-        }
+        };
+        builder.stop_point_table.define(point, origin);
     }
 
     fn assignment(&mut self, assignment: &crate::model::PassengerStopAssignment) {
@@ -1695,15 +1702,14 @@ impl Visit<'_> {
         }
     }
 
-    /// An operating period, its first and last day given as dates or as
-    /// operating days.
+    /// An operating period, its first and last day given as dates — read as
+    /// [`bound_day`] reads them — or as operating days.
     fn period(&mut self, period: &OperatingPeriod, element: &'static str) {
         let key = self.builder.key(&period.id, &period.version);
         let referrer = self.referrer(element, &period.id);
         let origin = self.origin;
-        let date = |date: &DateTime| date.date().and_then(|d| d.days_since_epoch());
         let (from, first) = match &period.start {
-            Some(PeriodStart::FromDate(start)) => (date(start), None),
+            Some(PeriodStart::FromDate(start)) => (bound_day(start), None),
             Some(PeriodStart::FromOperatingDayRef(r)) => (
                 None,
                 Some(
@@ -1714,7 +1720,7 @@ impl Visit<'_> {
             None => (None, None),
         };
         let (to, last) = match &period.end {
-            Some(PeriodEnd::ToDate(end)) => (date(end), None),
+            Some(PeriodEnd::ToDate(end)) => (bound_day(end), None),
             Some(PeriodEnd::ToOperatingDayRef(r)) => (
                 None,
                 Some(

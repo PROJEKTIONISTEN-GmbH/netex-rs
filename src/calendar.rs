@@ -7,7 +7,10 @@
 //!
 //! - An operating period gives the days its bits name, counted from its first
 //!   day, or every day from its first to its last where it states no bits
-//!   ([`period_days`]).
+//!   ([`period_days`]). Its first and last day are the dates of its bounds;
+//!   a bound written as an instant with a zone from noon on — the midnight
+//!   beginning a local day, written in UTC as the Belgian deliveries write
+//!   it — names the next day ([`bound_day`]).
 //! - Day type assignments apply in the order of their `order`, those stating
 //!   none last, the document's order between equals; a later assignment
 //!   overrides an earlier one, adding its days or, where it is not available,
@@ -183,6 +186,33 @@ pub fn period_days(from: Option<i64>, to: Option<i64>, bits: Option<&str>) -> Pe
     }
 }
 
+/// Seconds since midnight from which a bound written as an instant is the
+/// midnight beginning the next day.
+const NOON: u32 = 12 * 3600;
+
+/// The day a bound of an operating period names — its `FromDate` or
+/// `ToDate`, an `xsd:dateTime` —: the day of its date; but where it is
+/// written as an instant with a zone (`Z`, `+01:00`) at noon or later, the
+/// next day.
+///
+/// The bounds of a period are days. A producer writing them as instants in
+/// UTC writes the midnight beginning each local day: `2026-10-21T22:00:00Z`
+/// is the midnight beginning 22 October in Brussels in summer time,
+/// `2026-10-29T23:00:00Z` the one beginning 30 October in winter time — the
+/// Belgian deliveries' bounds, and the day bits they state count from those
+/// days. No time zone is needed to read them so: a local midnight within
+/// twelve hours of UTC is nearest the UTC midnight of its own day. A bound
+/// without a zone, or before noon, is the day of its date.
+pub fn bound_day(bound: &DateTime) -> Option<i64> {
+    let day = bound.date()?.days_since_epoch()?;
+    let next = bound.states_zone()
+        && bound
+            .time()
+            .and_then(|time| time.seconds_since_midnight())
+            .is_some_and(|seconds| seconds >= NOON);
+    Some(day + i64::from(next))
+}
+
 /// Days of the week, as a `DaysOfWeek` list of a property of day names them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct DaysOfWeek(u8);
@@ -277,6 +307,7 @@ pub fn assignment_rank(order: Option<&Order>) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::Date;
 
     fn valid(from: i64, to: Option<i64>) -> Span {
         Span {
@@ -329,6 +360,36 @@ mod tests {
                 days: Vec::new(),
                 issue: Some(PeriodIssue::NoFirstDay)
             }
+        );
+    }
+
+    fn bound(text: &str) -> Option<String> {
+        bound_day(&DateTime::from(text)).map(|day| Date::from_days_since_epoch(day).to_string())
+    }
+
+    #[test]
+    fn a_bound_written_as_a_local_midnight_in_utc_names_the_day_it_begins() {
+        let next = |text| bound(text).expect("a day");
+        assert_eq!(next("2026-10-21T22:00:00Z"), "2026-10-22", "summer time");
+        assert_eq!(next("2026-10-29T23:00:00Z"), "2026-10-30", "winter time");
+        assert_eq!(next("2026-10-29T23:00:00-01:00"), "2026-10-30");
+        assert_eq!(
+            bound("2026-10-21T00:00:00+01:00").as_deref(),
+            Some("2026-10-21")
+        );
+        assert_eq!(
+            bound("2030-01-10T11:45:00.000Z").as_deref(),
+            Some("2030-01-10")
+        );
+        assert_eq!(
+            bound("2026-12-12T23:59:59").as_deref(),
+            Some("2026-12-12"),
+            "a local time is the day of its date"
+        );
+        assert_eq!(
+            bound("2026-10-21").as_deref(),
+            None,
+            "no time, no date-time"
         );
     }
 

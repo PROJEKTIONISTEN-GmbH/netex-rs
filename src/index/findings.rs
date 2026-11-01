@@ -111,6 +111,17 @@ pub enum Concern {
     /// index, which holds a walk by the time it takes and does not choose a
     /// walking speed.
     WalkWithoutDuration,
+    /// A stop place, quay or stop point whose identifier another document
+    /// gives another name — the Czech deliveries number their stop places
+    /// from one in every document —: a stop of its own, which the references
+    /// of the documents defining it resolve to. The finding names the first
+    /// document stating that name and, as what else it names, the document
+    /// whose stop the identifier alone names ([`Index::stop_by_id`],
+    /// [`Index::stop_point_by_id`]).
+    ///
+    /// [`Index::stop_by_id`]: super::Index::stop_by_id
+    /// [`Index::stop_point_by_id`]: super::Index::stop_point_by_id
+    LocalIdentifier,
 }
 
 impl Concern {
@@ -137,6 +148,7 @@ impl Concern {
         Concern::PassingTimesOtherThanPoints,
         Concern::PropertiesOfDayUnread,
         Concern::WalkWithoutDuration,
+        Concern::LocalIdentifier,
     ];
 
     /// The concern's name in reports and on command lines, in lower case with
@@ -164,6 +176,7 @@ impl Concern {
             Concern::PassingTimesOtherThanPoints => "passing-times-other-than-points",
             Concern::PropertiesOfDayUnread => "properties-of-day-unread",
             Concern::WalkWithoutDuration => "walk-without-duration",
+            Concern::LocalIdentifier => "local-identifier",
         }
     }
 
@@ -215,6 +228,9 @@ impl Concern {
                 "day type whose properties name more than days of the week, its assignments' days alone"
             }
             Concern::WalkWithoutDuration => "walk stating no duration, no transfer",
+            Concern::LocalIdentifier => {
+                "identifier naming another stop than in another document, a stop of its own"
+            }
         }
     }
 }
@@ -278,7 +294,8 @@ pub struct Finding<'a> {
     /// What else it names: for a redefinition, the document whose definition
     /// the delivery answers with; for a point passed through, its pattern or
     /// journey; for days a line version does not govern or a journey of a
-    /// flexible line, the line; for a headway group, its journey.
+    /// flexible line, the line; for a headway group, its journey; for a local
+    /// identifier, the document whose stop the identifier alone names.
     pub about: Option<&'a str>,
 }
 

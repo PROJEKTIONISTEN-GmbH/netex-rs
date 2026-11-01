@@ -142,6 +142,7 @@ impl Class {
                     | Concern::ResolvedIgnoringVersion
                     | Concern::ResolvedAsOtherClass
                     | Concern::UnknownReferenceSystem
+                    | Concern::LocalIdentifier
             ),
             Class::Check(check) => matches!(
                 check,
@@ -413,8 +414,13 @@ pub fn check(index: &Index, source: &str, limits: &Limits, examples: usize) -> R
 
 /// The findings of `class`, in the index's order.
 fn find(index: &Index, referrers: &Referrers<'_>, class: Class) -> Vec<Found> {
+    // An object of the document named, else — a stop the delivery gathered
+    // from another document's definition — of the delivery.
     let object = |element: &str, id: &str, document: Option<&str>| {
-        referrers.find(element, id, document).next()
+        referrers
+            .find(element, id, document)
+            .next()
+            .or_else(|| referrers.find(element, id, None).next())
     };
     match class {
         Class::Concern(Concern::Unresolved) => index

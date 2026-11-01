@@ -4,7 +4,11 @@
 //!
 //! - A stop place, quay, stop point or level is one thing in the world, and
 //!   the documents that repeat it describe the same thing: it is gathered once
-//!   ([`Table`]), every repetition merged into it.
+//!   ([`Table`]), every repetition merged into it — but where documents give
+//!   a stop place, quay or stop point of one identifier other names, as the
+//!   Czech deliveries number their stop places from one in each document,
+//!   each name is a stop of its own, and a reference resolves to its own
+//!   document's.
 //! - A line, journey pattern, journey or anything of a calendar is what its
 //!   document says it is. The Linz AG reuses the identifiers of its calendars
 //!   in every line document with other days in each; the Swiss delivery
@@ -14,7 +18,9 @@
 //!   documents defining it, the one whose name sorts first answers
 //!   ([`Scoped`]).
 
-use rustc_hash::FxHashMap;
+use std::collections::hash_map::Entry;
+
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::build::{version_is_higher, Key, Pending, Validity};
 use super::strings::{Strings, Sym};
@@ -32,56 +38,181 @@ pub(crate) trait Lookup {
     fn versions(&self, id: Sym, document: Sym) -> Vec<u32>;
 }
 
-/// Entities gathered once, by key, and the highest version of each identifier.
+/// Entities gathered once, by key and name: the documents repeating an
+/// entity alike state one entity, and an identifier the documents name
+/// otherwise names an entity per name.
+///
+/// Gathered as the documents come, settled once every document is in
+/// ([`settle`](Self::settle)): then a reference resolves, in a document
+/// defining its key, to that document's entity, and elsewhere to the
+/// delivery's — of the entities of a key, the one the document named first
+/// defines.
 #[derive(Debug, Default, PartialEq)]
 pub(crate) struct Table {
+    /// Every entity, by its key and its name.
+    by_name: FxHashMap<(Key, Sym), u32>,
+    /// Each definition gathered — the entity it is, the document stating it —
+    /// until the table is settled.
+    definitions: Vec<(u32, Sym)>,
+    /// Per key, the entity the delivery answers with.
     by_key: FxHashMap<Key, u32>,
-    /// Per identifier: the entity at its highest version, and that version.
-    latest: FxHashMap<Sym, (u32, Option<Sym>)>,
+    /// Per identifier, the delivery's entity at its highest version.
+    latest: FxHashMap<Sym, u32>,
+    /// The keys the documents name otherwise.
+    named_otherwise: FxHashSet<Key>,
+    /// For a key the documents name otherwise: each defining document's entity.
+    in_document: FxHashMap<(Key, Sym), u32>,
+    /// For an identifier the documents name otherwise: each defining
+    /// document's entity at the highest version that document states.
+    latest_in_document: FxHashMap<(Sym, Sym), u32>,
 }
 
 impl Table {
-    /// Adds an entity, unless one with the same key is in already; then the
-    /// index of the entity that was kept.
-    pub(crate) fn insert_or_kept(
-        &mut self,
-        strings: &Strings,
-        key: Key,
-        index: u32,
-    ) -> Result<(), u32> {
-        use std::collections::hash_map::Entry;
-        match self.by_key.entry(key) {
-            Entry::Occupied(kept) => return Err(*kept.get()),
+    /// Adds an entity, unless one with the same key and name is in already;
+    /// then the index of the entity that was kept.
+    pub(crate) fn insert_or_kept(&mut self, key: Key, name: Sym, index: u32) -> Result<(), u32> {
+        match self.by_name.entry((key, name)) {
+            Entry::Occupied(kept) => Err(*kept.get()),
             Entry::Vacant(slot) => {
                 slot.insert(index);
+                Ok(())
             }
         }
-        let newer = match self.latest.get(&key.id) {
-            None => true,
-            Some((_, current)) => version_is_higher(strings, key.version, *current),
-        };
-        if newer {
-            self.latest.insert(key.id, (index, key.version));
-        }
-        Ok(())
     }
 
-    /// The entity with this identifier at its highest version.
+    /// Notes that `document` defines `entity`.
+    pub(crate) fn define(&mut self, entity: u32, document: Sym) {
+        self.definitions.push((entity, document));
+    }
+
+    /// Takes in the definitions another table gathered, each entity as
+    /// `moved` numbers it here and each document as `sym` does.
+    pub(crate) fn absorb_definitions(
+        &mut self,
+        other: &mut Table,
+        moved: impl Fn(u32) -> u32,
+        sym: impl Fn(Sym) -> Sym,
+    ) {
+        self.definitions.extend(
+            std::mem::take(&mut other.definitions)
+                .into_iter()
+                .map(|(entity, document)| (moved(entity), sym(document))),
+        );
+    }
+
+    /// Decides, once every document is in, which entity each reference
+    /// resolves to; `of` gives an entity's key and the document its record
+    /// comes from. Returns, for every key the documents name otherwise, each
+    /// of its entities but the delivery's, with the delivery's.
+    pub(crate) fn settle(
+        &mut self,
+        strings: &Strings,
+        of: impl Fn(u32) -> (Key, Sym),
+    ) -> Vec<(u32, u32)> {
+        // Of the entities of a key, the delivery's is the one the document
+        // named first states; of two that document states, the one named first.
+        let rank =
+            |(index, name): (u32, Sym)| (strings.resolve(of(index).1), strings.resolve(name));
+        let mut by_key: FxHashMap<Key, (u32, Sym)> = FxHashMap::default();
+        let mut named_otherwise = FxHashSet::default();
+        for (&(key, name), &index) in &self.by_name {
+            match by_key.entry(key) {
+                Entry::Vacant(slot) => {
+                    slot.insert((index, name));
+                }
+                Entry::Occupied(mut held) => {
+                    named_otherwise.insert(key);
+                    if rank((index, name)) < rank(*held.get()) {
+                        held.insert((index, name));
+                    }
+                }
+            }
+        }
+        self.by_key = by_key
+            .into_iter()
+            .map(|(key, (index, _))| (key, index))
+            .collect();
+        self.latest.clear();
+        for (&key, &index) in &self.by_key {
+            match self.latest.entry(key.id) {
+                Entry::Vacant(slot) => {
+                    slot.insert(index);
+                }
+                Entry::Occupied(mut held) => {
+                    if version_is_higher(strings, key.version, of(*held.get()).0.version) {
+                        held.insert(index);
+                    }
+                }
+            }
+        }
+        let mut others: Vec<(u32, u32)> = self
+            .by_name
+            .iter()
+            .filter(|((key, _), _)| named_otherwise.contains(key))
+            .map(|(&(key, _), &entity)| (entity, self.by_key[&key]))
+            .filter(|(entity, delivery)| entity != delivery)
+            .collect();
+        others.sort_unstable();
+        self.in_document.clear();
+        for (entity, document) in std::mem::take(&mut self.definitions) {
+            let key = of(entity).0;
+            if named_otherwise.contains(&key) {
+                self.in_document.entry((key, document)).or_insert(entity);
+            }
+        }
+        self.named_otherwise = named_otherwise;
+        self.latest_in_document.clear();
+        for (&(key, document), &entity) in &self.in_document {
+            match self.latest_in_document.entry((key.id, document)) {
+                Entry::Vacant(slot) => {
+                    slot.insert(entity);
+                }
+                Entry::Occupied(mut held) => {
+                    if version_is_higher(strings, key.version, of(*held.get()).0.version) {
+                        held.insert(entity);
+                    }
+                }
+            }
+        }
+        others
+    }
+
+    /// The delivery's entity with this identifier, at its highest version.
     pub(crate) fn latest_of(&self, id: Sym) -> Option<u32> {
-        self.latest.get(&id).map(|(index, _)| *index)
+        self.latest.get(&id).copied()
+    }
+
+    /// Whether the documents name `key` otherwise, once settled.
+    pub(crate) fn is_named_otherwise(&self, key: Key) -> bool {
+        self.named_otherwise.contains(&key)
     }
 }
 
 impl Lookup for Table {
-    fn exact(&self, key: Key, _: Sym) -> Option<u32> {
-        self.by_key.get(&key).copied()
+    fn exact(&self, key: Key, document: Sym) -> Option<u32> {
+        self.in_document
+            .get(&(key, document))
+            .or_else(|| self.by_key.get(&key))
+            .copied()
     }
 
-    fn latest(&self, id: Sym, _: Sym) -> Option<u32> {
-        self.latest_of(id)
+    fn latest(&self, id: Sym, document: Sym) -> Option<u32> {
+        self.latest_in_document
+            .get(&(id, document))
+            .or_else(|| self.latest.get(&id))
+            .copied()
     }
 
-    fn versions(&self, id: Sym, _: Sym) -> Vec<u32> {
+    fn versions(&self, id: Sym, document: Sym) -> Vec<u32> {
+        let own: Vec<u32> = self
+            .in_document
+            .iter()
+            .filter(|((key, by), _)| key.id == id && *by == document)
+            .map(|(_, &index)| index)
+            .collect();
+        if !own.is_empty() {
+            return own;
+        }
         self.by_key
             .iter()
             .filter(|(key, _)| key.id == id)

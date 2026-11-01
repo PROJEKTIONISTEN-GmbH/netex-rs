@@ -68,6 +68,21 @@ impl Timetable {
         self
     }
 
+    /// A stop place standing at a position, longitude and latitude in
+    /// degrees, with no quay.
+    pub fn stop_place_at(
+        mut self,
+        id: &str,
+        name: &str,
+        (longitude, latitude): (f64, f64),
+    ) -> Self {
+        let _ = write!(
+            self.stop_places,
+            r#"<StopPlace id="{id}" version="1"><Name>{name}</Name><Centroid><Location><Longitude>{longitude}</Longitude><Latitude>{latitude}</Latitude></Location></Centroid></StopPlace>"#
+        );
+        self
+    }
+
     /// A line, in a version, valid from one day — to another, where given —
     /// where given.
     pub fn line(mut self, id: &str, version: &str, valid: Option<(&str, Option<&str>)>) -> Self {

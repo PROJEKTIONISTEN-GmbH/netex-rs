@@ -4,11 +4,13 @@
 //! Each worker interns its own strings, so the other builder's symbols are
 //! renumbered into the receiving builder's interner first; every record is
 //! then appended with its symbols and its ranges into the flat arrays
-//! translated. An entity whose key the receiving builder already holds is a
-//! redefinition, exactly as it would be had one builder read both documents:
-//! the quays a redefined stop place brings are quays of the stop place that
-//! was kept, and of two contradicting definitions of a stop, a stop point or
-//! a level the one from the document named first is kept.
+//! translated. An entity whose key — and, for a stop or a stop point, name —
+//! the receiving builder already holds is a redefinition, exactly as it would
+//! be had one builder read both documents: the quays a redefined stop place
+//! brings are quays of the stop place that was kept, and of two contradicting
+//! definitions of a stop, a stop point or a level the one from the document
+//! named first is kept. Which document defines which stop is taken in as well,
+//! for the stops some documents name otherwise.
 
 use std::collections::hash_map::Entry;
 
@@ -312,7 +314,7 @@ impl IndexBuilder {
             let index = u32::try_from(self.stops.len()).expect("fewer than 2^32 stops");
             match self
                 .stop_table
-                .insert_or_kept(&self.strings, record.key, index)
+                .insert_or_kept(record.key, record.name, index)
             {
                 Ok(()) => {
                     self.stops.push(record);
@@ -340,6 +342,11 @@ impl IndexBuilder {
             let stop = &mut self.stops[index];
             stop.parent = stop.parent.map(|parent| moved[parent.0 as usize]);
         }
+        self.stop_table.absorb_definitions(
+            &mut other.stop_table,
+            |stop| moved[stop as usize].0,
+            |document| renumbered.sym(document),
+        );
         for (stop, contents) in std::mem::take(&mut other.stop_variants.of) {
             let contents = renumbered.contents(contents);
             self.stop_variants
@@ -403,7 +410,7 @@ impl IndexBuilder {
             let index = u32::try_from(self.stop_points.len()).expect("fewer than 2^32 stop points");
             match self
                 .stop_point_table
-                .insert_or_kept(&self.strings, record.key, index)
+                .insert_or_kept(record.key, record.name, index)
             {
                 Ok(()) => {
                     self.stop_points.push(record);
@@ -425,6 +432,11 @@ impl IndexBuilder {
                 }
             }
         }
+        self.stop_point_table.absorb_definitions(
+            &mut other.stop_point_table,
+            |point| moved[point as usize],
+            |document| renumbered.sym(document),
+        );
         for (point, contents) in std::mem::take(&mut other.stop_point_variants.of) {
             let contents = renumbered.contents(contents);
             self.stop_point_variants

@@ -515,6 +515,14 @@ impl DateTime {
         let time = Time::from(&rest[..end]);
         time.seconds_since_midnight().map(|_| time)
     }
+
+    /// Whether the form states a zone after its time — `Z` or an offset,
+    /// `+01:00` —, which makes it an instant rather than a local time.
+    pub fn states_zone(&self) -> bool {
+        self.0
+            .split_once('T')
+            .is_some_and(|(_, rest)| rest.contains(['Z', '+', '-']))
+    }
 }
 
 impl Date {

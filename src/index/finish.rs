@@ -43,6 +43,7 @@ pub(super) fn finish(builder: IndexBuilder) -> Index {
         recorder: None,
     };
     work.sort_by_document(&ranks);
+    work.settle_tables();
     if work.b.referrers {
         work.recorder = Some(work.definitions());
     }
@@ -80,7 +81,10 @@ pub(super) fn finish(builder: IndexBuilder) -> Index {
     // own document first.
     let graph = recorder.map(|recorder| {
         recorder.finish(|element, id, document| match element {
-            "StopPlace" | "Quay" => b.stop_table.latest_of(id).map(|stop| (Kind::Stop, stop)),
+            "StopPlace" | "Quay" => b
+                .stop_table
+                .latest(id, document)
+                .map(|stop| (Kind::Stop, stop)),
             "Route" => scopes
                 .routes
                 .table
@@ -648,7 +652,10 @@ impl Finish {
 
     /// Stop points → stops, quay before stop place. A stop point assigned in
     /// several documents takes the assignment of the document named first;
-    /// within one document, the last.
+    /// within one document, the last. A `QuayRef` naming a stop place, or a
+    /// `StopPlaceRef` naming a quay — as the Belgian deliveries assign their
+    /// stop points —, assigns the stop it names, and resolves to another class
+    /// than it names.
     fn resolve_assignments(&mut self) {
         let assignments = std::mem::take(&mut self.b.assignments);
         let mut assigned_by: Vec<Option<Sym>> = vec![None; self.b.stop_points.len()];
@@ -656,18 +663,67 @@ impl Finish {
             let Some(point_index) = self.resolve_stop_point(point) else {
                 continue;
             };
-            let stop = match (quay, place) {
-                (Some(quay), _) => self.resolve_stop(quay),
-                (None, Some(place)) => self.resolve_stop(place),
-                (None, None) => continue,
+            let Some(reference) = quay.as_ref().or(place.as_ref()) else {
+                continue;
             };
-            if let Some(stop) = stop {
+            if let Some(stop) = self.resolve_stop(reference) {
+                let found = match self.b.stops[stop as usize].kind {
+                    StopKind::StopPlace => "StopPlace",
+                    StopKind::Quay => "Quay",
+                };
+                self.check_class(reference, found);
                 let by = &mut assigned_by[point_index as usize];
                 if by.is_none_or(|current| !precedes(&self.b.strings, current, point.origin)) {
                     *by = Some(point.origin);
                     self.b.stop_points[point_index as usize].stop = Some(StopId(stop));
                 }
             }
+        }
+    }
+
+    /// Settles the tables of the stops and the stop points now that every
+    /// document is in: a stop place, quay or stop point another document
+    /// names otherwise is a stop of its own, and a finding.
+    fn settle_tables(&mut self) {
+        let IndexBuilder {
+            strings,
+            stops,
+            stop_table,
+            stop_points,
+            stop_point_table,
+            ..
+        } = &mut self.b;
+        let stops_named_otherwise = stop_table.settle(strings, |stop| {
+            let record = &stops[stop as usize];
+            (record.key, record.origin)
+        });
+        let points_named_otherwise = stop_point_table.settle(strings, |point| {
+            let record = &stop_points[point as usize];
+            (record.key, record.origin)
+        });
+        for (stop, delivery) in stops_named_otherwise {
+            let record = &self.b.stops[stop as usize];
+            let element = match record.kind {
+                StopKind::StopPlace => "StopPlace",
+                StopKind::Quay => "Quay",
+            };
+            let about = self.b.stops[delivery as usize].origin;
+            self.found(
+                Concern::LocalIdentifier,
+                element,
+                (record.origin, record.key.id),
+                Some(about),
+            );
+        }
+        for (point, delivery) in points_named_otherwise {
+            let record = &self.b.stop_points[point as usize];
+            let about = self.b.stop_points[delivery as usize].origin;
+            self.found(
+                Concern::LocalIdentifier,
+                "ScheduledStopPoint",
+                (record.origin, record.key.id),
+                Some(about),
+            );
         }
     }
 
@@ -738,17 +794,25 @@ impl Finish {
     fn definitions(&mut self) -> Recorder {
         let mut recorder = Recorder::default();
         let b = &self.b;
+        // A stop is the delivery's, but one of a key the documents name
+        // otherwise, which is the document's that defines it first.
         recorder.begin(Kind::Stop);
         for stop in &b.stops {
             let element = match stop.kind {
                 StopKind::StopPlace => "StopPlace",
                 StopKind::Quay => "Quay",
             };
-            recorder.define(element, stop.key.id, None);
+            let document = b.stop_table.is_named_otherwise(stop.key);
+            recorder.define(element, stop.key.id, document.then_some(stop.origin));
         }
         recorder.begin(Kind::StopPoint);
         for point in &b.stop_points {
-            recorder.define("ScheduledStopPoint", point.key.id, None);
+            let document = b.stop_point_table.is_named_otherwise(point.key);
+            recorder.define(
+                "ScheduledStopPoint",
+                point.key.id,
+                document.then_some(point.origin),
+            );
         }
         let mut levels: Vec<Key> = b.levels.keys().copied().collect();
         levels.sort_unstable_by(|a, b| level_order(&self.b.strings, a, b));

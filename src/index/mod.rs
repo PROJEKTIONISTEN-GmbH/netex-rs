@@ -407,7 +407,9 @@ impl Index {
         self.strings.len()
     }
 
-    /// The stop with this NeTEx identifier, at its highest version.
+    /// The stop with this NeTEx identifier, at its highest version; of an
+    /// identifier the documents name otherwise ([`Concern::LocalIdentifier`]),
+    /// the stop of the document named first.
     pub fn stop_by_id(&self, id: &str) -> Option<StopId> {
         let sym = self.strings.get(id)?;
         self.stop_table.latest_of(sym).map(StopId)
@@ -445,7 +447,10 @@ impl Index {
         (0..u32::try_from(self.stops.len()).expect("fewer than 2^32 stops")).map(StopId)
     }
 
-    /// The stop point with this NeTEx identifier, at its highest version.
+    /// The stop point with this NeTEx identifier, at its highest version; of
+    /// an identifier the documents name otherwise
+    /// ([`Concern::LocalIdentifier`]), the stop point of the document named
+    /// first.
     pub fn stop_point_by_id(&self, id: &str) -> Option<StopPointId> {
         let sym = self.strings.get(id)?;
         self.stop_point_table.latest_of(sym).map(StopPointId)
