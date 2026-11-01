@@ -232,6 +232,7 @@ profile relies on.
 | **EPIP** (European Passenger Information Profile) | composite frames of typed frames (`epip:EU_PI_*`) | read as any NeTEx; the index as for the others | the official EPIP example and the crate's own |
 | **IT-ITH1** (Italy, South Tyrol; the Italian national access point) | one document of EPIP frames (`IT:ITH1:…` identifiers), lines in versions | every name with the language it states; patterns naming their line only through a route; stop places stating a submode beside their mode; train numbers in the timetable frame; `OperatingPeriodRef`s naming UIC periods | yes, levels 1 and 3 of the delivery |
 | **NeTEx France** (the French national access point) | per network: stops, calendar, network and one document per line, everything in general frames typed by the part (`FR:TypeOfFrame:NETEX_ARRET`, …); or specific frames typed so; SNCF's trains in one document of 647 MB | general frames; quays defined beside their stop place, which names them by `QuayRef`; passing times naming no point, by position; day types given their days by a validity and days of the week, the assignments their exceptions; plain periods by the days of the week of their day type | yes, five deliveries: Fluo Grand Est (Bas-Rhin), Naolib, TBM, Normandy's aggregate, SNCF |
+| **Nordic NeTEx Profile** (Norway, Sweden, Finland) | per codespace, one document per line, a shared and a flexible shared document; no site in any of them, the stops being the national stop register's, published apart | journeys dated by the dated journeys naming them (`DatedServiceJourney`), cancelled and replaced ones giving no day; flexible lines as lines, their journeys left out and counted; operating periods stated by operating days; the stop register read along with the delivery (`Source::with`, `--with`); interchanges across line documents | yes, Norway's national delivery with its stop register |
 
 `tests/fixtures/own/` has a small delivery of each kind but DELFI, written for
 the tests; `tests/fixtures/fragments/` has small sets of frames and entities,
@@ -241,8 +242,9 @@ each pinning what the reader makes of one kind of thing a delivery states
 `docs/DELFI-PROFILE.md` lists what the German delivery uses of NeTEx: 193
 distinct elements, of which the typed model covers all but four, which are
 carried through. `docs/IT-ITH1-PROFILE.md` does the same for South Tyrol's,
-with what it states and how the crate reads it, and `docs/FR-PROFILE.md` for
-five French deliveries, checked against the GTFS feeds their producers publish.
+with what it states and how the crate reads it, `docs/FR-PROFILE.md` for
+five French deliveries, checked against the GTFS feeds their producers publish,
+and `docs/NORDIC-PROFILE.md` for Norway's, checked against Entur's GTFS feed.
 
 ## How conformant
 
@@ -440,7 +442,9 @@ point ([transport.data.gouv.fr](https://transport.data.gouv.fr/)), the
 timetables of Fluo Grand Est in the Bas-Rhin (Région Grand Est), Naolib
 (Nantes Métropole) and Normandy's networks (Région Normandie) under the Licence
 Ouverte 2.0, TBM's (Bordeaux Métropole) under the Licence Ouverte 1.0, and
-SNCF's under the ODbL. `docs/INTERPRETATION.md` and the profile pages name the
+SNCF's under the ODbL; and in the Nordic NeTEx Profile, Norway's national
+timetable with its stop register, published by Entur under the Norwegian
+Licence for Open Government Data (NLOD 2.0). `docs/INTERPRETATION.md` and the profile pages name the
 deliveries each figure was counted on. None of these deliveries is in the
 repository beyond the five DELFI files above.
 

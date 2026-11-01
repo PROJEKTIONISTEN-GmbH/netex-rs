@@ -24,7 +24,10 @@ what the standard says; what an importer built on this crate does today; what
   `docs/IT-ITH1-PROFILE.md`); and five deliveries in the French profile from
   the French national access point, fetched 2026-10-31: Fluo Grand Est in the
   Bas-Rhin, Naolib (Nantes), TBM (Bordeaux), the aggregate of Normandy's
-  networks and SNCF's trains (`docs/FR-PROFILE.md`).
+  networks and SNCF's trains (`docs/FR-PROFILE.md`); and Norway's national
+  delivery in the Nordic NeTEx Profile, Entur's of 2026-10-31
+  (`rb_norway-aggregated-netex.zip`, with its stop register;
+  `docs/NORDIC-PROFILE.md`).
 - *The importer*: the NeTEx importer of a journey planner, built on this crate
   and not published; it is cited for what it does with the same deliveries.
 - The standard: the NeTEx XML schema (CEN/TS 16614, the `xsd/` of the NeTEx
@@ -685,6 +688,10 @@ its windows and booking, into the model of a planner of on-demand services,
 not as fixed journeys: read as fixed journeys, an on-demand service would be
 shown as a bus at fixed times. Effort **M**.
 
+**Built (unreleased, after 0.7.2)**, as far as § 29: a flexible line is a line
+of the index; a journey of one is left out and counted, whether it names the
+line or reaches it through its route or pattern.
+
 ## 21. Who refers to an object
 
 **Problem.** A reference resolves forwards: a journey names its pattern, the
@@ -931,6 +938,130 @@ which is the reader's choice, not the delivery's. Effort **S**.
 **Built (unreleased, after 0.7.2).** A walk without a duration is a finding
 (`Concern::WalkWithoutDuration`), and still no transfer of the index.
 
+## 28. Journeys dated by dated journeys
+
+**Problem.** Norway's delivery gives 106 259 journeys no day type: 2 158 080
+`DatedServiceJourney`s each name a journey (`ServiceJourneyRef`) and an
+operating day (`OperatingDayRef`) and state nothing else — `RUT` in 391
+documents, `VYG`, `SJN` and 14 more codespaces. 3 359 of them are cancelled and
+6 681 replaced (`ServiceAlteration`); a journey running on a day a dated
+journey of it is replaced on has a second, plain dated journey for that day
+(`VYG:ServiceJourney:384-114_841657-R`, 2027-01-04). Read as journeys of their
+own, the dated journeys have no pattern and no times, and the journeys they
+date no day.
+
+**Standard.** A `DatedServiceJourney` is "a particular journey of a vehicle on
+a particular operating day", and may refer to the journey it is a run of
+(`netex_part_2/part2_journeyTimes/netex_datedVehicleJourney_version.xsd`, the
+`JourneyRef` of `DatedVehicleJourneyReferencesGroup`, NeTEx 2.0; NeTEx 1.x
+gives a dated journey no reference to its journey). The Nordic profile writes
+every dated journey so, and names the dated journey a replacing one replaces
+by a `DatedServiceJourneyRef` (NeTEx 2.0: `replacedJourneys`).
+
+**The importer.** Not run on a Nordic delivery.
+
+**netex-rs.** Up to 0.7.2 the index read a dated journey as a journey of its
+own: 2 158 080 journeys left with fewer than two timed calls, 2 266 214
+without a day.
+
+**Proposal: adopt.** Effort **S**.
+
+**Built (unreleased, after 0.7.2)** (the index). A dated journey naming a
+service journey and an operating day and stating no pattern, passing times
+or calls of its own dates the journey it names: the journey runs on the
+operating day, beside the days of its day types. A cancelled or replaced
+dated journey gives no day and takes none away — the plain dated journey of
+the same day gives it, where there is one. Any other dated journey is a
+journey of its own, as before. Entur's GTFS of the same delivery has the same
+days for every journey a dated journey dates (`docs/NORDIC-PROFILE.md`).
+
+## 29. A flexible line named by a route
+
+**Problem.** Norway's delivery defines 698 `FlexibleLine`s among its service
+frames' lines; their routes name them by `FlexibleLineRef`, and of their 2 390
+journeys 1 232 name neither line nor route, only their pattern. With flexible
+lines untyped, 824 references to them resolved to nothing, and the journeys
+reaching them through their pattern were read as fixed journeys — left out
+only where they stated no fixed times (1 191), kept where they did (41).
+
+**Standard.** A `FlexibleLine` is a `Line` with booking arrangements (§ 20).
+
+**The importer.** Not run on a Nordic delivery.
+
+**netex-rs.** Up to 0.7.2 the index read neither flexible lines nor the
+`FlexibleLineRef` of a journey, which left the journey out (§ 20).
+
+**Proposal: adopt.** Effort **S**.
+
+**Built (unreleased, after 0.7.2).** A flexible line is a line of the index,
+its `FlexibleLineType` typed and its booking carried through; a reference to
+it resolves as any reference to a line. A journey whose line is flexible — the
+one it names, its route's or its pattern's — is left out and counted
+(`Concern::FlexibleLineJourney`): 2 390 in Norway. The Austrian deliveries gain
+their flexible lines as lines and leave out the same journeys as before.
+
+## 30. Operating periods stated by their operating days
+
+**Problem.** 383 operating periods of 25 Norwegian codespaces state their
+first and last day as operating days (`FromOperatingDayRef`,
+`ToOperatingDayRef`): read by their dates alone, they have no first day, and
+1 539 journeys run on no day.
+
+**Standard.** An operating period starts on an operating day or a date and
+ends on one (`netex_framework/netex_reusableComponents/netex_serviceCalendar_version.xsd`,
+`OperatingPeriod`, a choice of each).
+
+**netex-rs.** Up to 0.7.2 the index read the dates only
+(`Concern::PeriodWithoutFirstDay`).
+
+**Proposal: adopt.** Effort **S**.
+
+**Built (unreleased, after 0.7.2).** A period stated by operating days takes
+their dates, each reference resolved in the period's document first; a
+reference to nothing is a finding, and leaves the period without that day.
+
+## 31. A condition no journey names, to the year 9999
+
+**Problem.** Flytoget's documents state the validity of their frames as an
+availability condition from 2026-10-28 to 9999-12-31. The index gave every
+calendar a bit for each day from the first to the last day of any period or
+condition of the delivery: in Norway's, 2.9 million days, 360 kB a calendar;
+asking for the days of each journey took five minutes.
+
+**Standard.** Silent on how far a reader looks.
+
+**netex-rs.** Up to 0.7.2 the calendar spanned every period and condition.
+
+**Proposal: better.** Effort **S**.
+
+**Built (unreleased, after 0.7.2).** The calendar spans the days that can give
+a journey a day: periods an assignment names, conditions a journey names,
+operating days, assigned dates and the validities of day types their days of
+the week decide. A period or condition nothing names gives no journey a day
+however far it reaches; no journey's days change (the German, Austrian and
+French deliveries read the same before and after, journey for journey).
+
+## 32. Stops a delivery names and does not define
+
+**Problem.** The Nordic deliveries assign their stop points to quays of the
+national stop register and define no site of their own. Norway's national
+archive holds the register; the archives of each codespace do not, and the
+register is published apart.
+
+**Standard.** A reference may name what another publication defines; how a
+reader finds it the schema does not say.
+
+**netex-rs.** Up to 0.7.2 a reader gave the index the documents of one
+archive or directory.
+
+**Proposal: adopt.** Effort **S**.
+
+**Built (unreleased, after 0.7.2)** (`dataset::Source::with`, `--with` of the
+`netex` command). Several sources are read as one: a delivery with its
+register, the documents of each source after the first named under its file
+or directory name, so that no two documents share a name. The register's
+stops are stops of the delivery, merged as the stops of any two documents are.
+
 ---
 
 ## Summary
@@ -964,3 +1095,8 @@ which is the reader's choice, not the delivery's. Effort **S**.
 | 25 | Passing times naming no point | adopt: by position in the pattern | S | ✓ (unreleased) |
 | 26 | A day type's properties | adopt: days of the week within the validity where no assignment gives a day of its own; plain periods by days of the week | S | ✓ (unreleased) |
 | 27 | Walks stating a distance alone | count them; no walking speed chosen | S | counted (unreleased) |
+| 28 | Journeys dated by dated journeys | adopt: a dated journey stating no journey dates the one it names; cancelled or replaced, no day | S | ✓ (unreleased) |
+| 29 | A flexible line named by a route | adopt: a flexible line is a line; its journeys, however they reach it, left out | S | ✓ (unreleased) |
+| 30 | Periods stated by operating days | adopt: their dates | S | ✓ (unreleased) |
+| 31 | A condition no journey names | better: the calendar spans what can give a day | S | ✓ (unreleased) |
+| 32 | Stops a delivery does not define | adopt: several sources read as one | S | ✓ (unreleased) |

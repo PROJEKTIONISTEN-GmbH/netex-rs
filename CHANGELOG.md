@@ -31,7 +31,42 @@ publish GTFS beside their NeTEx give the same trips, days and stop times
 - Own example `tests/fixtures/own/fr/`, the fragment
   `quays-beside-their-stop-place.xml`.
 
+The Nordic NeTEx Profile (`docs/NORDIC-PROFILE.md`): journeys dated by the
+dated journeys naming them, flexible lines as lines, operating periods stated
+by their operating days, and the stop register a delivery names read along
+with it. Norway's national delivery was read before and after: 106 259
+journeys dated only by dated journeys run on their days now, and its GTFS
+conversion has, trip for trip, the days, stops and times of the GTFS feed Entur
+publishes from it, but for differences each explained (`docs/INTERPRETATION.md`
+§§ 28–32). A calendar no longer spans conditions no journey names: on
+Norway's delivery `netex stats` took 356 s and 8.6 GiB, and takes 9 s and
+1.8 GiB. Not compatible with
+0.7 either: `LineItem` and `GeneralFrameMember` have a variant more, `Line`
+and `ServiceJourney` a field more.
+
+- **model**: `LineItem::FlexibleLine` and `GeneralFrameMember::FlexibleLine`,
+  read into `Line`, which types `FlexibleLineType`;
+  `ServiceJourney::dated_service_journey_refs`, the dated journeys a dated
+  journey replaces as the Nordic profile names them (`DatedServiceJourneyRef`).
+- **stream**: `Kind::FlexibleLine`, in `Selection::routing`.
+- **dataset**: `Source::with`, several sources read as one — a delivery with
+  the stop register it names, published apart —, the documents of each source
+  after the first named under its file or directory name.
+- **index**: a dated journey naming a journey and an operating day and stating
+  no journey of its own gives the journey that day, unless it is cancelled or
+  replaced; a flexible line is a line, and a journey whose line, route's line or
+  pattern's line is flexible is left out (`Concern::FlexibleLineJourney`); an
+  operating period stated by `FromOperatingDayRef`/`ToOperatingDayRef` takes
+  their dates; the calendar spans only the days that can give a journey a day,
+  and lists a calendar's days by its set bits.
+- Own example `tests/fixtures/own/nordic/` with its stop register
+  `tests/fixtures/own/nordic-stops/`.
+
 ### netex2gtfs
+
+A delivery read with the stop register it names converts with its stops
+(`Source::with`); journeys dated by dated journeys run on their days. Flexible
+lines, typed now, are reported as not carried, as they were untyped.
 
 A quay defined beside its stop place gives its platform code, level and
 accessibility to its stop; train numbers are read wherever they stand, among a
@@ -39,6 +74,9 @@ general frame's members as well. A French delivery naming no time zone takes
 none from its profile: France has more than one.
 
 ### netex-cli
+
+`netex validate`, `stats`, `convert` and `extract` read documents along with
+the source: `--with PATH`, a stop register published apart, as Norway's.
 
 `netex validate` reports the four new findings (`quay-of-two-stop-places`,
 `passing-times-other-than-points`, `properties-of-day-unread`,

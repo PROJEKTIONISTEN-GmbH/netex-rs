@@ -10,7 +10,13 @@ one — built on [netex-rs](../../README.md) and [netex2gtfs](../netex2gtfs/READ
 - Install: `cargo install netex-cli` (or from the repository: `cargo install --path crates/netex-cli`)
 
 A delivery is a zip archive or a directory of NeTEx documents, read on every
-core (`--threads N` to use fewer).
+core (`--threads N` to use fewer). `validate`, `stats`, `convert` and `extract`
+read the documents of `--with PATH` along with it — the stop register a Nordic
+delivery names, published apart:
+
+```sh
+netex validate rb_rut-aggregated-netex.zip --with Current_latest.zip
+```
 
 ## `netex validate` — the checking report
 
