@@ -289,19 +289,36 @@ fn statistics_count_by_operator_over_the_whole_calendar_or_a_period() {
     assert!(stderr(&output).contains("`14.10.2026` is no date"));
 }
 
-/// netex-rs's own example of the Nordic profile, and the stop register it
-/// names, published apart.
-fn nordic() -> (String, String) {
-    let own = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/own");
-    (
-        own.join("nordic").display().to_string(),
-        own.join("nordic-stops").display().to_string(),
-    )
+/// An own example delivery of netex-rs, where the repository has it: the
+/// package of netex-cli does not carry the core's fixtures.
+fn own_example(name: &str) -> Option<PathBuf> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/fixtures/own")
+        .join(name);
+    if path.is_dir() {
+        Some(path)
+    } else {
+        eprintln!(
+            "SKIPPED: netex-rs's own examples are not at {}",
+            path.display()
+        );
+        None
+    }
+}
+
+/// An own example delivery and the stop register it names, published apart.
+fn with_register(delivery: &str, register: &str) -> Option<(String, String)> {
+    Some((
+        own_example(delivery)?.display().to_string(),
+        own_example(register)?.display().to_string(),
+    ))
 }
 
 #[test]
 fn a_stop_register_published_apart_is_read_along_with_the_delivery() {
-    let (delivery, register) = nordic();
+    let Some((delivery, register)) = with_register("nordic", "nordic-stops") else {
+        return;
+    };
     let unresolved = |arguments: &[&str]| {
         let output = netex(arguments);
         assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
@@ -342,11 +359,9 @@ fn a_stop_register_published_apart_is_read_along_with_the_delivery() {
 /// available.
 #[test]
 fn a_dutch_delivery_reports_a_link_without_a_run_time() {
-    let own = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/own");
-    let (delivery, register) = (
-        own.join("nl").display().to_string(),
-        own.join("nl-register").display().to_string(),
-    );
+    let Some((delivery, register)) = with_register("nl", "nl-register") else {
+        return;
+    };
     let output = netex(&[
         "validate", &delivery, "--with", &register, "--format", "json",
     ]);
@@ -434,16 +449,9 @@ fn a_delivery_converts_to_gtfs_with_its_report() {
 
 #[test]
 fn the_merge_writes_each_delivery_under_its_rank_and_label() {
-    // An own example of netex-rs, where the repository has it: the package of
-    // netex-cli does not carry the core's fixtures.
-    let at = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/own/at");
-    if !at.is_dir() {
-        eprintln!(
-            "SKIPPED: netex-rs's own examples are not at {}",
-            at.display()
-        );
+    let Some(at) = own_example("at") else {
         return;
-    }
+    };
     let to = tempfile::tempdir().expect("a directory");
     let out = to.path().join("merged");
     let report = to.path().join("report.json");
