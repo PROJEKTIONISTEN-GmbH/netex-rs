@@ -608,9 +608,121 @@ fn a_delivery_stating_offsets_and_no_time_zone_takes_its_profile_s() {
     let decision = report
         .decisions
         .iter()
-        .find(|decision| decision.code == "time-zone-of-profile")
+        .find(|decision| decision.code == "time-zone-of-identifiers")
         .expect("the decision is reported");
-    assert_eq!(decision.example.as_deref(), Some("Europe/Zurich"));
+    assert_eq!(
+        decision.example.as_deref(),
+        Some("Europe/Zurich: 1 of 1 journeys identified ch:")
+    );
+}
+
+/// The decision `code` of `report`: how often it was taken, and its example.
+fn decision(report: &Report, code: &str) -> Option<(u64, String)> {
+    report
+        .decisions
+        .iter()
+        .find(|decision| decision.code == code)
+        .map(|decision| (decision.count, decision.example.clone().unwrap_or_default()))
+}
+
+#[test]
+fn an_austrian_delivery_framed_as_epip_takes_the_zone_its_identifiers_show() {
+    let Some(path) = own_example("at") else {
+        return;
+    };
+    // As the Austrian national deliveries are written: frames typed as the
+    // European profile's, no time zone.
+    let delivery = tempfile::tempdir().expect("a directory");
+    for entry in std::fs::read_dir(&path).expect("the example") {
+        let file = entry.expect("a file").path();
+        let xml = std::fs::read_to_string(&file).expect("the document");
+        let xml = xml
+            .replace("<TimeZone>Europe/Vienna</TimeZone>", "")
+            .replacen(
+                "<FrameDefaults>",
+                r#"<TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER"/><FrameDefaults>"#,
+                1,
+            );
+        std::fs::write(delivery.path().join(file.file_name().expect("a name")), xml)
+            .expect("written");
+    }
+    let (feed, report) = convert_to_directory(delivery.path(), &Options::default());
+    assert_eq!(report.profile, Profile::Epip);
+    assert!(table(feed.path(), "agency.txt", &["agency_timezone"])
+        .iter()
+        .all(|zone| zone == "Europe/Vienna"));
+    assert_eq!(
+        decision(&report, "time-zone-of-identifiers"),
+        Some((
+            1,
+            "Europe/Vienna: 3 of 3 journeys identified at:".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn a_belgian_delivery_takes_the_zone_of_the_country_its_stops_lie_in() {
+    let Some(path) = own_example("be") else {
+        return;
+    };
+    // Its line names no operator: the publisher's agency runs it.
+    let publisher = Publisher {
+        name: "Example".to_owned(),
+        url: "https://example.org".to_owned(),
+        language: None,
+    };
+    let options = Options {
+        publisher: Some(publisher),
+        ..Options::default()
+    };
+    let (feed, report) = convert_to_directory(&path, &options);
+    assert_eq!(
+        table(feed.path(), "agency.txt", &["agency_id", "agency_timezone"]),
+        ["publisher|Europe/Brussels"]
+    );
+    assert_eq!(
+        decision(&report, "time-zone-of-stops"),
+        Some((
+            1,
+            "Europe/Brussels: 4 of 4 stops with a position in BE".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn a_delivery_stating_no_zone_whose_stops_lie_in_no_country_known_takes_none() {
+    // Uferweg moved out into the Atlantic, its documents naming no zone.
+    let delivery = tempfile::tempdir().expect("a directory");
+    for name in ["uferweg-nord.xml", "uferweg-sued.xml"] {
+        let xml = std::fs::read_to_string(fixture("uferweg").join(name)).expect("the fixture");
+        let xml = xml
+            .replace("<TimeZone>Europe/Zurich</TimeZone>", "")
+            .replace("<Longitude>8.", "<Longitude>-30.");
+        std::fs::write(delivery.path().join(name), xml).expect("written");
+    }
+    let source = Source::open(delivery.path()).expect("the delivery opens");
+    let delivery = Delivery::read(&source, Reading::default()).expect("the delivery reads");
+    let feed = tempfile::tempdir().expect("a directory");
+    let converted = convert(
+        &delivery,
+        &Options::default(),
+        output::at(feed.path()).expect("an output"),
+    );
+    assert!(
+        matches!(converted, Err(netex2gtfs::Error::NoTimeZone)),
+        "{converted:?}"
+    );
+    // Given one, it converts.
+    let options = Options {
+        time_zone: Some("Atlantic/Azores".to_owned()),
+        ..Options::default()
+    };
+    convert(
+        &delivery,
+        &options,
+        output::at(feed.path()).expect("an output"),
+    )
+    .expect("converts with the zone given");
 }
 
 #[test]

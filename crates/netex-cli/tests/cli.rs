@@ -430,8 +430,25 @@ fn a_delivery_converts_to_gtfs_with_its_report() {
     let directory = tempfile::tempdir().expect("a directory");
     let feed = directory.path().join("feed");
     let feed = feed.to_str().expect("a path");
-    // The delivery names no time zone: GTFS needs one.
+    // The delivery names no time zone: its stops lie in Germany.
     let output = netex(&["convert", &source, "--to", "gtfs", feed]);
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+    assert!(
+        stderr(&output).contains("time-zone-of-stops"),
+        "{}",
+        stderr(&output)
+    );
+    // Out at sea, nothing tells its time zone: GTFS needs one.
+    let at_sea = tempfile::tempdir().expect("a directory");
+    for entry in std::fs::read_dir(&source).expect("the delivery") {
+        let path = entry.expect("a document").path();
+        let xml = std::fs::read_to_string(&path).expect("the document");
+        let xml = xml.replace("<Longitude>9.", "<Longitude>-30.");
+        std::fs::write(at_sea.path().join(path.file_name().expect("a name")), xml)
+            .expect("written");
+    }
+    let at_sea = at_sea.path().to_str().expect("a path");
+    let output = netex(&["convert", at_sea, "--to", "gtfs", feed]);
     assert_eq!(output.status.code(), Some(2));
     assert!(
         stderr(&output).contains("names a time zone"),
