@@ -1,9 +1,133 @@
 # Performance
 
-What reading a NeTEx delivery and converting it to GTFS costs: first whole
-national deliveries as of 0.8.1, read and converted to GTFS, each feed checked
-against the GTFS its publisher writes from the same data; then how reading the
-German delivery got fast, in 0.2 and 0.3.
+What reading a NeTEx delivery and converting it to GTFS costs: first what
+0.9.0 changed in writing the feed, then whole national deliveries as of
+0.8.1, read and converted to GTFS, each feed checked against the GTFS its
+publisher writes from the same data; then how reading the German delivery got
+fast, in 0.2 and 0.3.
+
+## Writing the feed on every thread (0.9.0)
+
+netex2gtfs 0.3.0 writes its zip archive itself and deflates each file in
+pieces on every thread, where 0.2 deflated the whole feed on one: on 8
+threads Germany converts in 200 s instead of 364 s, Austria's nine
+deliveries in 39 s instead of 68 s, Norway in 16 s instead of 29 s. Reading
+is as it was.
+
+### How it was measured
+
+`tools/bench/netex_bench.py` on 2 November 2026 over Germany, Norway and
+Austria's nine deliveries as `tools/bench/deliveries.json` lists them, on 8
+threads, `netex stats`, `netex convert --to gtfs` and `netex convert --to
+gtfs --shapes`, one run of each per call; before — netex-cli 0.3.1 — and
+after — netex-cli 0.4.0 — called in the order before, after, after, before,
+every call one hold of the host's measuring lock. The host as below; the
+container was granted 8 CPUs and 16 GiB. The load of the host (one minute)
+stood between 1.6 and 36 at the starts of the 132 runs, 12.7 in the median.
+Both builds were given the same command lines, `--time-zone Europe/Vienna`
+for the Austrian deliveries among them, which 0.3.1 needs.
+
+| Delivery | Step | Before, runs | After, runs | Before | After | Change | Peak memory, before / after |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Germany | read (`stats`) | 116.0 s, 97.6 s | 103.5 s, 109.2 s | 106.8 s | 106.3 s | −0.4 % | 12.6 / 12.7 GiB |
+| Germany | → GTFS | 377.6 s, 350.1 s | 200.6 s, 199.2 s | 363.8 s | 199.9 s | −45.1 % | 12.7 / 12.7 GiB |
+| Germany | → GTFS with shapes | 359.1 s, 357.8 s | 209.3 s, 208.2 s | 358.5 s | 208.7 s | −41.8 % | 12.7 / 12.9 GiB |
+| Austria, nine deliveries | read | 21.5 s, 21.7 s | 21.8 s, 22.1 s | 21.6 s | 21.9 s | +1.4 % | 1.4 / 1.4 GiB |
+| Austria, nine deliveries | → GTFS | 67.5 s, 68.2 s | 39.1 s, 39.3 s | 67.9 s | 39.2 s | −42.3 % | 1.4 / 1.4 GiB |
+| Austria, nine deliveries | → GTFS with shapes | 138.7 s, 139.6 s | 74.6 s, 75.0 s | 139.1 s | 74.8 s | −46.2 % | 1.4 / 1.4 GiB |
+| Norway | read | 8.3 s, 8.5 s | 8.6 s, 8.6 s | 8.4 s | 8.6 s | +2.2 % | 1.8 / 1.8 GiB |
+| Norway | → GTFS | 28.5 s, 28.6 s | 16.2 s, 16.2 s | 28.5 s | 16.2 s | −43.3 % | 1.8 / 1.8 GiB |
+| Norway | → GTFS with shapes | 28.6 s, 28.9 s | 32.8 s, 32.6 s | 28.8 s | 32.7 s | +13.7 % | 1.8 / 2.1 GiB |
+
+Austria's times are the sums of its nine deliveries, its memory the
+largest one's. Converting reads the delivery too: the feed is written in
+what the conversion takes beyond the reading — Germany's in about 94 s
+instead of 257 s (most of which, on 16 threads below, was the deflate on one
+thread). Norway's conversion with shapes takes longer since it has shapes:
+30 396 477 points written where 0.3.1 wrote none, an archive of 328 MB
+instead of 70 MB. The feeds have the same rows — but `shapes.txt`, below —
+and the same decisions, but for those this release adds and the four
+Norwegian operators whose `<Url/>` is empty, now `agency-without-url` (72,
+before 68); the trip days held against the publishers' GTFS are what they
+were (Germany +3.06 %, Norway equal). The archives are 3 to 7 % smaller
+(Germany 666 MB instead of 704 MB, Norway 65 MB instead of 70 MB) at the
+same compression level: deflating the feed in pieces of 1 MiB, each primed
+with the 32 KiB before it, loses nothing against the one stream of 0.2.
+
+### The same bytes on any number of threads
+
+Converted with `--shapes` on 1, 8 and 16 threads, each feed's archive and
+its report are the same bytes (SHA-256, the first 16 digits):
+
+| Delivery | Archive | Report |
+|---|---|---|
+| Germany | `eaca3f5ec0f2cc61` | `877ba55922b3cb1f` |
+| Norway | `b62035e6ac80e9c2` | `93db2b069a9d0230` |
+| Austria, railways (ÖBB) | `e3d08a4c3912af75` | `befc256b784ce3c1` |
+| Austria, Linz AG | `c8cd10a28801f5ec` | `a566d072314819e8` |
+| Austria, Upper Austria | `efe1a6753ce693e4` | `ebf99aad18e302d9` |
+| Austria, Salzburg | `9d87a8f5ae396fc8` | `ce1ba4964b557840` |
+| Austria, Carinthia | `cbfaa3c6ec69f966` | `12f19e0ffde1d7db` |
+| Austria, VOR | `36868f4c32a90530` | `5977054f8d474a3a` |
+| Austria, Styria | `bac7b30b353de2a6` | `81f5eae7edffd46b` |
+| Austria, Tyrol | `2451ecac46c5c9f0` | `3196029b49e50b05` |
+| Austria, Vorarlberg | `7565c8bc0685e523` | `af5c3a99e2d6e332` |
+
+0.3.1 wrote another archive in each run: its two runs of Norway on the same
+8 threads came to 69 849 954 and 69 853 937 bytes.
+
+### Shapes
+
+The Nordic deliveries state their link geometries in link sequence
+projections, which 0.3.1 did not read:
+
+| Delivery | Trips | With a shape | Points | Links without a geometry |
+|---|---:|---:|---:|---:|
+| Norway | 374 843 | 359 996 | 30 396 477 | 4 377 |
+| Sweden | 438 778 | 388 316 | 19 640 718 | 18 208 |
+| Finland | 521 058 | 495 064 | 2 061 520 | — |
+
+Norway's shapes against Entur's GTFS of the same stand: each feed gives
+359 996 trips a shape, 359 985 of them the same trips. Of the 26 456 pairs of our shape and Entur's,
+4 000 chosen by a hash of the pair (57 218 trips) were measured — each point
+of ours against Entur's line and up to 200 points of Entur's against ours,
+point to segment: the farthest point lies 0.062 m off, the median of each
+trip's farthest 0.000 m. Finland's patterns name one link for the whole way;
+2 149 of them name a link between other stop points, and their trips take
+the link between their stop points where one is stated (`docs/NORDIC-PROFILE.md`).
+
+Austria's deliveries state their geometry on the link itself, as before, and
+name the links of each pattern: a trip now runs over those, else over a link
+between its stop points stated in another document. Of the trips with a
+shape in both versions, those of the railways' delivery 31 525 of 31 730 have
+the same, Styria's 301 917 of 302 472, VOR's 469 317 of 469 322. The others
+follow the links their pattern names where the delivery states another link
+between two of their calls too: the S3's
+`at:obb:ServiceJourney:010S3V-OEBB-1-1-64920:bX:` passes
+`at-48-1252-0-5` without stopping, and runs over its pattern's two links
+through it (68 and 76 positions), where 0.3.1 took the direct link between
+the calls either side (285). 9 110 trips of the railways' delivery and
+5 150 of Styria's have a shape now that had none. Germany's 1 438 702 service links state no geometry: with `--shapes`
+the report says so and gives every trip `shape-incomplete`, where 0.3.1 said
+nothing.
+
+### Time zones
+
+The deliveries that needed `--time-zone` take their zone from the data:
+
+| Delivery | Zone | Decision |
+|---|---|---|
+| Austria's nine deliveries (frames typed `epip:`) | Europe/Vienna | `time-zone-of-identifiers`, e.g. VOR: 469 994 of 469 994 journeys identified `at:` |
+| Belgium, STIB | Europe/Brussels | `time-zone-of-stops`: 3 296 of 3 296 stops with a position in Belgium |
+| Belgium, SNCB | Europe/Brussels | 2 721 of 2 950 |
+| Belgium, TEC | Europe/Brussels | 45 643 of 46 563 |
+| Belgium, De Lijn | Europe/Brussels | 30 213 of 30 596 |
+| France, TBM | Europe/Paris | 6 088 of 6 118 |
+| France, Naolib | Europe/Paris | 4 097 of 4 100 |
+| France, SNCF | Europe/Paris | 3 247 of 3 425 |
+
+Given the same zone with `--time-zone`, the feed is the same bytes (checked
+for STIB and Linz AG).
 
 ## Whole national deliveries, read and converted to GTFS (0.8.1)
 

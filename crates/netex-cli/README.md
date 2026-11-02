@@ -102,17 +102,20 @@ decision taken and what the feed does not carry, and writes the conversion's
 report as JSON with `--report`. `--stop-ids global` gives stops their `GlobalID`
 (DHID) or, without one, their Swiss `SLOID`, numbered `#2`, `#3` where stops
 share one; `--time-zone` names the agencies' time zone where no document of the
-delivery does — as French deliveries may not, and France has more than one time
-zone: `--time-zone Europe/Paris` for one of metropolitan France. The national
-deliveries of Austria and of the Belgian operators name none either:
-`--time-zone Europe/Vienna`, `--time-zone Europe/Brussels`.
+delivery does. Without it, such a delivery takes the zone of the country its
+journeys' identifiers show (`at:` Europe/Vienna, as Austria's national
+deliveries), else of the country most of its stops lie in (Europe/Brussels for
+the Belgian operators', Europe/Paris for the French deliveries naming none);
+the report says which. A delivery whose stops lie in no country netex2gtfs
+knows needs `--time-zone`.
 
 A whole national delivery converts on one machine: Germany's 28 190 documents
 (74.7 GB of XML) in 5.3 minutes on 16 threads at a peak of 12.8 GiB, reading
 them alone (`netex stats`) in 65 s — every country's figures are in the
-[README of netex-rs](../../README.md#performance). The feed is written on one
-thread, most of it deflating the archive: a directory as the output is
-faster (Germany 2.6 minutes in all).
+[README of netex-rs](../../README.md#performance). Those figures are of
+netex-cli 0.3, which deflated the feed's archive on one thread; 0.4 deflates
+it on every thread, and on 8 threads converts Germany in 200 s instead of
+364 s.
 
 ## `netex extract` — a part of a delivery
 

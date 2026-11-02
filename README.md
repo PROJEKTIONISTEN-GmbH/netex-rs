@@ -246,9 +246,12 @@ largest one's.
 
 - **Germany** converts on one, four, eight and sixteen threads in 13.5, 7.0,
   5.8 and 5.3 minutes. Reading scales with the threads (9.5 minutes on one,
-  65 s on sixteen); writing the feed, about four minutes, runs on one, most
-  of it deflating the zip archive — written into a directory instead, the
-  feed takes 2.6 minutes in all on sixteen threads. Its peak, 11.1 to
+  65 s on sixteen); writing the feed, about four minutes, ran on one, most
+  of it deflating the zip archive. Since 0.9.0 each file of the archive is
+  deflated on every thread: on eight threads Germany converts in 200 s
+  instead of 364 s, Austria's nine deliveries in 39 s instead of 68 s —
+  measured before and after on one machine, the feed the same bytes on one,
+  eight and sixteen threads. Its peak, 11.1 to
   12.8 GiB by the threads, is the reading's: converting needs no more memory
   than reading alone, and the feed is written from 6 to 8 GiB.
 - **Switzerland** needs 16.9 GiB on sixteen threads, 12.4 GiB on one: on a
@@ -267,7 +270,8 @@ largest one's.
   the delivery states.
 
 Every delivery and every comparison with its explanation, the curves over the
-threads, and where the memory goes: [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+threads, where the memory goes, and what 0.9.0 changed:
+[docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
 ## NeTEx → GTFS: what the feed carries, and what not
 
@@ -276,14 +280,14 @@ library behind it) writes from the resolved delivery:
 
 | GTFS | From NeTEx |
 |---|---|
-| `agency.txt` | the operator of each line, else its additional operator, else its authority |
+| `agency.txt` | the operator of each line, else its additional operator, else its authority; the time zone a document names, else that of the country the identifiers or the stops show |
 | `stops.txt`, `levels.txt` | stop places as stations, their quays as stops under them, stop points no stop is assigned as stops of their own; accessibility, platform codes, levels |
 | `routes.txt` | lines — a line's versions are one route —, their mode as a route type, their colours |
 | `trips.txt`, `stop_times.txt` | journeys with their calls and passing times, the destination shown, train numbers, direction, accessibility; boarding and alighting; a point passed through is no call |
 | `calendar.txt`, `calendar_dates.txt` | the days each journey runs, by the calendar rules of the delivery's profile |
 | `frequencies.txt` | template journeys run at a headway |
 | `transfers.txt` | walks between stops and planned interchanges (staying seated, guaranteed) |
-| `shapes.txt` | the geometry a service link states on itself (`--shapes`), as Austria's and Denmark's deliveries do; not yet geometry in a link's projections, as Norway's, Sweden's and Finland's |
+| `shapes.txt` | the geometry of the service links a trip runs over (`--shapes`), those its pattern names first: the geometry a link states on itself, as Austria's and Denmark's deliveries do, or in its link sequence projection, as Norway's, Sweden's and Finland's |
 | `feed_info.txt`, `attributions.txt` | the publisher given, the delivery's data sources and participants |
 
 Positions in a national reference system are written in WGS 84. GlobalIDs
@@ -417,7 +421,10 @@ CHENyx06 (© swisstopo, free use) and, for the Dutch points, NSGI's
 RDNAPTRANS2018 — at the stops of the Swiss service point register
 (opentransportdata.swiss) and of the Austrian stop register (data.gv.at,
 CC BY 4.0). `tests/fixtures/README.md` records file by file what was copied,
-from where, and what was left out.
+from where, and what was left out. The borders netex2gtfs takes a delivery's
+country from (`crates/netex2gtfs/src/countries.txt`) are Natural Earth's
+Admin 0 countries at 1:10m, public domain, simplified by
+`tools/countries.py`.
 
 **Deliveries.** The profiles were read, and the figures under Performance
 measured, on the deliveries as their publishers publish them. None of them

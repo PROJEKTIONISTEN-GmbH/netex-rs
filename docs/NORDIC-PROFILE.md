@@ -196,8 +196,25 @@ under the parent, as GTFS stations do not nest
 place. The stop register's quays have no name of their own: each is named as
 its stop place. Not carried into the feed, and said so in the report: notices,
 networks, flexible lines, flexible stop places and their assignments, route
-points and service links, the register's fares, topographic places, tariff
-zones, groups of stop places and parkings.
+points, the register's fares, topographic places, tariff zones, groups of
+stop places and parkings.
+
+With `--shapes` (since netex2gtfs 0.3.0) a trip's shape follows the service
+links its pattern names in sequence, their geometry in the link sequence
+projection of each link (`srsName="4326"`), in the codespace's shared data.
+Norway: 359 996 of 374 843 trips have a shape, 30 396 477 points; 4 377 links
+state no geometry (`link-without-geometry`), and 14 847 trips run over one or
+between calls no link joins (`shape-incomplete`). Held against Entur's GTFS —
+4 000 of the 26 456 pairs of our shape and Entur's, chosen by a hash, 57 218
+trips —, no point of ours, nor of up to 200 of each of Entur's, lies more
+than 0.07 m from the other's line.
+Sweden: 388 316 of 438 778 trips, 19 640 718 points, 18 208 links without a
+geometry. Finland's patterns name one link each for the whole way: 495 064 of
+521 058 trips have a shape, 2 061 520 points; of the 9 182 patterns naming a
+link, 2 149 name one between other stop points — `OYM:JourneyPattern:237598_7010`,
+in Porvoo, names `OYM:ServiceLink:16`, from Helsinki into central Finland —,
+and their trips take the link between their stop points where one is stated,
+else have no shape.
 
 ## Several deliveries into one
 

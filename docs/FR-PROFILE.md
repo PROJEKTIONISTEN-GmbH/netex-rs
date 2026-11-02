@@ -153,7 +153,10 @@ Fluo's GTFS also holds the days before 2026-10-30 its NeTEx no longer states.
 `netex convert --to gtfs` converts each delivery: Fluo and Normandy name their
 time zone (`Europe/Paris`) in their frame defaults; TBM and Naolib name none,
 SNCF only its offsets from UTC, and France has more than one time zone, so the
-converter takes none from the profile: `--time-zone Europe/Paris` gives it.
+profile gives none. Since netex2gtfs 0.3.0 they take the zone of the country
+their stops lie in (`time-zone-of-stops`): TBM 6 088 of its 6 118 stops with a
+position, Naolib 4 097 of 4 100, SNCF 3 247 of 3 425 lie in France —
+Europe/Paris, its European part's.
 Fluo gives 1 771 trips with 27 800 stop times, Normandy 85 356 trips with
 1 890 835 stop times, its trains named by the train numbers its general frames
 hold, SNCF 60 142 trips with 523 621 stop times. Not carried into the feed, and said
