@@ -25,6 +25,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+## Whole national deliveries
+
+Every national delivery netex-rs reads converts whole, without error — the
+Czech ones into empty feeds, as none of their stops states a position. On 16
+threads of an AMD EPYC 7502P with 64 GiB, with `netex convert`:
+
+| Delivery | XML | NeTEx → GTFS | Peak memory | Trips | Stop times |
+|---|---:|---:|---:|---:|---:|
+| Germany | 74.7 GB | 5.3 min | 12.8 GiB | 4 838 062 | 99 495 018 |
+| Switzerland | 39.3 GB | 2.7 min | 16.9 GiB | 2 583 297 | 41 602 402 |
+| Norway | 5.7 GB | 29 s | 1.9 GiB | 374 843 | 8 986 827 |
+| Denmark | 3.9 GB | 15 s | 1.1 GiB | 196 818 | 4 690 714 |
+
+Converting needs no more memory than reading the delivery; the feed is
+written on one thread, most of it deflating the zip archive (Germany into a
+directory: 2.6 minutes). Each feed was held against the GTFS feed its
+publisher writes from the same data: Norway's has the same trips on the same
+days. All deliveries, the method and every comparison: the
+[README of netex-rs](../../README.md#performance) and its
+`docs/PERFORMANCE.md`.
+
 ## How a feed is made
 
 The delivery is read once, on every core. The index of netex-rs gives stops,
@@ -44,7 +65,7 @@ in the same walk of each document and resolved by the same rule.
 | `frequencies.txt` | the headway groups of template journeys | from the first departure to the last, `exact_times` 0: a headway group states an interval, not departures |
 | `calendar.txt`, `calendar_dates.txt` | the calendars of the trips | the weekdays a calendar runs on on at least half their dates from its first day to its last, and each date it differs from them on |
 | `transfers.txt` | walks between stops (`SiteConnection`), planned interchanges | a walk `transfer_type` 2 with its duration, the longest of those stated between two stops; an interchange staying seated 4, guaranteed 1, else 0, once between the same trips at the same stops |
-| `shapes.txt` | the geometry of the service links between a trip's calls (with `Options::shapes`) | each link read in its reference system — its own `srsName`, else its document's — and in the axis order whose first position lies near the link's start |
+| `shapes.txt` | the geometry of the service links between a trip's calls (with `Options::shapes`) | each link read in its reference system — its own `srsName`, else its document's — and in the axis order whose first position lies near the link's start; a geometry the link states on itself (`gml:LineString`), not one in its projections (`LinkSequenceProjection`), which the Nordic deliveries write |
 | `feed_info.txt`, `attributions.txt` | the publisher given, else the delivery's data source with a web address; the data sources and participants | the feed's period from its calendars, its version the latest publication timestamp |
 
 GTFS requires positions in WGS 84; netex2gtfs reads netex-rs with its `crs`

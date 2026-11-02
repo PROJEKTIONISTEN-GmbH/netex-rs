@@ -103,7 +103,16 @@ report as JSON with `--report`. `--stop-ids global` gives stops their `GlobalID`
 (DHID) or, without one, their Swiss `SLOID`, numbered `#2`, `#3` where stops
 share one; `--time-zone` names the agencies' time zone where no document of the
 delivery does — as French deliveries may not, and France has more than one time
-zone: `--time-zone Europe/Paris` for one of metropolitan France.
+zone: `--time-zone Europe/Paris` for one of metropolitan France. The national
+deliveries of Austria and of the Belgian operators name none either:
+`--time-zone Europe/Vienna`, `--time-zone Europe/Brussels`.
+
+A whole national delivery converts on one machine: Germany's 28 190 documents
+(74.7 GB of XML) in 5.3 minutes on 16 threads at a peak of 12.8 GiB, reading
+them alone (`netex stats`) in 65 s — every country's figures are in the
+[README of netex-rs](../../README.md#performance). The feed is written on one
+thread, most of it deflating the archive: a directory as the output is
+faster (Germany 2.6 minutes in all).
 
 ## `netex extract` — a part of a delivery
 
