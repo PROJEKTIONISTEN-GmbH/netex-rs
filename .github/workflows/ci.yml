@@ -88,6 +88,11 @@ jobs:
             echo "the core's package carries what it must not"
             exit 1
           fi
+      # A package carries less than the repository: its tests run on what it
+      # carries, each against the packages before it, as a user of the
+      # published version runs them.
+      - name: the tests of the packages pass on what they carry
+        run: python3 tools/package_tests.py
 
   hygiene:
     name: nothing internal, in files and commit messages
