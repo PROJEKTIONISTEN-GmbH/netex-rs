@@ -1,5 +1,51 @@
 # Changelog
 
+## 0.8.1 — 2026-11-02
+
+Care after 0.8.0, compatible with it.
+
+- **index**: a day type with a property of day naming no day — no days of the
+  week, nothing more — is read as before, as every day of the week, and is a
+  finding now, `Concern::PropertyOfDayWithoutDays`
+  (`property-of-day-without-days`), made where the day type's properties are
+  read: a delivery whose day types lost their days of the week runs every
+  journey on every day of its periods, and only the finding shows it
+  (`docs/INTERPRETATION.md` § 26).
+- **CI**: the tests of the three packages run on what each package carries,
+  the packages it depends on taken from their unpacked archives
+  (`tools/package_tests.py`): a test reading what its package does not carry
+  fails in CI, not first on the trial run before a release.
+
+`privateCodes` on a passing time and on a stop point in a pattern: the schema
+allows them none — both are versioned children, not managed objects — and the
+documentation, which said otherwise, says so now (`docs/INTERPRETATION.md`
+§ 40). Five managed objects whose keys the model does not type (`DataSource`,
+`ResponsibilitySet`, `PassengerCapacity`, `AllowedLineDirection`,
+`HeadwayJourneyGroup`) keep their `privateCodes` untyped, carried through as
+written: a field more on a struct a caller may build field by field is not
+compatible with 0.8, and is left for 0.9.0.
+
+### netex2gtfs 0.2.1
+
+Built on netex-rs 0.8.1; its code is that of 0.2.0. Its report counts the new
+finding among the index's (`index_findings`).
+
+### netex-cli 0.3.0
+
+Built on netex-rs 0.8.1 and netex2gtfs 0.2.1.
+
+`netex validate` reports the class `property-of-day-without-days`, with the
+journeys running on the day type, and the check `stop-reference-to-nothing`:
+of the references to nothing, those to a stop place, quay or stop point, each
+with the element holding it and the journeys depending on it. A delivery may be
+refused for them alone (`--refuse stop-reference-to-nothing`) and other
+references to nothing tolerated. The JSON schema names both classes; the
+report's layout is unchanged (`report_version` 1).
+
+Not compatible with 0.2 as a library: `validate::Check` has a variant more. It
+is `#[non_exhaustive]` now, so that a check added later breaks nothing. The
+command line and the report are compatible.
+
 ## 0.8.0 — 2026-11-01
 
 Four profiles more, each read in full on its publishers' deliveries, several
