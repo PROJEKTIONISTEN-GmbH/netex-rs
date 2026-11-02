@@ -49,6 +49,7 @@ import json
 import os
 import platform
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -86,21 +87,33 @@ class LockTimeout(Exception):
 def lock_held(path, wait):
     """Holds an exclusive `flock` on `path` while the block runs, waiting up to
     `wait` seconds for it; yields the seconds waited. Without a path, holds
-    nothing."""
+    nothing.
+
+    The wait is the kernel's, as `flock -w` waits: a process polling for the
+    lock loses it to every process blocked on it, whom the kernel wakes the
+    moment it is released. An alarm ends the wait (the main thread only)."""
     if path is None:
         yield 0.0
         return
+
+    def give_up(_signal, _frame):
+        raise LockTimeout(f"{path}: not taken in {wait} s")
+
     with open(path, "a", encoding="utf-8") as file:
         started = time.monotonic()
-        while True:
+        if wait > 0:
+            previous = signal.signal(signal.SIGALRM, give_up)
+            signal.setitimer(signal.ITIMER_REAL, wait)
+            try:
+                fcntl.flock(file, fcntl.LOCK_EX)
+            finally:
+                signal.setitimer(signal.ITIMER_REAL, 0)
+                signal.signal(signal.SIGALRM, previous)
+        else:
             try:
                 fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                break
             except BlockingIOError:
-                waited = time.monotonic() - started
-                if waited >= wait:
-                    raise LockTimeout(f"{path}: not taken in {wait} s") from None
-                time.sleep(min(5.0, wait - waited))
+                raise LockTimeout(f"{path}: held by another") from None
         try:
             yield time.monotonic() - started
         finally:

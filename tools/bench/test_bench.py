@@ -13,6 +13,7 @@ import datetime
 import fcntl
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -172,6 +173,31 @@ class Measuring(unittest.TestCase):
                 fcntl.flock(held, fcntl.LOCK_UN)
             measured = netex_bench.measure(command, out, err, lock=lock, lock_wait=0.3)
         self.assertLess(measured["lock_wait_s"], 0.3)
+
+    def test_a_run_blocked_on_the_lock_takes_it_when_it_is_released(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            lock = Path(scratch) / "lock"
+            # Another process holds the lock for a second, then lets go.
+            holder = subprocess.Popen(
+                [sys.executable, "-c",
+                 "import fcntl, sys, time\n"
+                 "lock = open(sys.argv[1], 'a')\n"
+                 "fcntl.flock(lock, fcntl.LOCK_EX)\n"
+                 "print('held', flush=True)\n"
+                 "time.sleep(1.0)\n",
+                 str(lock)],
+                stdout=subprocess.PIPE,
+                text=True,
+            )
+            self.assertEqual(holder.stdout.readline(), "held\n")
+            measured = netex_bench.measure(
+                [sys.executable, "-c", "pass"], Path(scratch) / "out", Path(scratch) / "err",
+                lock=lock, lock_wait=30.0,
+            )
+            holder.wait()
+            holder.stdout.close()
+        self.assertGreater(measured["lock_wait_s"], 0.5)
+        self.assertLess(measured["lock_wait_s"], 5.0)
 
     def test_the_samples_kept_are_spread_and_keep_the_peak_and_the_end(self):
         samples = [(n / 2, n if n != 777 else 10**9) for n in range(1000)]
