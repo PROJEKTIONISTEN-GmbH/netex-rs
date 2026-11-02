@@ -64,6 +64,23 @@ jobs:
       - run: python3 tools/schema_table.py
       - run: git diff --exit-code src/version/table.rs docs/VERSIONS.md
 
+  bench:
+    name: the benchmark tool
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # The tool's tests measure, convert and compare two of the repository's
+      # own small deliveries with the command they are given.
+      - run: cargo build --locked -p netex-cli
+      - run: python3 -m unittest discover -s tools/bench -v
+        env:
+          NETEX_BIN: target/debug/netex
+
   package:
     name: packages
     runs-on: ubuntu-latest
