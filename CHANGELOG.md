@@ -1,5 +1,74 @@
 # Changelog
 
+## 0.9.0 — 2026-11-02
+
+What converting the national deliveries to GTFS showed, taken up: a time zone
+from the data, shapes from the Nordic link projections, a feed the same bytes
+on any number of threads, and the feed's archive deflated on every thread.
+
+- **index**: the interchanges at a stop point are listed in the order of the
+  names of the documents stating them, each document's in its order, whatever
+  order the documents were read in — before, in the order the threads merged
+  what they read, so that of an interchange two documents state otherwise the
+  first listed depended on the threads. `Index::stop_version` and
+  `Index::stop_point_version` tell the version a stop or stop point is stated
+  in: two versions of one stop are two stops of the index, its identifier,
+  version and name tell every one apart.
+- **crs**: an `srsName` that is an EPSG code alone, `4326`, as Norway's and
+  Sweden's link geometries write it, names its system
+  (`ReferenceSystem::from_srs_name`).
+
+### netex2gtfs 0.3.0
+
+Built on netex-rs 0.9.0.
+
+- **Time zone**: a delivery whose documents name none, given none, takes the
+  zone of the country most of its journeys' identifiers show — `at:` now
+  whatever profile its frames are typed as, so Austria's national deliveries,
+  typed as the European profile's, take Europe/Vienna —, else of the country
+  more than half of its stops with a position lie in, by Natural Earth's
+  borders of the member states of the European Union and of EFTA, the United
+  Kingdom and the small states among them (`src/countries.txt`, public
+  domain; written by `tools/countries.py`): the Belgian operators' deliveries
+  take Europe/Brussels, the French ones naming none Europe/Paris. The
+  decision `time-zone-of-profile` is now `time-zone-of-identifiers`, beside
+  the new `time-zone-of-stops`, each with how many journeys or stops show the
+  country. A delivery whose stops lie in no country of the table still needs
+  a zone given (`Error::NoTimeZone`).
+- **Shapes from link projections**: a link's geometry is its `LineString`,
+  else the one of its `LinkSequenceProjection`, where Norway's, Sweden's and
+  Finland's deliveries state it, in the codespace's shared data. A trip runs
+  over the links its pattern names in sequence (`linksInSequence`) — one to
+  the next call each, or one for the whole way, as Finland's —, else over a
+  link the delivery states between two of its stop points; each resolved as
+  the trip's document sees it, then in the delivery. Before, links were found
+  only by their two stop points and in the trip's own document. A link
+  without a geometry is the decision `link-without-geometry`; a trip without
+  a shape is `shape-incomplete` also where no link of the delivery has a
+  geometry (before, nothing was said).
+- **An empty web address is none**: `<Url/>` on an organisation is the
+  decision `agency-without-url`, the publisher's web address given written
+  instead; a data source with an empty one publishes no feed.
+- **The same bytes on any number of threads**: the rows of `stops.txt` are
+  written in the order of the stops' identifiers (stations first), those of
+  `transfers.txt` in the order of the stops and stop points they start at —
+  before, in the order the threads had numbered the stops —, and the first
+  example of every decision follows.
+- **The archive deflated on every thread**: netex2gtfs writes its zip archive
+  itself (ZIP64 where a file or the archive exceeds 4 GiB), each file
+  deflated in pieces of 1 MiB on the threads of the current rayon pool, each
+  piece's compressor primed with the 32 KiB before it, the pieces one deflate
+  stream; it no longer depends on `zip`. On 8 threads Germany converts in
+  200 s instead of 364 s, Austria's nine deliveries in 39 s instead of 68 s,
+  Norway in 16 s instead of 29 s; reading is as it was
+  (`docs/PERFORMANCE.md`).
+
+### netex-cli 0.4.0
+
+Built on netex-rs 0.9.0 and netex2gtfs 0.3.0. `netex convert` needs no
+`--time-zone` for the Austrian, Belgian and French deliveries any more; the
+report says where the zone came from.
+
 ## 0.8.2 — 2026-11-02
 
 Documentation and a benchmark; the code is that of 0.8.1.

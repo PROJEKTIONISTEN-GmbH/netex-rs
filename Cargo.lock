@@ -732,7 +732,7 @@ checksum = "c2a86d3146ed3995b5913c414f6664344b9617457320782e64f0bb44afd49d74"
 
 [[package]]
 name = "netex-cli"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "clap",
  "jsonschema",
@@ -749,7 +749,7 @@ dependencies = [
 
 [[package]]
 name = "netex-rs"
-version = "0.8.2"
+version = "0.9.0"
 dependencies = [
  "allocation-counter",
  "crc32fast",
@@ -767,7 +767,7 @@ dependencies = [
 
 [[package]]
 name = "netex2gtfs"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "crc32fast",
  "csv",
