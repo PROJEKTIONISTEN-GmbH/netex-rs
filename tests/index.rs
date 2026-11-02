@@ -254,3 +254,40 @@ fn documents_that_repeat_shared_entities_are_merged_without_duplicates() {
         small.unresolved().first()
     );
 }
+
+#[test]
+fn a_stop_and_a_stop_point_stated_in_two_versions_are_two_each_with_its_version() {
+    let document = |version: &str| {
+        format!(
+            concat!(
+                r#"<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.10">"#,
+                "<PublicationTimestamp>2026-10-14T00:00:00</PublicationTimestamp>",
+                "<ParticipantRef>test</ParticipantRef>",
+                r#"<dataObjects><CompositeFrame id="c" version="1"><frames>"#,
+                r#"<SiteFrame id="g" version="1"><stopPlaces>"#,
+                r#"<StopPlace id="SP" version="{0}"><Name>Platz</Name></StopPlace>"#,
+                "</stopPlaces></SiteFrame>",
+                r#"<ServiceFrame id="s" version="1"><scheduledStopPoints>"#,
+                r#"<ScheduledStopPoint id="SSP" version="{0}"><Name>Platz</Name></ScheduledStopPoint>"#,
+                "</scheduledStopPoints></ServiceFrame>",
+                "</frames></CompositeFrame></dataObjects></PublicationDelivery>"
+            ),
+            version
+        )
+    };
+    let index = support::timetable::serially(&[
+        ("a.xml".to_owned(), document("1")),
+        ("b.xml".to_owned(), document("2")),
+    ]);
+    let stops: Vec<_> = index
+        .stops()
+        .map(|stop| (index.stop(stop).id, index.stop_version(stop)))
+        .collect();
+    assert_eq!(stops.len(), 2);
+    assert!(stops.contains(&("SP", Some("1"))) && stops.contains(&("SP", Some("2"))));
+    let latest = index.stop_by_id("SP").expect("the stop");
+    assert_eq!(index.stop_version(latest), Some("2"));
+    let point = index.stop_point_by_id("SSP").expect("the stop point");
+    assert_eq!(index.stop_point_version(point), Some("2"));
+    assert_eq!(index.stop_point_count(), 2);
+}
