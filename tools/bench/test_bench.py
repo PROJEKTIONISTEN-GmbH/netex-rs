@@ -17,6 +17,7 @@ import sys
 import tempfile
 import unittest
 import zipfile
+from unittest import mock
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -281,6 +282,80 @@ class Validator(unittest.TestCase):
         self.assertEqual(arguments[arguments.index("--threads") + 1], "8")
 
 
+# A stand-in for the `netex` command: it notes its arguments and whether the
+# lock file was free while it ran, and answers as `netex stats` and
+# `netex convert` do, with a one-trip feed and its report.
+FAKE_NETEX = """#!{python}
+import fcntl, json, sys, zipfile
+arguments = sys.argv[1:]
+if arguments == ["--version"]:
+    print("netex 0.0.0")
+    sys.exit(0)
+with open({lock!r}, "a") as lock:
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        fcntl.flock(lock, fcntl.LOCK_UN)
+        free = True
+    except BlockingIOError:
+        free = False
+with open({calls!r}, "a") as calls:
+    calls.write(json.dumps({{"arguments": arguments, "lock_free": free}}) + "\\n")
+if arguments[2] == "stats":
+    print(json.dumps({{"total": {{"journeys": 1}}}}))
+else:
+    with zipfile.ZipFile(arguments[arguments.index("--to") + 2], "w") as feed:
+        feed.writestr("trips.txt", "route_id,service_id,trip_id\\nr,s,t\\n")
+    with open(arguments[arguments.index("--report") + 1], "w") as report:
+        json.dump({{"rows": {{"trips.txt": 1}}, "period": None, "decisions": []}}, report)
+"""
+
+
+class LockScopes(unittest.TestCase):
+    """Two runs on one and on two threads, with shapes on two: ten runs."""
+
+    def measured_with(self, scope):
+        with tempfile.TemporaryDirectory() as scratch:
+            scratch = Path(scratch)
+            (scratch / "data" / "delivery").mkdir(parents=True)
+            (scratch / "data" / "delivery" / "line.xml").write_text("<PublicationDelivery/>")
+            lock, calls = scratch / "lock", scratch / "calls.jsonl"
+            netex = scratch / "netex"
+            netex.write_text(FAKE_NETEX.format(python=sys.executable, lock=str(lock), calls=str(calls)))
+            netex.chmod(0o755)
+            options = SimpleNamespace(
+                netex=netex, data=scratch / "data", out=scratch / "out", runs=2,
+                lock=lock, lock_wait=10.0, lock_scope=scope, window=None, validator=None,
+            )
+            delivery = {"id": "x", "name": "X", "netex": "delivery", "threads": [1, 2], "shapes": True}
+            with open(os.devnull, "w") as quiet, contextlib.redirect_stderr(quiet):
+                with mock.patch.object(netex_bench, "lock_held", wraps=netex_bench.lock_held) as held:
+                    result = netex_bench.measure_delivery(delivery, options)
+            taken = [call for call in held.call_args_list if call.args[0] is not None]
+            ran = [json.loads(line) for line in calls.read_text().splitlines()]
+        return result, len(taken), ran
+
+    def test_the_lock_is_taken_for_each_run_on_each_thread_count_or_once(self):
+        for scope, times in (("run", 10), ("threads", 4), ("delivery", 1)):
+            with self.subTest(scope=scope):
+                result, taken, ran = self.measured_with(scope)
+                self.assertEqual(taken, times)
+                self.assertEqual(len(ran), 10)
+                self.assertFalse(any(call["lock_free"] for call in ran), "every run holds the lock")
+                self.assertEqual(result["lock"]["scope"], scope)
+
+    def test_the_steps_run_thread_count_by_thread_count(self):
+        _, _, ran = self.measured_with("run")
+        steps = [
+            (call["arguments"][2], call["arguments"][1], "--shapes" in call["arguments"])
+            for call in ran[:5]
+        ]
+        self.assertEqual(
+            steps,
+            [("stats", "1", False), ("convert", "1", False),
+             ("stats", "2", False), ("convert", "2", False), ("convert", "2", True)],
+        )
+
+
 def measured_delivery():
     """A delivery as `OUT/deliveries/<id>.json` keeps it, two thread counts."""
 
@@ -427,6 +502,7 @@ class WholeRun(unittest.TestCase):
                             only=[],
                             lock=scratch / "lock",
                             lock_wait=10.0,
+                            lock_scope="threads",
                             window=(datetime.date(2026, 10, 12), datetime.date(2026, 10, 18)),
                             validator=Path("validator.jar"),
                         )
@@ -439,7 +515,7 @@ class WholeRun(unittest.TestCase):
 
         self.assertEqual(
             [(m["step"], m["threads"], m["shapes"]) for m in seetal["measurements"]],
-            [("stats", 1, False), ("stats", 2, False), ("convert", 1, False),
+            [("stats", 1, False), ("convert", 1, False), ("stats", 2, False),
              ("convert", 2, False), ("convert", 2, True)],
         )
         self.assertTrue(all(len(m["runs"]) == 2 for m in seetal["measurements"]))

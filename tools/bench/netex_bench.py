@@ -15,9 +15,11 @@ each as often as `--runs` says. Of every run it keeps the wall clock, the CPU
 time (user and system), the peak resident memory of the process, its resident
 memory over time, and the load of the machine before and after; of the
 delivery the size of its archives and of the XML they inflate to, of the feed
-its size and the rows written to each file. With `--lock FILE` every run takes
+its size and the rows written to each file. With `--lock FILE` the runs take
 an exclusive lock on the file first (`flock`), so that measurements on a
-shared machine do not overlap; it is held for that one run only.
+shared machine do not overlap: each run on its own, or with `--lock-scope` the
+runs of a delivery on one number of threads, or all of a delivery's runs,
+together — a delivery of seconds need not queue for the lock a hundred times.
 
 With `--window FIRST LAST` each feed written is compared with the publisher's
 over that window (`gtfs_days.py`); with `--validator JAR` both are checked by
@@ -34,7 +36,8 @@ Only the standard library is used; Linux only (`/proc`, `wait4`). Usage:
 
     python3 tools/bench/netex_bench.py run tools/bench/deliveries.json \\
         --netex target/release/netex --data DIR --out DIR \\
-        [--runs 2] [--only ID]... [--lock FILE] [--window FIRST LAST] [--validator JAR]
+        [--runs 2] [--only ID]... [--lock FILE [--lock-scope run|threads|delivery]]
+        [--window FIRST LAST] [--validator JAR]
     python3 tools/bench/netex_bench.py table OUT
 """
 
@@ -64,6 +67,9 @@ MB = 1000**2
 # and how many of those readings a run keeps.
 SAMPLE_EVERY = 0.5
 SAMPLES_KEPT = 240
+# What the lock is held over: each run, the runs of a delivery on one number of
+# threads, or all runs of a delivery.
+LOCK_SCOPES = ("run", "threads", "delivery")
 # The severities the GTFS validator reports notices with.
 SEVERITIES = ("ERROR", "WARNING", "INFO")
 
@@ -365,36 +371,52 @@ def measure_delivery(delivery, options):
     feeds.mkdir(parents=True, exist_ok=True)
     extra = [str(argument) for argument in delivery.get("convert", [])]
 
-    variants = [("stats", count, False) for count in threads]
-    variants += [("convert", count, False) for count in threads]
-    if delivery.get("shapes"):
-        variants.append(("convert", max(threads), True))
-    runs = {variant: [] for variant in variants}
+    # The steps on each number of threads: reading, converting, and
+    # converting with shapes on the most threads where the list asks for it.
+    steps = {
+        count: [("stats", False), ("convert", False)]
+        + ([("convert", True)] if delivery.get("shapes") and count == max(threads) else [])
+        for count in threads
+    }
+    runs = {(step, count, shapes): [] for count in threads for step, shapes in steps[count]}
     warm([source, *along])
     stats = None
     reports = {}
-    for run in range(1, options.runs + 1):
-        for step, count, shapes in variants:
-            name = f"{step}{'-shapes' if shapes else ''}-t{count}-r{run}"
-            feed = feeds / f"{delivery['id']}{'-shapes' if shapes else ''}.zip"
-            report = logs / f"{name}.report.json"
-            command = netex_command(options.netex, count, step, source, along)
-            if step == "stats":
-                command += ["--format", "json"]
-            else:
-                feed.unlink(missing_ok=True)
-                command += ["--to", "gtfs", feed, "--report", report, *extra]
-                if shapes:
-                    command.append("--shapes")
-            print(f"{delivery['id']}: {name}", file=sys.stderr, flush=True)
-            measured = measure(
-                command, logs / f"{name}.out", logs / f"{name}.err", options.lock, options.lock_wait
-            )
-            runs[(step, count, shapes)].append(measured)
-            if step == "stats":
-                stats = json.loads((logs / f"{name}.out").read_text())["total"]
-            else:
-                reports[shapes] = (feed, json.loads(report.read_text()))
+    waited = []
+
+    def scoped(scope):
+        """The lock, held over this scope where the options say so."""
+        return lock_held(options.lock if options.lock_scope == scope else None, options.lock_wait)
+
+    with scoped("delivery") as waited_for_delivery:
+        waited.append(waited_for_delivery)
+        for run in range(1, options.runs + 1):
+            for count in threads:
+                with scoped("threads") as waited_for_threads:
+                    waited.append(waited_for_threads)
+                    for step, shapes in steps[count]:
+                        name = f"{step}{'-shapes' if shapes else ''}-t{count}-r{run}"
+                        feed = feeds / f"{delivery['id']}{'-shapes' if shapes else ''}.zip"
+                        report = logs / f"{name}.report.json"
+                        command = netex_command(options.netex, count, step, source, along)
+                        if step == "stats":
+                            command += ["--format", "json"]
+                        else:
+                            feed.unlink(missing_ok=True)
+                            command += ["--to", "gtfs", feed, "--report", report, *extra]
+                            if shapes:
+                                command.append("--shapes")
+                        print(f"{delivery['id']}: {name}", file=sys.stderr, flush=True)
+                        lock = options.lock if options.lock_scope == "run" else None
+                        measured = measure(
+                            command, logs / f"{name}.out", logs / f"{name}.err", lock, options.lock_wait
+                        )
+                        waited.append(measured["lock_wait_s"])
+                        runs[(step, count, shapes)].append(measured)
+                        if step == "stats":
+                            stats = json.loads((logs / f"{name}.out").read_text())["total"]
+                        else:
+                            reports[shapes] = (feed, json.loads(report.read_text()))
 
     result = {
         "id": delivery["id"],
@@ -404,6 +426,8 @@ def measure_delivery(delivery, options):
         "netex": netex_version(options.netex),
         "machine": machine([data, out]),
         "input": input_size([source, *along]),
+        "lock": {"scope": options.lock_scope if options.lock else None,
+                 "waited_s": round(sum(waited), 1)},
         "measurements": [
             {"step": step, "threads": count, "shapes": shapes,
              "summary": summary(measured), "runs": measured}
@@ -694,6 +718,9 @@ def main(arguments):
     measuring.add_argument("--lock", type=Path, help="a file locked for each run")
     measuring.add_argument("--lock-wait", type=float, default=7200.0,
                            help="seconds to wait for the lock (7200)")
+    measuring.add_argument("--lock-scope", choices=LOCK_SCOPES, default="run",
+                           help="what the lock is held over: each run (the default), the runs "
+                                "on one number of threads, or a delivery's every run")
     measuring.add_argument("--window", nargs=2, type=datetime.date.fromisoformat,
                            metavar=("FIRST", "LAST"), help="the days a feed is compared over")
     measuring.add_argument("--validator", type=Path, help="the GTFS validator of MobilityData (jar)")
