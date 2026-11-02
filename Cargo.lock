@@ -769,7 +769,9 @@ dependencies = [
 name = "netex2gtfs"
 version = "0.2.2"
 dependencies = [
+ "crc32fast",
  "csv",
+ "flate2",
  "hashbrown",
  "netex-rs",
  "rayon",

@@ -24,14 +24,17 @@ rustc-hash = "2"
 hashbrown = { version = "0.17", default-features = false }
 # The report is written as JSON by the command line.
 serde = { version = "1", features = ["derive"] }
-# A feed is a zip archive of CSV files.
-zip = { version = "7", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+# A feed is a zip archive of CSV files, each deflated in pieces on every
+# thread, through the pure-Rust zlib port; with the checksum zip takes.
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
+crc32fast = "1"
+rayon = "1.10"
 
 [dev-dependencies]
 # The tests read the feeds written back, as a consumer would.
 csv = "1"
-# The tests read a delivery on pools of several sizes.
-rayon = "1.10"
+# The tests read the archives written back.
+zip = { version = "7", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 serde_json = "1"
 tempfile = "3"
 

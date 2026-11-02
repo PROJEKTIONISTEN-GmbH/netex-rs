@@ -4,8 +4,9 @@ use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::path::{Path, PathBuf};
 
-use zip::write::SimpleFileOptions;
-use zip::{CompressionMethod, ZipWriter};
+mod archive;
+
+pub use archive::Archive;
 
 /// Where the files of a feed go, one after the other.
 pub trait Output {
@@ -59,40 +60,6 @@ impl Output for Directory {
             file.flush()?;
         }
         Ok(())
-    }
-}
-
-/// The files of a feed in a zip archive, deflated.
-#[derive(Debug)]
-pub struct Archive {
-    zip: ZipWriter<BufWriter<File>>,
-}
-
-impl Archive {
-    /// A feed written as the archive `path`.
-    pub fn create(path: impl AsRef<Path>) -> io::Result<Archive> {
-        let file = BufWriter::with_capacity(1 << 20, File::create(path)?);
-        Ok(Archive {
-            zip: ZipWriter::new(file),
-        })
-    }
-}
-
-impl Output for Archive {
-    fn start(&mut self, name: &str) -> io::Result<()> {
-        let options = SimpleFileOptions::default()
-            .compression_method(CompressionMethod::Deflated)
-            // stop_times.txt of a national delivery is several gigabytes.
-            .large_file(true);
-        self.zip.start_file(name, options).map_err(io::Error::other)
-    }
-
-    fn write_all(&mut self, bytes: &[u8]) -> io::Result<()> {
-        self.zip.write_all(bytes)
-    }
-
-    fn finish(self: Box<Self>) -> io::Result<()> {
-        self.zip.finish().map_err(io::Error::other)?.flush()
     }
 }
 
