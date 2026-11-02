@@ -61,6 +61,18 @@
               <FromPointRef ref="FV:ScheduledStopPoint:brygga" version="1"/>
               <ToPointRef ref="FV:ScheduledStopPoint:fjord" version="1"/>
             </ServiceLink>
+            <ServiceLink id="FV:ServiceLink:torget-fjord" version="1">
+              <Distance>3200</Distance>
+              <projections>
+                <LinkSequenceProjection id="FV:LinkSequenceProjection:torget-fjord" version="1">
+                  <gis:LineString srsName="4326" gis:id="torget-fjord">
+                    <gis:posList srsDimension="2" count="4">59.9000 10.7000 59.9040 10.7060 59.9100 10.7200 59.9200 10.7400</gis:posList>
+                  </gis:LineString>
+                </LinkSequenceProjection>
+              </projections>
+              <FromPointRef ref="FV:ScheduledStopPoint:torget" version="1"/>
+              <ToPointRef ref="FV:ScheduledStopPoint:fjord" version="1"/>
+            </ServiceLink>
             <ServiceLink id="FV:ServiceLink:fjord-torget" version="1">
               <Distance>3100</Distance>
               <FromPointRef ref="FV:ScheduledStopPoint:fjord" version="1"/>

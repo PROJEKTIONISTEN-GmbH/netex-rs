@@ -1088,7 +1088,8 @@ fn shapes_follow_the_links_a_pattern_names_with_their_geometry_in_a_projection()
         },
     );
     // The links the line file's patterns name are the shared data's; the
-    // pattern naming none takes the link between its stop points there.
+    // pattern naming none, and the one naming a link between other stop
+    // points, take the link between their stop points there.
     assert_eq!(
         table(feed.path(), "trips.txt", &["trip_id", "shape_id"]),
         [
@@ -1096,6 +1097,8 @@ fn shapes_follow_the_links_a_pattern_names_with_their_geometry_in_a_projection()
             "FV:ServiceJourney:1-0900|s1",
             "FV:ServiceJourney:1-1000|",
             "FV:ServiceJourney:1-1100|s2",
+            "FV:ServiceJourney:1-1200|s3",
+            "FV:ServiceJourney:1-1300|s2",
         ]
     );
     assert_eq!(
@@ -1124,6 +1127,11 @@ fn shapes_follow_the_links_a_pattern_names_with_their_geometry_in_a_projection()
             "s2|59.9100000|10.7200000|0",
             "s2|59.9160000|10.7290000|1",
             "s2|59.9200000|10.7400000|2",
+            // One link for the whole way, past Brygga.
+            "s3|59.9000000|10.7000000|0",
+            "s3|59.9040000|10.7060000|1",
+            "s3|59.9100000|10.7200000|2",
+            "s3|59.9200000|10.7400000|3",
         ]
     );
     let decision = |code: &str| {
