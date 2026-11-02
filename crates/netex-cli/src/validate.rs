@@ -24,8 +24,10 @@ pub const REPORT_VERSION: u32 = 1;
 /// How many examples a class lists at most, unless told otherwise.
 pub const EXAMPLES: usize = 5;
 
-/// The checks of the report's own, beyond the index's findings.
+/// The checks of the report's own, beyond the index's findings. More may
+/// come, as the index's concerns do ([`Concern`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[non_exhaustive]
 pub enum Check {
     /// A journey whose calls are all at one time: it takes no time from its
     /// first stop to its last.
