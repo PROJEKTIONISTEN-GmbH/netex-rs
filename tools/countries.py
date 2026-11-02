@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Writes the borders netex2gtfs takes a delivery's country from:
-`crates/netex2gtfs/data/countries.txt`.
+`crates/netex2gtfs/src/countries.txt`.
 
 A delivery that names no time zone, given none and whose identifiers show no
 country is of the country most of its stops lie in. The borders are Natural
@@ -28,7 +28,7 @@ import sys
 from pathlib import Path
 
 #: The file written, from the repository root.
-OUTPUT = Path("crates/netex2gtfs/data/countries.txt")
+OUTPUT = Path("crates/netex2gtfs/src/countries.txt")
 
 #: The SHA-256 of the Natural Earth file the table is written from.
 SOURCE_SHA256 = "239eec57ac17f100a11e2536cffc56752c318b50ae765b0918ff7aab4ce8f255"

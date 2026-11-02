@@ -6,7 +6,7 @@
 use std::sync::OnceLock;
 
 /// The borders, as `tools/countries.py` writes them.
-const BORDERS: &str = include_str!("../data/countries.txt");
+const BORDERS: &str = include_str!("countries.txt");
 
 /// The positions of a ring are written in units of this many degrees.
 const QUANTUM: f64 = 1e-4;
