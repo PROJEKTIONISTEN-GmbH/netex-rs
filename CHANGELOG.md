@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.8.2 — 2026-11-02
+
+Documentation and a benchmark; the code is that of 0.8.1.
+
+- **README** written anew: what the crate and the `netex` command do, the
+  five commands on the crate's own example, the profiles with their pages,
+  what a GTFS feed written from NeTEx carries and what not, and what reading
+  and converting whole national deliveries costs. The table of how each
+  profile lays out its deliveries moved to `docs/PROFILES.md`.
+- **docs/PERFORMANCE.md** begins with 34 national deliveries of twelve
+  countries, each read and converted to GTFS on 8 and 16 threads, Germany on
+  1, 4, 8 and 16: time, CPU time, peak memory and its course, the rows of
+  every feed, shapes, and every feed held against the GTFS feed its publisher
+  writes from the same data, with what the differences come from.
+- **tools/bench/**, the benchmark behind those figures: it measures
+  `netex stats` and `netex convert` on a list of deliveries under a lock
+  against other measurements, compares the feeds with the publishers' and
+  runs the GTFS validator of MobilityData on them. CI runs its tests.
+
+What the measurements found, and this release leaves as it is: Austria's
+national deliveries and the Belgian operators' name no time zone, so
+`netex convert` needs `--time-zone`; a link geometry stated in the link's
+projections, as the Nordic deliveries state it, gives no shape, and the
+report does not say so; the order of the rows of `stops.txt` and
+`transfers.txt`, and the first example of some decisions, depend on the
+number of threads, the rows themselves do not; the feed's archive is
+deflated on one thread, most of the time a large conversion takes.
+
+### netex2gtfs 0.2.2
+
+Built on netex-rs 0.8.2; its code is that of 0.2.1. Its README gives the
+figures of whole national deliveries and says which link geometry gives a
+shape.
+
+### netex-cli 0.3.1
+
+Built on netex-rs 0.8.2 and netex2gtfs 0.2.2; its code is that of 0.3.0. Its
+README gives the figures of whole national deliveries and the time zones the
+Austrian and Belgian deliveries need.
+
 ## 0.8.1 — 2026-11-02
 
 Care after 0.8.0, compatible with it.

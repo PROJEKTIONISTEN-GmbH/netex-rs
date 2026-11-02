@@ -1,6 +1,6 @@
 [package]
 name = "netex-cli"
-version = "0.3.0"
+version = "0.3.1"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -20,8 +20,8 @@ path = "src/main.rs"
 all-features = true
 
 [dependencies]
-netex-rs = { version = "0.8.1", path = "../..", features = ["crs", "serde"] }
-netex2gtfs = { version = "0.2.1", path = "../netex2gtfs" }
+netex-rs = { version = "0.8.2", path = "../..", features = ["crs", "serde"] }
+netex2gtfs = { version = "0.2.2", path = "../netex2gtfs" }
 quick-xml = "0.42"
 clap = { version = "4.5", features = ["derive"] }
 rayon = "1.10"

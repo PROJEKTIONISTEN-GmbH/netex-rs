@@ -222,7 +222,8 @@ Every national delivery below reads whole and converts whole to GTFS with
 `netex convert --to gtfs`, without error. Measured with
 [`tools/bench/`](tools/bench/README.md) on an AMD EPYC 7502P host, 16 of its
 64 hardware threads and 64 GiB granted to the container, deliveries on an
-NVMe SSD; netex-cli 0.3.0 (netex-rs 0.8.1), release build, 16 threads; wall clock and peak resident memory of the
+NVMe SSD; netex-cli 0.3.0 (netex-rs 0.8.1, the code of 0.8.2), release
+build, 16 threads; wall clock and peak resident memory of the
 process, the mean of two runs. The host ran other work (load 3.5 to 42);
 every run held a lock against other measurements on it. Where a country
 publishes several deliveries, their times are summed and the memory is the

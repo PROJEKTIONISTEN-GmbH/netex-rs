@@ -24,7 +24,8 @@ finds them in the page cache alike.
 The host: an AMD EPYC 7502P (32 cores, 64 hardware threads, 251 GiB),
 shared with other work; the measurements ran in a container granted 16 CPUs
 and 64 GiB, the deliveries and the feeds on an NVMe SSD (ext4), Linux 6.8.
-netex-cli 0.3.0 with netex-rs 0.8.1 and netex2gtfs 0.2.1, release build.
+netex-cli 0.3.0 with netex-rs 0.8.1 and netex2gtfs 0.2.1, release build —
+the code of netex-cli 0.3.1, netex-rs 0.8.2 and netex2gtfs 0.2.2.
 Every run held the host's measuring lock, so no other measurement
 overlapped it — Germany one hold for each number of threads, the other
 deliveries in three holds — but other work ran: the load of the host (one
