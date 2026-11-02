@@ -290,8 +290,8 @@ impl Gather {
             document: self.document,
             id: self.id(organisation.id.as_ref()),
             name: self.names.intern(name.unwrap_or("")),
-            url: self.intern(contact.and_then(|c| c.url.as_deref())),
-            phone: self.intern(contact.and_then(|c| c.phone.as_deref())),
+            url: self.intern(stated(contact.and_then(|c| c.url.as_deref()))),
+            phone: self.intern(stated(contact.and_then(|c| c.phone.as_deref()))),
         };
         self.organisations.push(record);
     }
@@ -741,7 +741,7 @@ impl<'i> Sink<'i> for Gather {
                     let record = (
                         self.document,
                         self.names.intern(text),
-                        self.intern(source.url.as_deref()),
+                        self.intern(stated(source.url.as_deref())),
                     );
                     self.data_sources.push(record);
                 }
@@ -820,6 +820,12 @@ impl<'i> Sink<'i> for Gather {
         }
         cursor.skip_over(element)
     }
+}
+
+/// A text as stated, without the white space around it; none where it is
+/// empty — an empty `<Url/>` states no web address.
+fn stated(text: Option<&str>) -> Option<&str> {
+    text.map(str::trim).filter(|text| !text.is_empty())
 }
 
 /// The text of a multilingual string, if there is one.

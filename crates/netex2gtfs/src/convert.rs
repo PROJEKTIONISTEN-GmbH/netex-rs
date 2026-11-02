@@ -1,6 +1,7 @@
 //! The conversion: a delivery's index and gathered facts written as the files
 //! of a GTFS feed, every decision counted in the report.
 
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::io;
@@ -190,6 +191,9 @@ struct Conversion<'d> {
     levels_used: Vec<Name>,
     /// The sum of the positions of the quays of each stop place, and how many.
     quay_positions: FxHashMap<StopId, (f64, f64, u32)>,
+    /// Each stop's place in the order of the stops' identifiers, by its
+    /// number in the index: the order rows of stops are written in.
+    stop_rank: Vec<u32>,
 }
 
 #[derive(Debug, Clone)]
@@ -254,6 +258,7 @@ impl<'d> Conversion<'d> {
             shapes: Vec::new(),
             levels_used: Vec::new(),
             quay_positions: FxHashMap::default(),
+            stop_rank: stop_ranks(index),
         })
     }
 
@@ -382,7 +387,7 @@ impl<'d> Conversion<'d> {
     /// point no stop is assigned at its own position.
     fn plan_stops(&mut self, used: &[Place]) {
         let index = self.index;
-        for stop in index.stops() {
+        for stop in self.stops_in_order() {
             let quay = index.stop(stop);
             if let (Some(parent), Some((latitude, longitude))) =
                 (quay.parent, quay.latitude.zip(quay.longitude))
@@ -398,7 +403,7 @@ impl<'d> Conversion<'d> {
                 Place::Point(_) => None,
             })
             .collect();
-        parents.sort_unstable();
+        parents.sort_unstable_by_key(|stop| self.stop_rank[stop.0 as usize]);
         parents.dedup();
         let mut ids = UniqueIds::default();
         for &parent in &parents {
@@ -409,9 +414,13 @@ impl<'d> Conversion<'d> {
             self.station_rows.insert(parent, at);
         }
         let mut ordered: Vec<Place> = used.to_vec();
-        ordered.sort_unstable_by_key(|place| match place {
-            Place::Stop(stop) => (0, stop.0),
-            Place::Point(point) => (1, point.0),
+        ordered.sort_unstable_by(|a, b| match (a, b) {
+            (Place::Stop(a), Place::Stop(b)) => {
+                self.stop_rank[a.0 as usize].cmp(&self.stop_rank[b.0 as usize])
+            }
+            (Place::Point(a), Place::Point(b)) => stop_point_order(index, *a, *b),
+            (Place::Stop(_), Place::Point(_)) => Ordering::Less,
+            (Place::Point(_), Place::Stop(_)) => Ordering::Greater,
         });
         for place in ordered {
             let row = match place {
@@ -475,6 +484,13 @@ impl<'d> Conversion<'d> {
                 ),
             }
         }
+    }
+
+    /// The stops of the index in the order of their identifiers.
+    fn stops_in_order(&self) -> Vec<StopId> {
+        let mut stops: Vec<StopId> = self.index.stops().collect();
+        stops.sort_unstable_by_key(|stop| self.stop_rank[stop.0 as usize]);
+        stops
     }
 
     /// The station a stop stands under in the feed: a quay's stop place, or
@@ -1287,7 +1303,8 @@ impl<'d> Conversion<'d> {
 
     /// `transfers.txt`: the walks between stops (`SiteConnection`), at least
     /// as long as they take; and the planned interchanges between trips —
-    /// staying seated (4), guaranteed (1), else recommended (0).
+    /// staying seated (4), guaranteed (1), else recommended (0). Each in the
+    /// order of the identifiers of the stops and stop points they start at.
     fn transfers(&mut self, output: &mut dyn Output) -> io::Result<u64> {
         let mut table = Table::start(
             output,
@@ -1313,8 +1330,11 @@ impl<'d> Conversion<'d> {
         let mut walks: Vec<(&str, &str, u32)> = Vec::new();
         let mut walk_of: FxHashMap<(&str, &str), usize> = FxHashMap::default();
         let mut again: Vec<String> = Vec::new();
-        for stop in self.index.stops() {
-            for transfer in self.index.transfers_from(stop) {
+        for stop in self.stops_in_order() {
+            let mut from_stop: Vec<_> = self.index.transfers_from(stop).iter().collect();
+            from_stop
+                .sort_by_key(|transfer| (self.stop_rank[transfer.to.0 as usize], transfer.seconds));
+            for transfer in from_stop {
                 let (Some(from), Some(to)) = (row_of_stop(transfer.from), row_of_stop(transfer.to))
                 else {
                     continue;
@@ -1347,7 +1367,11 @@ impl<'d> Conversion<'d> {
         let mut written: FxHashSet<(&str, &str, &str, &str)> = FxHashSet::default();
         let mut left_out: Vec<&str> = Vec::new();
         let mut repeated: Vec<&str> = Vec::new();
-        for point in (0..self.index.stop_point_count() as u32).map(StopPointId) {
+        let mut points: Vec<StopPointId> = (0..self.index.stop_point_count() as u32)
+            .map(StopPointId)
+            .collect();
+        points.sort_unstable_by(|&a, &b| stop_point_order(self.index, a, b));
+        for point in points {
             for interchange in self.index.interchanges_at(point) {
                 let trip = |journey: JourneyId| {
                     self.trip_of_journey
@@ -1601,6 +1625,32 @@ fn goes_back(times: &[PassingTime], positions: impl Iterator<Item = usize>) -> b
         }
     }
     false
+}
+
+/// Each stop's place in the order of the stops' identifiers, versions and
+/// names, by its number in the index — which follows the order the threads
+/// reading the delivery took its documents in.
+fn stop_ranks(index: &Index) -> Vec<u32> {
+    let mut stops: Vec<StopId> = index.stops().collect();
+    stops.sort_unstable_by_key(|&stop| {
+        let record = index.stop(stop);
+        (record.id, index.stop_version(stop), record.name)
+    });
+    let mut ranks = vec![0; stops.len()];
+    for (rank, stop) in stops.into_iter().enumerate() {
+        ranks[stop.0 as usize] = u32::try_from(rank).expect("fewer than 2^32 stops");
+    }
+    ranks
+}
+
+/// The order of two stop points by their identifiers, versions and names,
+/// which tell every stop point apart.
+fn stop_point_order(index: &Index, a: StopPointId, b: StopPointId) -> Ordering {
+    let key = |point: StopPointId| {
+        let record = index.stop_point(point);
+        (record.id, index.stop_point_version(point), record.name)
+    };
+    key(a).cmp(&key(b))
 }
 
 /// The agency of lines naming none, from the publisher.

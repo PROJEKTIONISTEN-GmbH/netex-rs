@@ -114,17 +114,19 @@ fn quays_stand_under_their_stop_place_and_every_call_has_a_placed_stop() {
             "stops.txt",
             &["stop_id", "stop_name", "stop_lat", "stop_lon", "location_type", "parent_station", "wheelchair_boarding", "platform_code", "level_id"]
         ),
+        // The stations first, then the stops, each in the order of their
+        // identifiers.
         [
-            "sw:StopPlace:seehof|Seehof|47.0500000|8.3000000|1||0||",
             // The parent site of Bergdorf, which is called at itself.
             "sw:StopPlace:bergdorf-ort|Bergdorf Ort|47.0601000|8.3202000|1||0||",
+            "sw:StopPlace:seehof|Seehof|47.0500000|8.3000000|1||0||",
             "sw:StopPlace:talwil|Talwil|47.0700000|8.3400000|1||0||",
             "sw:Quay:seehof-1|Seehof|47.0501000|8.3001000|0|sw:StopPlace:seehof|1|1|sw:Level:seehof-0",
             // Without a position of its own: at its stop place.
             "sw:Quay:seehof-2|Seehof|47.0500000|8.3000000|0|sw:StopPlace:seehof|0|2|",
+            "sw:Quay:talwil-1|Talwil|47.0701000|8.3401000|0|sw:StopPlace:talwil|0||",
             // Called at itself, without quays: a stop, under its parent site.
             "sw:StopPlace:bergdorf|Bergdorf|47.0600000|8.3200000|0|sw:StopPlace:bergdorf-ort|2||",
-            "sw:Quay:talwil-1|Talwil|47.0701000|8.3401000|0|sw:StopPlace:talwil|0||",
             // Assigned to no stop, but with a position of its own.
             "sw:ScheduledStopPoint:weide|Weide|47.0650000|8.3300000|0||0||",
         ]
@@ -466,13 +468,13 @@ fn a_publisher_given_names_the_feed_and_stops_may_take_their_global_identifier()
     assert_eq!(
         table(unpacked.path(), "stops.txt", &["stop_id", "parent_station"]),
         [
-            "de:99001:1|",
             "de:99001:2|",
+            "de:99001:1|",
             "ch:1:sloid:99003|",
             "de:99001:1:0:1|de:99001:1",
             "de:99001:1:0:1#2|de:99001:1",
-            "sw:StopPlace:bergdorf|de:99001:2",
             "de:99001:3|ch:1:sloid:99003",
+            "sw:StopPlace:bergdorf|de:99001:2",
             "sw:ScheduledStopPoint:weide|",
         ]
     );

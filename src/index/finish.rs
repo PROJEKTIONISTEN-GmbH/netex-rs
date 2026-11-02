@@ -821,6 +821,9 @@ impl Finish {
         ranks.sort(&mut self.b.time_demands, |r| r.origin);
         ranks.sort(&mut self.b.quay_listings, |(_, pending)| pending.origin);
         ranks.sort(&mut self.b.quay_sites, |(_, pending)| pending.origin);
+        // Interchanges listed by the stop point the feeder arrives at, each
+        // stop point's in the order of the documents stating them.
+        ranks.sort(&mut self.b.interchanges, |r| r.from_journey.origin);
         // Assignments apply in the order of their documents' names, within a
         // document in their order.
         self.b

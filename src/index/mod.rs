@@ -445,6 +445,16 @@ impl Index {
         }
     }
 
+    /// The version a stop is stated in, if it names one. A stop place or
+    /// quay stated in two versions is two stops of the index; its identifier,
+    /// version and name tell every stop apart.
+    pub fn stop_version(&self, stop: StopId) -> Option<&str> {
+        self.stops[stop.0 as usize]
+            .key
+            .version
+            .map(|v| self.text(v))
+    }
+
     /// How many stops the index holds.
     pub fn stop_count(&self) -> usize {
         self.stops.len()
@@ -474,6 +484,15 @@ impl Index {
             longitude: record.longitude,
             stop: record.stop,
         }
+    }
+
+    /// The version a stop point is stated in, if it names one; its
+    /// identifier, version and name tell every stop point apart.
+    pub fn stop_point_version(&self, stop_point: StopPointId) -> Option<&str> {
+        self.stop_points[stop_point.0 as usize]
+            .key
+            .version
+            .map(|v| self.text(v))
     }
 
     /// How many stop points the index holds.
@@ -642,7 +661,9 @@ impl Index {
         self.transfers.len()
     }
 
-    /// The interchanges at a stop point, by where the feeder arrives.
+    /// The interchanges at a stop point, by where the feeder arrives: in the
+    /// order of the names of the documents stating them, each document's in
+    /// its order — whatever order the documents were read in.
     pub fn interchanges_at(&self, stop_point: StopPointId) -> &[Interchange] {
         let start = self.interchange_offsets[stop_point.0 as usize] as usize;
         let end = self.interchange_offsets[stop_point.0 as usize + 1] as usize;
