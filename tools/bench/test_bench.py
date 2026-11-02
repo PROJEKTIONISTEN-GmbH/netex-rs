@@ -228,28 +228,44 @@ notices = [
 ]
 with open(into + "/report.json", "w") as report:
     json.dump({{"notices": notices}}, report)
+with open(into + "/system_errors.json", "w") as errors:
+    json.dump({{"notices": [{{"code": "runtime_exception_in_validator_error", "totalNotices": 1}}]}}, errors)
 """
+
+# A validator that dies, as one out of memory does.
+FAILING_JAVA = """#!{python}
+import sys
+print("java.lang.OutOfMemoryError: Java heap space", file=sys.stderr)
+sys.exit(1)
+"""
+
+
+@contextlib.contextmanager
+def java_on_path(directory, script):
+    """`java` on the path, the given script."""
+    java = directory / "java"
+    directory.mkdir(parents=True, exist_ok=True)
+    java.write_text(script.format(python=sys.executable))
+    java.chmod(0o755)
+    path = os.environ["PATH"]
+    os.environ["PATH"] = f"{directory}{os.pathsep}{path}"
+    try:
+        yield
+    finally:
+        os.environ["PATH"] = path
 
 
 class Validator(unittest.TestCase):
     def test_the_notices_counted_by_severity_and_code(self):
         with tempfile.TemporaryDirectory() as scratch:
             scratch = Path(scratch)
-            java = scratch / "bin" / "java"
-            java.parent.mkdir()
-            java.write_text(FAKE_JAVA.format(python=sys.executable))
-            java.chmod(0o755)
             into = scratch / "checked"
             into.mkdir()
             (into / "left-over").write_text("from an earlier run")
-            path = os.environ["PATH"]
-            os.environ["PATH"] = f"{java.parent}{os.pathsep}{path}"
-            try:
+            with java_on_path(scratch / "bin", FAKE_JAVA):
                 checked = netex_bench.validate(
                     Path("validator.jar"), scratch / "feed.zip", into, MONDAY, 8
                 )
-            finally:
-                os.environ["PATH"] = path
             arguments = json.loads((into / "arguments.json").read_text())
             self.assertFalse((into / "left-over").exists(), "an earlier report is cleared")
         self.assertEqual(checked["notices"], {"ERROR": 7, "WARNING": 7, "INFO": 1})
@@ -258,6 +274,7 @@ class Validator(unittest.TestCase):
             [("foreign_key_violation", 5), ("invalid_url", 2)],
         )
         self.assertEqual(checked["codes"]["WARNING"], {"fast_travel_between_consecutive_stops": 7})
+        self.assertEqual(checked["system_errors"], {"runtime_exception_in_validator_error": 1})
         self.assertEqual(arguments[:2], ["-jar", "validator.jar"])
         self.assertIn("--skip_validator_update", arguments)
         self.assertEqual(arguments[arguments.index("--date") + 1], "2026-11-02")
@@ -348,7 +365,8 @@ class Tables(unittest.TestCase):
 class WholeRun(unittest.TestCase):
     """The tool over two small deliveries of the repository: the Swiss form
     of `netex2gtfs`'s tests, compared with a feed written by hand of the one
-    journey it runs, and the crate's own Austrian example."""
+    journey it runs and given to a validator that fails, and the crate's own
+    Austrian example."""
 
     def test_two_deliveries_measured_converted_and_compared(self):
         listed = {
@@ -363,6 +381,7 @@ class WholeRun(unittest.TestCase):
                     "stand": "2026-10-12",
                     "threads": [1, 2],
                     "shapes": True,
+                    "validate": True,
                 },
                 {
                     "id": "at",
@@ -396,21 +415,22 @@ class WholeRun(unittest.TestCase):
             )
             (scratch / "list.json").write_text(json.dumps(listed))
             out = scratch / "out"
-            with open(os.devnull, "w") as quiet, contextlib.redirect_stderr(quiet):
-                netex_bench.run(
-                    SimpleNamespace(
-                        list=scratch / "list.json",
-                        netex=os.environ["NETEX_BIN"],
-                        data=data,
-                        out=out,
-                        runs=2,
-                        only=[],
-                        lock=scratch / "lock",
-                        lock_wait=10.0,
-                        window=(datetime.date(2026, 10, 12), datetime.date(2026, 10, 18)),
-                        validator=None,
+            with java_on_path(scratch / "bin", FAILING_JAVA):
+                with open(os.devnull, "w") as quiet, contextlib.redirect_stderr(quiet):
+                    netex_bench.run(
+                        SimpleNamespace(
+                            list=scratch / "list.json",
+                            netex=os.environ["NETEX_BIN"],
+                            data=data,
+                            out=out,
+                            runs=2,
+                            only=[],
+                            lock=scratch / "lock",
+                            lock_wait=10.0,
+                            window=(datetime.date(2026, 10, 12), datetime.date(2026, 10, 18)),
+                            validator=Path("validator.jar"),
+                        )
                     )
-                )
             seetal = json.loads((out / "deliveries" / "seetal.json").read_text())
             austrian = json.loads((out / "deliveries" / "at.json").read_text())
             table = (out / "results.md").read_text()
@@ -434,6 +454,15 @@ class WholeRun(unittest.TestCase):
         self.assertNotIn("comparison", austrian)
         self.assertEqual(austrian["stats"]["journeys"], austrian["feeds"]["plain"]["rows"]["trips.txt"])
         self.assertIn("| Seetal | 1 | 1 | 7 | 7 | 0 (+0.00 %) |", table)
+        # The validator failed on both feeds; the measurements stand.
+        self.assertIn("OutOfMemoryError", seetal["validation"]["converted"]["failed"])
+        self.assertEqual(set(seetal["validation"]), {"converted", "published"})
+        self.assertIn(
+            "| Seetal | converted | — | — | — | the validator failed: "
+            "java.lang.OutOfMemoryError: Java heap space |",
+            table,
+        )
+        self.assertNotIn("validation", austrian)
         self.assertLess(table.index("| Seetal |"), table.index("| Austrian example |"))
 
 

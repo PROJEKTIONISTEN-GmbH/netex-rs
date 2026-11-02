@@ -183,6 +183,7 @@ def measure(command, stdout, stderr, lock=None, lock_wait=0.0):
 
 
 def mean(runs, key):
+    """The mean of one figure over the runs."""
     return sum(run[key] for run in runs) / len(runs)
 
 
@@ -293,13 +294,15 @@ def file_system(path):
     if best is None:
         return None
     device, point, kind = best
-    rotational = None
+    # A partition's device is named after its disk (`nvme0n1p1`, `sda2`); the
+    # longest disk name it starts with is its disk.
     name = Path(device).name
-    for block in Path("/sys/block").glob("*"):
-        if name.startswith(block.name):
-            rotational_file = block / "queue" / "rotational"
-            if rotational_file.exists():
-                rotational = rotational_file.read_text().strip() == "1"
+    disks = [block for block in Path("/sys/block").glob("*") if name.startswith(block.name)]
+    rotational = None
+    if disks:
+        flag = max(disks, key=lambda block: len(block.name)) / "queue" / "rotational"
+        if flag.exists():
+            rotational = flag.read_text().strip() == "1"
     return {"device": device, "mount": point, "type": kind, "rotational": rotational}
 
 
@@ -320,7 +323,8 @@ def netex_command(netex, threads, step, source, along):
 def validate(validator, feed, into, day, threads):
     """The GTFS validator of MobilityData on a feed, its rules about time taken
     on `day`: its notices counted by severity and, for errors and warnings, by
-    code."""
+    code, and the errors of the validator itself (`system_errors.json`) — a
+    validator that ran out of memory reports there, not in its notices."""
     if into.exists():
         shutil.rmtree(into)
     command = ["java", "-jar", validator, "--input", feed, "--output_base", into,
@@ -337,10 +341,13 @@ def validate(validator, feed, into, day, threads):
         counted[severity] = counted.get(severity, 0) + notice["totalNotices"]
         if severity in codes:
             codes[severity][notice["code"]] = notice["totalNotices"]
+    own_errors = into / "system_errors.json"
+    failures = json.loads(own_errors.read_text())["notices"] if own_errors.exists() else []
     return {
         "notices": counted,
         "codes": {severity: dict(sorted(found.items(), key=lambda item: -item[1]))
                   for severity, found in codes.items()},
+        "system_errors": {failure["code"]: failure["totalNotices"] for failure in failures},
         "wall_s": measured["wall_s"],
     }
 
@@ -393,7 +400,7 @@ def measure_delivery(delivery, options):
         "id": delivery["id"],
         "name": delivery["name"],
         "group": delivery.get("group", delivery["name"]),
-        **{key: delivery.get(key) for key in ("publisher", "licence", "stand", "url", "note")},
+        **{key: delivery.get(key) for key in ("publisher", "licence", "stand", "url")},
         "netex": netex_version(options.netex),
         "machine": machine([data, out]),
         "input": input_size([source, *along]),
@@ -421,20 +428,26 @@ def measure_delivery(delivery, options):
     if options.validator and delivery.get("validate"):
         checked = out / "validator" / delivery["id"]
         day = options.window[0] if options.window else None
-        feeds_checked = {"converted": plain, "published": published}
-        result["validation"] = {
-            which: validate(options.validator, feed, checked / which, day, max(threads))
-            for which, feed in feeds_checked.items()
-            if feed is not None
-        }
+        result["validation"] = {}
+        for which, feed in (("converted", plain), ("published", published)):
+            if feed is None:
+                continue
+            # A validator that fails is a finding about the validator and the
+            # feed, not a reason to lose the measurements taken.
+            try:
+                checked_feed = validate(options.validator, feed, checked / which, day, max(threads))
+            except RunFailed as failure:
+                checked_feed = {"failed": str(failure)}
+            result["validation"][which] = checked_feed
     return result
 
 
 def netex_version(netex):
+    """What `netex --version` says, the version measured."""
     return subprocess.run([netex, "--version"], check=True, capture_output=True, text=True).stdout.strip()
 
 
-# The tables.
+# The tables of `results.md`.
 
 
 def size(count):
@@ -468,6 +481,16 @@ def found(delivery, step, threads, shapes=False):
         (m["summary"] for m in delivery["measurements"]
          if m["step"] == step and m["threads"] == threads and m["shapes"] == shapes),
         None,
+    )
+
+
+def system_errors(checked):
+    """The validator's own errors, where it reported any, as a note."""
+    found = checked.get("system_errors") or {}
+    if not found:
+        return ""
+    return "; the validator's own errors: " + ", ".join(
+        f"`{code}` {number(total)}" for code, total in found.items()
     )
 
 
@@ -599,13 +622,17 @@ def markdown(deliveries):
         ]
         for delivery in validated:
             for which, checked in delivery["validation"].items():
+                if "failed" in checked:
+                    reason = checked["failed"].strip().splitlines()[-1]
+                    lines.append(f"| {delivery['name']} | {which} | — | — | — | the validator failed: {reason} |")
+                    continue
                 codes = ", ".join(
                     f"`{code}` {number(total)}" for code, total in checked["codes"]["ERROR"].items()
                 )
                 lines.append(
                     f"| {delivery['name']} | {which} | {number(checked['notices']['ERROR'])} "
                     f"| {number(checked['notices']['WARNING'])} | {number(checked['notices']['INFO'])} "
-                    f"| {codes or '—'} |"
+                    f"| {codes or '—'}{system_errors(checked)} |"
                 )
 
     lines += [
