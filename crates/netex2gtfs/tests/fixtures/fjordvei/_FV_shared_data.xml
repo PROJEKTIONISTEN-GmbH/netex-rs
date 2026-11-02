@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" xmlns:gis="http://www.opengis.net/gml/3.2" version="1.15:NO-NeTEx-networktimetable:1.5">
+  <PublicationTimestamp>2026-10-10T06:00:00</PublicationTimestamp>
+  <ParticipantRef>FV</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="FV:CompositeFrame:shared" version="1">
+      <FrameDefaults>
+        <DefaultLocale>
+          <TimeZone>Europe/Oslo</TimeZone>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="FV:ResourceFrame:shared" version="1">
+          <organisations>
+            <Operator id="FV:Operator:1" version="1">
+              <Name>Fjordvei Buss</Name>
+              <ContactDetails><Url>https://fjordvei.example</Url></ContactDetails>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <ServiceFrame id="FV:ServiceFrame:shared" version="1">
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="FV:ScheduledStopPoint:torget" version="1"><Name>Torget</Name></ScheduledStopPoint>
+            <ScheduledStopPoint id="FV:ScheduledStopPoint:brygga" version="1"><Name>Brygga</Name></ScheduledStopPoint>
+            <ScheduledStopPoint id="FV:ScheduledStopPoint:fjord" version="1"><Name>Fjord</Name></ScheduledStopPoint>
+          </scheduledStopPoints>
+          <serviceLinks>
+            <ServiceLink id="FV:ServiceLink:torget-brygga" version="1">
+              <Distance>1500</Distance>
+              <projections>
+                <LinkSequenceProjection id="FV:LinkSequenceProjection:torget-brygga" version="1">
+                  <gis:LineString srsName="4326" gis:id="torget-brygga">
+                    <gis:posList srsDimension="2" count="3">59.9000 10.7000 59.9050 10.7080 59.9100 10.7200</gis:posList>
+                  </gis:LineString>
+                </LinkSequenceProjection>
+              </projections>
+              <FromPointRef ref="FV:ScheduledStopPoint:torget" version="1"/>
+              <ToPointRef ref="FV:ScheduledStopPoint:brygga" version="1"/>
+            </ServiceLink>
+            <ServiceLink id="FV:ServiceLink:torget-brygga-omkjoering" version="1">
+              <Distance>1900</Distance>
+              <projections>
+                <LinkSequenceProjection id="FV:LinkSequenceProjection:torget-brygga-omkjoering" version="1">
+                  <gis:LineString srsName="4326" gis:id="torget-brygga-omkjoering">
+                    <gis:posList srsDimension="2" count="3">59.9000 10.7000 59.8980 10.7150 59.9100 10.7200</gis:posList>
+                  </gis:LineString>
+                </LinkSequenceProjection>
+              </projections>
+              <FromPointRef ref="FV:ScheduledStopPoint:torget" version="1"/>
+              <ToPointRef ref="FV:ScheduledStopPoint:brygga" version="1"/>
+            </ServiceLink>
+            <ServiceLink id="FV:ServiceLink:brygga-fjord" version="1">
+              <Distance>1500</Distance>
+              <projections>
+                <LinkSequenceProjection id="FV:LinkSequenceProjection:brygga-fjord" version="1">
+                  <gis:LineString srsName="4326" gis:id="brygga-fjord">
+                    <gis:posList srsDimension="2" count="3">59.9100 10.7200 59.9160 10.7290 59.9200 10.7400</gis:posList>
+                  </gis:LineString>
+                </LinkSequenceProjection>
+              </projections>
+              <FromPointRef ref="FV:ScheduledStopPoint:brygga" version="1"/>
+              <ToPointRef ref="FV:ScheduledStopPoint:fjord" version="1"/>
+            </ServiceLink>
+            <ServiceLink id="FV:ServiceLink:fjord-torget" version="1">
+              <Distance>3100</Distance>
+              <FromPointRef ref="FV:ScheduledStopPoint:fjord" version="1"/>
+              <ToPointRef ref="FV:ScheduledStopPoint:torget" version="1"/>
+            </ServiceLink>
+          </serviceLinks>
+          <stopAssignments>
+            <PassengerStopAssignment id="FV:PassengerStopAssignment:torget" version="1" order="1">
+              <ScheduledStopPointRef ref="FV:ScheduledStopPoint:torget" version="1"/>
+              <QuayRef ref="FV:Quay:torget-1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="FV:PassengerStopAssignment:brygga" version="1" order="2">
+              <ScheduledStopPointRef ref="FV:ScheduledStopPoint:brygga" version="1"/>
+              <QuayRef ref="FV:Quay:brygga-1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="FV:PassengerStopAssignment:fjord" version="1" order="3">
+              <ScheduledStopPointRef ref="FV:ScheduledStopPoint:fjord" version="1"/>
+              <QuayRef ref="FV:Quay:fjord-1"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+        </ServiceFrame>
+        <ServiceCalendarFrame id="FV:ServiceCalendarFrame:shared" version="1">
+          <dayTypes>
+            <DayType id="FV:DayType:weekdays" version="1">
+              <properties>
+                <PropertyOfDay>
+                  <DaysOfWeek>Monday Tuesday Wednesday Thursday Friday</DaysOfWeek>
+                </PropertyOfDay>
+              </properties>
+            </DayType>
+          </dayTypes>
+          <operatingPeriods>
+            <OperatingPeriod id="FV:OperatingPeriod:october" version="1">
+              <FromDate>2026-10-12T00:00:00</FromDate>
+              <ToDate>2026-10-23T00:00:00</ToDate>
+            </OperatingPeriod>
+          </operatingPeriods>
+          <dayTypeAssignments>
+            <DayTypeAssignment id="FV:DayTypeAssignment:weekdays" version="1" order="1">
+              <OperatingPeriodRef ref="FV:OperatingPeriod:october" version="1"/>
+              <DayTypeRef ref="FV:DayType:weekdays" version="1"/>
+            </DayTypeAssignment>
+          </dayTypeAssignments>
+        </ServiceCalendarFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

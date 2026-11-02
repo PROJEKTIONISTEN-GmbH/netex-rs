@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.15:NO-NeTEx-stops:1.4">
+  <PublicationTimestamp>2026-10-10T06:00:00</PublicationTimestamp>
+  <ParticipantRef>FV</ParticipantRef>
+  <dataObjects>
+    <SiteFrame id="FV:SiteFrame:1" version="1">
+      <stopPlaces>
+        <StopPlace id="FV:StopPlace:torget" version="1">
+          <Name>Torget</Name>
+          <Centroid><Location><Longitude>10.7000</Longitude><Latitude>59.9000</Latitude></Location></Centroid>
+          <quays>
+            <Quay id="FV:Quay:torget-1" version="1">
+              <Centroid><Location><Longitude>10.7000</Longitude><Latitude>59.9000</Latitude></Location></Centroid>
+            </Quay>
+          </quays>
+        </StopPlace>
+        <StopPlace id="FV:StopPlace:brygga" version="1">
+          <Name>Brygga</Name>
+          <Centroid><Location><Longitude>10.7200</Longitude><Latitude>59.9100</Latitude></Location></Centroid>
+          <quays>
+            <Quay id="FV:Quay:brygga-1" version="1">
+              <Centroid><Location><Longitude>10.7200</Longitude><Latitude>59.9100</Latitude></Location></Centroid>
+            </Quay>
+          </quays>
+        </StopPlace>
+        <StopPlace id="FV:StopPlace:fjord" version="1">
+          <Name>Fjord</Name>
+          <Centroid><Location><Longitude>10.7400</Longitude><Latitude>59.9200</Latitude></Location></Centroid>
+          <quays>
+            <Quay id="FV:Quay:fjord-1" version="1">
+              <Centroid><Location><Longitude>10.7400</Longitude><Latitude>59.9200</Latitude></Location></Centroid>
+            </Quay>
+          </quays>
+        </StopPlace>
+      </stopPlaces>
+    </SiteFrame>
+  </dataObjects>
+</PublicationDelivery>

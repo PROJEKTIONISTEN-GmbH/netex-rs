@@ -1077,3 +1077,90 @@ fn an_empty_web_address_is_no_web_address() {
         ["Seeweg Verkehrsverbund|", "SEEWEG|"]
     );
 }
+
+#[test]
+fn shapes_follow_the_links_a_pattern_names_with_their_geometry_in_a_projection() {
+    let (feed, report) = convert_to_directory(
+        &fixture("fjordvei"),
+        &Options {
+            shapes: true,
+            ..Options::default()
+        },
+    );
+    // The links the line file's patterns name are the shared data's; the
+    // pattern naming none takes the link between its stop points there.
+    assert_eq!(
+        table(feed.path(), "trips.txt", &["trip_id", "shape_id"]),
+        [
+            "FV:ServiceJourney:1-0800|s0",
+            "FV:ServiceJourney:1-0900|s1",
+            "FV:ServiceJourney:1-1000|",
+            "FV:ServiceJourney:1-1100|s2",
+        ]
+    );
+    assert_eq!(
+        table(
+            feed.path(),
+            "shapes.txt",
+            &[
+                "shape_id",
+                "shape_pt_lat",
+                "shape_pt_lon",
+                "shape_pt_sequence"
+            ]
+        ),
+        [
+            // On to Fjord, the two links one after the other.
+            "s0|59.9000000|10.7000000|0",
+            "s0|59.9050000|10.7080000|1",
+            "s0|59.9100000|10.7200000|2",
+            "s0|59.9160000|10.7290000|3",
+            "s0|59.9200000|10.7400000|4",
+            // The detour its pattern names, not the direct link between the
+            // same stop points.
+            "s1|59.9000000|10.7000000|0",
+            "s1|59.8980000|10.7150000|1",
+            "s1|59.9100000|10.7200000|2",
+            "s2|59.9100000|10.7200000|0",
+            "s2|59.9160000|10.7290000|1",
+            "s2|59.9200000|10.7400000|2",
+        ]
+    );
+    let decision = |code: &str| {
+        report
+            .decisions
+            .iter()
+            .find(|decision| decision.code == code)
+            .map(|decision| (decision.count, decision.example.clone().unwrap_or_default()))
+    };
+    assert_eq!(
+        decision("shape-incomplete"),
+        Some((1, "FV:ServiceJourney:1-1000".to_owned()))
+    );
+    assert_eq!(
+        decision("link-without-geometry"),
+        Some((1, "FV:ServiceLink:fjord-torget".to_owned()))
+    );
+    assert_eq!(decision("shape-in-unknown-system"), None);
+}
+
+#[test]
+fn shapes_asked_of_a_delivery_stating_no_geometry_are_each_said_to_be_missing() {
+    let (feed, report) = convert_to_directory(
+        &fixture("uferweg"),
+        &Options {
+            shapes: true,
+            ..Options::default()
+        },
+    );
+    assert!(rows(feed.path(), "shapes.txt").is_empty());
+    let missing = report
+        .decisions
+        .iter()
+        .find(|decision| decision.code == "shape-incomplete")
+        .expect("the trips without a shape are reported");
+    assert_eq!(
+        (missing.count, missing.example.as_deref()),
+        (2, Some("uw:ServiceJourney:N-0800"))
+    );
+}

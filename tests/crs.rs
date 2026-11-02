@@ -138,6 +138,20 @@ fn an_srs_name_names_its_system_in_any_of_the_usual_forms() {
 }
 
 #[cfg(feature = "crs")]
+#[test]
+fn a_bare_epsg_code_names_its_system_as_the_nordic_deliveries_write_it() {
+    // Norway's and Sweden's link geometries name WGS 84 as `srsName="4326"`.
+    let wgs84 = ReferenceSystem::from_srs_name("4326").expect("WGS 84");
+    assert_eq!(wgs84, ReferenceSystem::WGS84);
+    assert_eq!(wgs84.to_wgs84(62.64484, 6.814601), (62.64484, 6.814601));
+    let lv95 = ReferenceSystem::from_srs_name(" 2056 ").expect("LV95");
+    assert_eq!((lv95.epsg(), lv95.axes()), (2056, Axes::EastingNorthing));
+    for unknown in ["3857", "4326.0", "-4326", "43 26"] {
+        assert_eq!(ReferenceSystem::from_srs_name(unknown), None, "{unknown}");
+    }
+}
+
+#[cfg(feature = "crs")]
 fn location(xml: &str) -> netex_rs::model::Location {
     netex_rs::read_element(xml, "Location", &netex_rs::Limits::default()).expect("a location")
 }
