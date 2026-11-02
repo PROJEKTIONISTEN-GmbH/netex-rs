@@ -312,3 +312,31 @@ impl Delivery {
         }
     }
 }
+
+#[cfg(test)]
+impl Delivery {
+    /// The delivery of the documents `workers` read, each worker's by a
+    /// builder and a gather of its own, merged in the order given — as
+    /// [`Delivery::read`] merges what its threads read, in an order the
+    /// documents' distribution over the threads decides.
+    pub(crate) fn read_by_workers(workers: &[&[(&str, &str)]], reading: Reading) -> Delivery {
+        let options = ReadOptions::new(selection(reading));
+        let mut read = workers.iter().map(|documents| {
+            let mut builder = IndexBuilder::new();
+            let mut gather = Gather::default();
+            for &(name, xml) in documents.iter() {
+                gather.begin(name);
+                builder
+                    .add_streamed_with(xml, &options, name, &mut gather)
+                    .expect("the document reads");
+            }
+            (builder, gather)
+        });
+        let (mut builder, mut gather) = read.next().expect("at least one worker");
+        for (other_builder, other_gather) in read {
+            builder.merge(other_builder);
+            gather.merge(other_gather);
+        }
+        Delivery::of(builder.finish(), gather)
+    }
+}

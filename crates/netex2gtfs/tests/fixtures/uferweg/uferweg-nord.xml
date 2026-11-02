@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.10">
+  <PublicationTimestamp>2026-10-10T06:00:00</PublicationTimestamp>
+  <ParticipantRef>UFERWEG</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="uw:CompositeFrame:nord" version="1">
+      <FrameDefaults>
+        <DefaultLocale>
+          <TimeZone>Europe/Zurich</TimeZone>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="uw:ResourceFrame:nord" version="1">
+          <organisations>
+            <Operator id="uw:Operator:nord" version="1">
+              <Name>Uferweg Nord</Name>
+              <ContactDetails><Url>https://nord.uferweg.example</Url></ContactDetails>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <SiteFrame id="uw:SiteFrame:nord" version="1">
+          <stopPlaces>
+            <StopPlace id="uw:StopPlace:hafen" version="1">
+              <Name>Hafen</Name>
+              <Centroid><Location><Longitude>8.4000</Longitude><Latitude>47.1000</Latitude></Location></Centroid>
+              <quays>
+                <Quay id="uw:Quay:hafen-1" version="1">
+                  <Name>Hafen</Name>
+                  <Centroid><Location><Longitude>8.4001</Longitude><Latitude>47.1001</Latitude></Location></Centroid>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="uw:StopPlace:muehle" version="1">
+              <Name>Mühle</Name>
+              <Centroid><Location><Longitude>8.4100</Longitude><Latitude>47.1050</Latitude></Location></Centroid>
+              <quays>
+                <Quay id="uw:Quay:muehle-1" version="1">
+                  <Name>Mühle</Name>
+                  <Centroid><Location><Longitude>8.4101</Longitude><Latitude>47.1051</Latitude></Location></Centroid>
+                </Quay>
+              </quays>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+        <ServiceFrame id="uw:ServiceFrame:nord" version="1">
+          <lines>
+            <Line id="uw:Line:N" version="1">
+              <Name>Nordufer</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>N</PublicCode>
+              <OperatorRef ref="uw:Operator:nord" version="1"/>
+            </Line>
+          </lines>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="uw:ScheduledStopPoint:hafen" version="1"><Name>Hafen</Name></ScheduledStopPoint>
+            <ScheduledStopPoint id="uw:ScheduledStopPoint:muehle" version="1"><Name>Mühle</Name></ScheduledStopPoint>
+          </scheduledStopPoints>
+          <connections>
+            <SiteConnection id="uw:SiteConnection:hafen-steg" version="1">
+              <WalkTransferDuration><DefaultDuration>PT4M</DefaultDuration></WalkTransferDuration>
+              <BothWays>false</BothWays>
+              <From><QuayRef ref="uw:Quay:hafen-1" version="1"/></From>
+              <To><QuayRef ref="uw:Quay:steg-1" version="1"/></To>
+            </SiteConnection>
+          </connections>
+          <stopAssignments>
+            <PassengerStopAssignment id="uw:PassengerStopAssignment:hafen" version="1" order="1">
+              <ScheduledStopPointRef ref="uw:ScheduledStopPoint:hafen" version="1"/>
+              <QuayRef ref="uw:Quay:hafen-1" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="uw:PassengerStopAssignment:muehle" version="1" order="2">
+              <ScheduledStopPointRef ref="uw:ScheduledStopPoint:muehle" version="1"/>
+              <QuayRef ref="uw:Quay:muehle-1" version="1"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="uw:ServiceJourneyPattern:N" version="1">
+              <RouteView><LineRef ref="uw:Line:N" version="1"/></RouteView>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="uw:StopPointInJourneyPattern:N-1" version="1" order="1">
+                  <ScheduledStopPointRef ref="uw:ScheduledStopPoint:hafen" version="1"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="uw:StopPointInJourneyPattern:N-2" version="1" order="2">
+                  <ScheduledStopPointRef ref="uw:ScheduledStopPoint:muehle" version="1"/>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <ServiceCalendarFrame id="uw:ServiceCalendarFrame:nord" version="1">
+          <dayTypes>
+            <DayType id="uw:DayType:nord" version="1"/>
+          </dayTypes>
+          <operatingPeriods>
+            <UicOperatingPeriod id="uw:UicOperatingPeriod:nord" version="1">
+              <FromDate>2026-10-12T00:00:00</FromDate>
+              <ToDate>2026-10-16T00:00:00</ToDate>
+              <ValidDayBits>11111</ValidDayBits>
+            </UicOperatingPeriod>
+          </operatingPeriods>
+          <dayTypeAssignments>
+            <DayTypeAssignment id="uw:DayTypeAssignment:nord" version="1" order="1">
+              <UicOperatingPeriodRef ref="uw:UicOperatingPeriod:nord" version="1"/>
+              <DayTypeRef ref="uw:DayType:nord" version="1"/>
+            </DayTypeAssignment>
+          </dayTypeAssignments>
+        </ServiceCalendarFrame>
+        <TimetableFrame id="uw:TimetableFrame:nord" version="1">
+          <vehicleJourneys>
+            <ServiceJourney id="uw:ServiceJourney:N-0800" version="1">
+              <dayTypes><DayTypeRef ref="uw:DayType:nord" version="1"/></dayTypes>
+              <ServiceJourneyPatternRef ref="uw:ServiceJourneyPattern:N" version="1"/>
+              <LineRef ref="uw:Line:N" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="uw:TimetabledPassingTime:N-0800-1" version="1">
+                  <StopPointInJourneyPatternRef ref="uw:StopPointInJourneyPattern:N-1" version="1"/>
+                  <DepartureTime>08:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="uw:TimetabledPassingTime:N-0800-2" version="1">
+                  <StopPointInJourneyPatternRef ref="uw:StopPointInJourneyPattern:N-2" version="1"/>
+                  <ArrivalTime>08:10:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+          <journeyInterchanges>
+            <ServiceJourneyInterchange id="uw:ServiceJourneyInterchange:nord" version="1">
+              <Guaranteed>true</Guaranteed>
+              <FromPointRef ref="uw:ScheduledStopPoint:muehle" version="1"/>
+              <ToPointRef ref="uw:ScheduledStopPoint:steg" version="1"/>
+              <FromJourneyRef ref="uw:ServiceJourney:N-0800" version="1"/>
+              <ToJourneyRef ref="uw:ServiceJourney:S-0815" version="1"/>
+            </ServiceJourneyInterchange>
+          </journeyInterchanges>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

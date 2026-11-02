@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.10">
+  <PublicationTimestamp>2026-10-10T06:00:00</PublicationTimestamp>
+  <ParticipantRef>UFERWEG</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="uw:CompositeFrame:sued" version="1">
+      <FrameDefaults>
+        <DefaultLocale>
+          <TimeZone>Europe/Zurich</TimeZone>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="uw:ResourceFrame:sued" version="1">
+          <organisations>
+            <Operator id="uw:Operator:sued" version="1">
+              <Name>Uferweg Süd</Name>
+              <ContactDetails><Url>https://sued.uferweg.example</Url></ContactDetails>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <SiteFrame id="uw:SiteFrame:sued" version="1">
+          <stopPlaces>
+            <StopPlace id="uw:StopPlace:steg" version="1">
+              <Name>Steg</Name>
+              <Centroid><Location><Longitude>8.4110</Longitude><Latitude>47.1060</Latitude></Location></Centroid>
+              <quays>
+                <Quay id="uw:Quay:steg-1" version="1">
+                  <Name>Steg</Name>
+                  <Centroid><Location><Longitude>8.4111</Longitude><Latitude>47.1061</Latitude></Location></Centroid>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="uw:StopPlace:anger" version="1">
+              <Name>Anger</Name>
+              <Centroid><Location><Longitude>8.4200</Longitude><Latitude>47.0900</Latitude></Location></Centroid>
+              <quays>
+                <Quay id="uw:Quay:anger-1" version="1">
+                  <Name>Anger</Name>
+                  <Centroid><Location><Longitude>8.4201</Longitude><Latitude>47.0901</Latitude></Location></Centroid>
+                </Quay>
+              </quays>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+        <ServiceFrame id="uw:ServiceFrame:sued" version="1">
+          <lines>
+            <Line id="uw:Line:S" version="1">
+              <Name>Südufer</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>S</PublicCode>
+              <OperatorRef ref="uw:Operator:sued" version="1"/>
+            </Line>
+          </lines>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="uw:ScheduledStopPoint:steg" version="1"><Name>Steg</Name></ScheduledStopPoint>
+            <ScheduledStopPoint id="uw:ScheduledStopPoint:anger" version="1"><Name>Anger</Name></ScheduledStopPoint>
+          </scheduledStopPoints>
+          <connections>
+            <SiteConnection id="uw:SiteConnection:steg-muehle" version="1">
+              <WalkTransferDuration><DefaultDuration>PT2M</DefaultDuration></WalkTransferDuration>
+              <BothWays>true</BothWays>
+              <From><QuayRef ref="uw:Quay:steg-1" version="1"/></From>
+              <To><QuayRef ref="uw:Quay:muehle-1" version="1"/></To>
+            </SiteConnection>
+          </connections>
+          <stopAssignments>
+            <PassengerStopAssignment id="uw:PassengerStopAssignment:steg" version="1" order="1">
+              <ScheduledStopPointRef ref="uw:ScheduledStopPoint:steg" version="1"/>
+              <QuayRef ref="uw:Quay:steg-1" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="uw:PassengerStopAssignment:anger" version="1" order="2">
+              <ScheduledStopPointRef ref="uw:ScheduledStopPoint:anger" version="1"/>
+              <QuayRef ref="uw:Quay:anger-1" version="1"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="uw:ServiceJourneyPattern:S" version="1">
+              <RouteView><LineRef ref="uw:Line:S" version="1"/></RouteView>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="uw:StopPointInJourneyPattern:S-1" version="1" order="1">
+                  <ScheduledStopPointRef ref="uw:ScheduledStopPoint:steg" version="1"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="uw:StopPointInJourneyPattern:S-2" version="1" order="2">
+                  <ScheduledStopPointRef ref="uw:ScheduledStopPoint:anger" version="1"/>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <ServiceCalendarFrame id="uw:ServiceCalendarFrame:sued" version="1">
+          <dayTypes>
+            <DayType id="uw:DayType:sued" version="1"/>
+          </dayTypes>
+          <operatingPeriods>
+            <UicOperatingPeriod id="uw:UicOperatingPeriod:sued" version="1">
+              <FromDate>2026-10-12T00:00:00</FromDate>
+              <ToDate>2026-10-16T00:00:00</ToDate>
+              <ValidDayBits>11111</ValidDayBits>
+            </UicOperatingPeriod>
+          </operatingPeriods>
+          <dayTypeAssignments>
+            <DayTypeAssignment id="uw:DayTypeAssignment:sued" version="1" order="1">
+              <UicOperatingPeriodRef ref="uw:UicOperatingPeriod:sued" version="1"/>
+              <DayTypeRef ref="uw:DayType:sued" version="1"/>
+            </DayTypeAssignment>
+          </dayTypeAssignments>
+        </ServiceCalendarFrame>
+        <TimetableFrame id="uw:TimetableFrame:sued" version="1">
+          <vehicleJourneys>
+            <ServiceJourney id="uw:ServiceJourney:S-0815" version="1">
+              <dayTypes><DayTypeRef ref="uw:DayType:sued" version="1"/></dayTypes>
+              <ServiceJourneyPatternRef ref="uw:ServiceJourneyPattern:S" version="1"/>
+              <LineRef ref="uw:Line:S" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="uw:TimetabledPassingTime:S-0815-1" version="1">
+                  <StopPointInJourneyPatternRef ref="uw:StopPointInJourneyPattern:S-1" version="1"/>
+                  <DepartureTime>08:15:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="uw:TimetabledPassingTime:S-0815-2" version="1">
+                  <StopPointInJourneyPatternRef ref="uw:StopPointInJourneyPattern:S-2" version="1"/>
+                  <ArrivalTime>08:30:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+          <journeyInterchanges>
+            <ServiceJourneyInterchange id="uw:ServiceJourneyInterchange:sued" version="1">
+              <StaySeated>true</StaySeated>
+              <FromPointRef ref="uw:ScheduledStopPoint:muehle" version="1"/>
+              <ToPointRef ref="uw:ScheduledStopPoint:steg" version="1"/>
+              <FromJourneyRef ref="uw:ServiceJourney:N-0800" version="1"/>
+              <ToJourneyRef ref="uw:ServiceJourney:S-0815" version="1"/>
+            </ServiceJourneyInterchange>
+          </journeyInterchanges>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

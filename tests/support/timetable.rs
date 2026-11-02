@@ -52,6 +52,7 @@ pub struct Timetable {
     periods: String,
     assignments: String,
     journeys: String,
+    interchanges: String,
 }
 
 impl Timetable {
@@ -305,6 +306,28 @@ impl Timetable {
         self
     }
 
+    /// A planned interchange from `from_journey` at `from_point` to
+    /// `to_journey` at `to_point`, guaranteed or with the passengers staying
+    /// seated.
+    pub fn interchange(
+        mut self,
+        id: &str,
+        (from_journey, from_point): (&str, &str),
+        (to_journey, to_point): (&str, &str),
+        stay_seated: bool,
+    ) -> Self {
+        let kind = if stay_seated {
+            "<StaySeated>true</StaySeated>"
+        } else {
+            "<Guaranteed>true</Guaranteed>"
+        };
+        let _ = write!(
+            self.interchanges,
+            r#"<ServiceJourneyInterchange id="{id}" version="1">{kind}<FromPointRef ref="{from_point}" version="1"/><ToPointRef ref="{to_point}" version="1"/><FromJourneyRef ref="{from_journey}" version="1"/><ToJourneyRef ref="{to_journey}" version="1"/></ServiceJourneyInterchange>"#
+        );
+        self
+    }
+
     /// The document.
     pub fn xml(&self) -> String {
         let container = |name: &str, content: &str| {
@@ -323,7 +346,7 @@ impl Timetable {
                 r#"<SiteFrame id="g" version="1">{}</SiteFrame>"#,
                 r#"<ServiceFrame id="s" version="1">{}{}{}</ServiceFrame>"#,
                 r#"<ServiceCalendarFrame id="k" version="1">{}{}{}</ServiceCalendarFrame>"#,
-                r#"<TimetableFrame id="t" version="1">{}</TimetableFrame>"#,
+                r#"<TimetableFrame id="t" version="1">{}{}</TimetableFrame>"#,
                 "</frames></CompositeFrame></dataObjects></PublicationDelivery>"
             ),
             container("stopPlaces", &self.stop_places),
@@ -334,6 +357,7 @@ impl Timetable {
             container("operatingPeriods", &self.periods),
             container("dayTypeAssignments", &self.assignments),
             container("vehicleJourneys", &self.journeys),
+            container("journeyInterchanges", &self.interchanges),
         )
     }
 }

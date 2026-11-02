@@ -922,3 +922,156 @@ fn a_dutch_delivery_converts_with_its_register_codes_rd_positions_and_demanded_t
     assert_eq!(report.index_findings.get("link-without-run-time"), Some(&1));
     assert_eq!(report.index_findings.get("journey-without-days"), Some(&1));
 }
+
+#[test]
+fn stops_and_transfers_are_written_in_the_order_of_their_identifiers() {
+    let (feed, report) = convert_to_directory(&fixture("uferweg"), &Options::default());
+    assert_eq!(
+        table(
+            feed.path(),
+            "stops.txt",
+            &["stop_id", "location_type", "parent_station"]
+        ),
+        [
+            "uw:StopPlace:anger|1|",
+            "uw:StopPlace:hafen|1|",
+            "uw:StopPlace:muehle|1|",
+            "uw:StopPlace:steg|1|",
+            "uw:Quay:anger-1|0|uw:StopPlace:anger",
+            "uw:Quay:hafen-1|0|uw:StopPlace:hafen",
+            "uw:Quay:muehle-1|0|uw:StopPlace:muehle",
+            "uw:Quay:steg-1|0|uw:StopPlace:steg",
+        ]
+    );
+    // The walks by the stops they lead from and to; the interchange both
+    // documents state, as the document whose name sorts first states it.
+    assert_eq!(
+        table(
+            feed.path(),
+            "transfers.txt",
+            &[
+                "from_stop_id",
+                "to_stop_id",
+                "from_trip_id",
+                "to_trip_id",
+                "transfer_type",
+                "min_transfer_time"
+            ]
+        ),
+        [
+            "uw:Quay:hafen-1|uw:Quay:steg-1|||2|240",
+            "uw:Quay:muehle-1|uw:Quay:steg-1|||2|120",
+            "uw:Quay:steg-1|uw:Quay:muehle-1|||2|120",
+            "uw:Quay:muehle-1|uw:Quay:steg-1|uw:ServiceJourney:N-0800|uw:ServiceJourney:S-0815|1|",
+        ]
+    );
+    let repeated = report
+        .decisions
+        .iter()
+        .find(|decision| decision.code == "interchange-repeated")
+        .expect("the repetition is reported");
+    assert_eq!(
+        (repeated.count, repeated.example.as_deref()),
+        (1, Some("uw:ServiceJourney:N-0800"))
+    );
+}
+
+/// The bytes of the feed archive at `path`.
+fn archive_bytes(path: &Path) -> Vec<u8> {
+    std::fs::read(path).unwrap_or_else(|error| panic!("{}: {error}", path.display()))
+}
+
+#[test]
+fn a_feed_is_the_same_bytes_whatever_number_of_threads_reads_the_delivery() {
+    let written = tempfile::tempdir().expect("a directory");
+    for name in ["uferweg", "seeweg"] {
+        let source = Source::open(fixture(name)).expect("the delivery opens");
+        let mut feeds = Vec::new();
+        for threads in [1, 2, 4] {
+            let pool = rayon::ThreadPoolBuilder::new()
+                .num_threads(threads)
+                .build()
+                .expect("a pool");
+            let path = written.path().join(format!("{name}-{threads}.zip"));
+            let report = pool.install(|| {
+                let delivery = Delivery::read(
+                    &source,
+                    Reading {
+                        geometry: true,
+                        ..Reading::default()
+                    },
+                )
+                .expect("the delivery reads");
+                let options = Options {
+                    shapes: true,
+                    ..Options::default()
+                };
+                convert(&delivery, &options, output::at(&path).expect("an archive"))
+                    .expect("converts")
+            });
+            feeds.push((threads, archive_bytes(&path), report));
+        }
+        let (_, bytes, report) = &feeds[0];
+        for (threads, other_bytes, other_report) in &feeds[1..] {
+            assert!(
+                other_bytes == bytes,
+                "{name}: the feed read on {threads} threads differs from the one read on 1"
+            );
+            assert_eq!(other_report, report, "{name} on {threads} threads");
+        }
+    }
+}
+
+#[test]
+fn an_empty_web_address_is_no_web_address() {
+    // Four Norwegian taxi operators write `<Url/>`.
+    let delivery = tempfile::tempdir().expect("a directory");
+    for name in ["seeweg-line-7.xml", "seeweg-other.xml"] {
+        let xml = std::fs::read_to_string(fixture("seeweg").join(name)).expect("the fixture");
+        let xml = xml
+            .replace("<Url>https://bahnen.seeweg.example</Url>", "<Url/>")
+            .replace("<Url>https://seeweg.example</Url>", "<Url> </Url>");
+        std::fs::write(delivery.path().join(name), xml).expect("written");
+    }
+    let publisher = Publisher {
+        name: "Example".to_owned(),
+        url: "https://example.org".to_owned(),
+        language: None,
+    };
+    let (feed, report) = convert_to_directory(
+        delivery.path(),
+        &Options {
+            publisher: Some(publisher),
+            ..Options::default()
+        },
+    );
+    assert_eq!(
+        table(feed.path(), "agency.txt", &["agency_id", "agency_url"]),
+        ["sw:Operator:SWB|https://example.org"]
+    );
+    let without = report
+        .decisions
+        .iter()
+        .find(|decision| decision.code == "agency-without-url")
+        .expect("the organisation without a web address is reported");
+    assert_eq!(
+        (without.count, without.example.as_deref()),
+        (1, Some("sw:Operator:SWB"))
+    );
+    // A data source with an empty web address names the feed's producer,
+    // but publishes no feed.
+    let (feed, report) = convert_to_directory(delivery.path(), &Options::default());
+    assert!(!feed.path().join("feed_info.txt").exists());
+    assert!(report
+        .decisions
+        .iter()
+        .any(|decision| decision.code == "feed-info-without-publisher"));
+    assert_eq!(
+        table(
+            feed.path(),
+            "attributions.txt",
+            &["organization_name", "attribution_url"]
+        ),
+        ["Seeweg Verkehrsverbund|", "SEEWEG|"]
+    );
+}

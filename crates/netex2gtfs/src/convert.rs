@@ -1719,6 +1719,8 @@ fn date_text(day: i64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::delivery::Reading;
+    use crate::output;
 
     #[test]
     fn days_are_written_as_dates_and_weekdays() {
@@ -1745,5 +1747,67 @@ mod tests {
         assert_eq!(ids.unique("a"), "a#2");
         assert_eq!(ids.unique("a#2"), "a#2#2");
         assert_eq!(ids.unique("b"), "b");
+    }
+
+    /// Every file of the feed `delivery` converts to, by name, with the report.
+    fn feed(delivery: &Delivery) -> (BTreeMap<String, Vec<u8>>, Report) {
+        let directory = tempfile::tempdir().expect("a directory");
+        let options = Options {
+            shapes: true,
+            ..Options::default()
+        };
+        let report = convert(
+            delivery,
+            &options,
+            output::at(directory.path()).expect("an output"),
+        )
+        .expect("converts");
+        let files = std::fs::read_dir(directory.path())
+            .expect("the feed")
+            .map(|entry| {
+                let path = entry.expect("a file").path();
+                let name = path
+                    .file_name()
+                    .expect("a name")
+                    .to_string_lossy()
+                    .into_owned();
+                (name, std::fs::read(&path).expect("the file reads"))
+            })
+            .collect();
+        (files, report)
+    }
+
+    #[test]
+    fn the_feed_does_not_depend_on_the_order_the_threads_reading_it_are_merged_in() {
+        let fixture = |name: &str| {
+            let path = format!(
+                "{}/tests/fixtures/uferweg/{name}",
+                env!("CARGO_MANIFEST_DIR")
+            );
+            std::fs::read_to_string(path).expect("the fixture")
+        };
+        let (north, south) = (fixture("uferweg-nord.xml"), fixture("uferweg-sued.xml"));
+        let north = [("uferweg-nord.xml", north.as_str())];
+        let south = [("uferweg-sued.xml", south.as_str())];
+        let reading = Reading {
+            geometry: true,
+            ..Reading::default()
+        };
+        let (files, report) = feed(&Delivery::read_by_workers(&[&north, &south], reading));
+        let (other_files, other_report) =
+            feed(&Delivery::read_by_workers(&[&south, &north], reading));
+        assert_eq!(
+            files.keys().collect::<Vec<_>>(),
+            other_files.keys().collect::<Vec<_>>()
+        );
+        for (name, bytes) in &files {
+            assert!(
+                &other_files[name] == bytes,
+                "{name} differs:\n{}\n---\n{}",
+                String::from_utf8_lossy(bytes),
+                String::from_utf8_lossy(&other_files[name])
+            );
+        }
+        assert_eq!(other_report, report);
     }
 }

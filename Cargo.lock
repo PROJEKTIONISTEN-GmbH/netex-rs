@@ -772,6 +772,7 @@ dependencies = [
  "csv",
  "hashbrown",
  "netex-rs",
+ "rayon",
  "rustc-hash",
  "serde",
  "serde_json",

@@ -152,3 +152,60 @@ fn the_index_holds_the_same_whatever_order_and_threads_the_documents_are_read_in
         assert_same(&render(&index), &expected, &format!("on {threads} threads"));
     }
 }
+
+/// A line document of its own line `L<n>` from stop point `A` to `B`, its
+/// journey `J<n>` on Monday 12 October, stating the interchange from `J1` to
+/// `J2` at `B` — guaranteed, or with the passengers staying seated.
+fn interchanging_document(n: u32, departure: &str, stay_seated: bool) -> String {
+    let (line, pattern, journey) = (format!("L{n}"), format!("P{n}"), format!("J{n}"));
+    let (first, second) = (format!("P{n}-1"), format!("P{n}-2"));
+    Timetable::new()
+        .line(&line, "1", None)
+        .stop_point("A")
+        .stop_point("B")
+        .pattern(
+            &pattern,
+            &line,
+            &[Point::at(&first, "A"), Point::at(&second, "B")],
+        )
+        .day_type("DT")
+        .uic_period("OP", "2026-10-12", "2026-10-18", "1000000")
+        .assignment("DTA", 1, "OP", "DT", true)
+        .journey(
+            &journey,
+            (&line, "1"),
+            &pattern,
+            &["DT"],
+            &[
+                (&first, None, Some(departure)),
+                (&second, Some("09:00:00"), None),
+            ],
+        )
+        .interchange(&format!("I{n}"), ("J1", "B"), ("J2", "B"), stay_seated)
+        .xml()
+}
+
+#[test]
+fn interchanges_are_listed_in_the_order_of_their_documents_whatever_order_they_are_merged_in() {
+    // The same interchange stated by two documents, of two kinds: whoever
+    // takes the first the index lists takes the first document's.
+    let documents = vec![
+        (
+            "A.xml".to_owned(),
+            interchanging_document(1, "08:00:00", false),
+        ),
+        (
+            "B.xml".to_owned(),
+            interchanging_document(2, "09:05:00", true),
+        ),
+    ];
+    for index in [merged(&documents), merged(&reversed(&documents))] {
+        let point = index.stop_point_by_id("B").expect("the stop point");
+        let kinds: Vec<(bool, bool)> = index
+            .interchanges_at(point)
+            .iter()
+            .map(|interchange| (interchange.guaranteed, interchange.stay_seated))
+            .collect();
+        assert_eq!(kinds, [(true, false), (false, true)]);
+    }
+}
