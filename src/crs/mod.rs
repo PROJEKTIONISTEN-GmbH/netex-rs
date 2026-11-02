@@ -67,7 +67,8 @@ impl ReferenceSystem {
 
     /// The system an `srsName` names — `EPSG:2056`,
     /// `urn:ogc:def:crs:EPSG::2056`, `http://www.opengis.net/def/crs/EPSG/0/2056`
-    /// and the like —, if it is one the crate knows.
+    /// and the like, or the EPSG code alone, `4326`, as the Nordic deliveries
+    /// write it —, if it is one the crate knows.
     pub fn from_srs_name(name: &str) -> Option<ReferenceSystem> {
         let name = name.trim();
         let lower = name.to_ascii_lowercase();
@@ -79,10 +80,11 @@ impl ReferenceSystem {
         }
         // The legacy GML name of a system writes x before y, whatever the system.
         let legacy = lower.contains("epsg.xml#");
+        let bare = !lower.is_empty() && lower.bytes().all(|b| b.is_ascii_digit());
         let code = lower
             .rsplit([':', '/', '#'])
             .next()
-            .filter(|_| lower.contains("epsg"))?
+            .filter(|_| bare || lower.contains("epsg"))?
             .parse::<u32>()
             .ok()?;
         let axes = match code {

@@ -1,5 +1,7 @@
 //! A delivery read once: the index, and what a feed needs beyond it.
 
+use std::hash::Hash;
+
 use netex_rs::dataset::Source;
 use netex_rs::index::{Index, IndexBuilder, JourneyId, LineId};
 use netex_rs::stream::{Kind, ReadOptions, Selection};
@@ -7,7 +9,7 @@ use rustc_hash::FxHashMap;
 
 use crate::gather::{
     Direction, DirectionFacts, Display, DocumentFacts, Gather, JourneyFacts, LineFacts,
-    Organisation, PatternFacts, Point, TrainNumber,
+    LinkGeometry, Organisation, PatternFacts, PatternLinks, Point, TrainNumber,
 };
 use crate::names::{Name, Names};
 
@@ -16,7 +18,8 @@ use crate::names::{Name, Names};
 pub struct Reading {
     /// Keep what refers to what ([`IndexBuilder::with_referrers`]).
     pub referrers: bool,
-    /// Read the geometry of service links, for the feed's shapes.
+    /// Read the service links with their geometry, and the links each
+    /// journey pattern names, for the feed's shapes.
     pub geometry: bool,
 }
 
@@ -42,20 +45,35 @@ pub fn selection(reading: Reading) -> Selection {
     }
 }
 
-/// Definitions each document makes of its own, by identifier: a reference
-/// resolves in its own document first, then in the delivery, where the
-/// document whose name sorts first answers — as the index resolves them.
+/// Definitions each document makes of its own, by identifier (or another
+/// key): a reference resolves in its own document first, then in the
+/// delivery, where the document whose name sorts first answers — as the index
+/// resolves them.
 #[derive(Debug)]
-struct Scoped {
+struct Scoped<K = Name> {
     /// Per identifier, the positions of its definitions, the document whose
     /// name sorts first first.
-    by_id: FxHashMap<Name, Vec<u32>>,
+    by_id: FxHashMap<K, Vec<u32>>,
 }
 
-impl Scoped {
-    fn of<T>(names: &Names, records: &[T], key: impl Fn(&T) -> (Name, Name)) -> Scoped {
-        let mut by_id: FxHashMap<Name, Vec<u32>> = FxHashMap::default();
+impl<K: Copy + Eq + Hash> Scoped<K> {
+    /// The definitions of `records`, each by its document and key.
+    fn of<T>(names: &Names, records: &[T], key: impl Fn(&T) -> (Name, K)) -> Scoped<K> {
+        Self::of_those(names, records, |_| true, key)
+    }
+
+    /// The definitions of those of `records` that `keep` keeps.
+    fn of_those<T>(
+        names: &Names,
+        records: &[T],
+        keep: impl Fn(&T) -> bool,
+        key: impl Fn(&T) -> (Name, K),
+    ) -> Scoped<K> {
+        let mut by_id: FxHashMap<K, Vec<u32>> = FxHashMap::default();
         for (position, record) in records.iter().enumerate() {
+            if !keep(record) {
+                continue;
+            }
             let (_, id) = key(record);
             by_id
                 .entry(id)
@@ -76,8 +94,8 @@ impl Scoped {
         &self,
         records: &[T],
         document: Name,
-        id: Name,
-        key: impl Fn(&T) -> (Name, Name),
+        id: K,
+        key: impl Fn(&T) -> (Name, K),
     ) -> Option<u32> {
         let positions = self.by_id.get(&id)?;
         positions
@@ -100,8 +118,11 @@ pub struct Delivery {
     journeys: Scoped,
     train_numbers: Scoped,
     directions: Scoped,
-    /// The service links with a geometry, by document, from and to stop point.
-    pub(crate) links: FxHashMap<(Name, Name, Name), u32>,
+    pattern_links: Scoped,
+    links: Scoped,
+    /// The service links with a geometry, by the stop points they lead from
+    /// and to.
+    links_between: Scoped<(Name, Name)>,
 }
 
 /// An organisation responsible for a line, as the feed names it.
@@ -131,7 +152,7 @@ impl Delivery {
                 } else {
                     IndexBuilder::new()
                 };
-                (builder, Gather::default(), None)
+                (builder, Gather::new(reading.geometry), None)
             },
             |(builder, gather, failure): &mut (IndexBuilder, Gather, Option<netex_rs::Error>),
              entry,
@@ -168,15 +189,6 @@ impl Delivery {
 
     pub(crate) fn of(index: Index, gather: Gather) -> Delivery {
         let names = &gather.names;
-        let links = gather
-            .links
-            .iter()
-            .enumerate()
-            .map(|(position, link)| {
-                let position = u32::try_from(position).expect("fewer than 2^32 links");
-                ((link.document, link.from, link.to), position)
-            })
-            .collect();
         Delivery {
             organisations: Scoped::of(names, &gather.organisations, |o| (o.document, o.id)),
             lines: Scoped::of(names, &gather.lines, |l| (l.document, l.id)),
@@ -185,7 +197,14 @@ impl Delivery {
             journeys: Scoped::of(names, &gather.journeys, |j| (j.document, j.id)),
             train_numbers: Scoped::of(names, &gather.train_numbers, |t| (t.document, t.id)),
             directions: Scoped::of(names, &gather.directions, |d| (d.document, d.id)),
-            links,
+            pattern_links: Scoped::of(names, &gather.pattern_links, |p| (p.document, p.id)),
+            links: Scoped::of(names, &gather.links, |l| (l.document, l.id)),
+            links_between: Scoped::of_those(
+                names,
+                &gather.links,
+                LinkGeometry::has_geometry,
+                |l| (l.document, (l.from, l.to)),
+            ),
             index,
             gather,
         }
@@ -270,6 +289,35 @@ impl Delivery {
         Some(records[at as usize].direction)
     }
 
+    /// The service links a journey pattern names in sequence, as `document`
+    /// sees the pattern; empty where it names none.
+    pub(crate) fn pattern_links(&self, document: Name, pattern: Name) -> &[Name] {
+        let records: &[PatternLinks] = &self.gather.pattern_links;
+        self.pattern_links
+            .get(records, document, pattern, |p| (p.document, p.id))
+            .map_or(&[], |at| {
+                let (start, end) = records[at as usize].links;
+                &self.gather.link_refs[start as usize..end as usize]
+            })
+    }
+
+    /// The service link `id` as `document` sees it: its position among the
+    /// gather's links.
+    pub(crate) fn link(&self, document: Name, id: Name) -> Option<u32> {
+        let records: &[LinkGeometry] = &self.gather.links;
+        self.links
+            .get(records, document, id, |l| (l.document, l.id))
+    }
+
+    /// A service link with a geometry from stop point `from` to `to`, as
+    /// `document` sees them: its position among the gather's links.
+    pub(crate) fn link_between(&self, document: Name, from: Name, to: Name) -> Option<u32> {
+        let records: &[LinkGeometry] = &self.gather.links;
+        self.links_between.get(records, document, (from, to), |l| {
+            (l.document, (l.from, l.to))
+        })
+    }
+
     pub(crate) fn points(&self, (start, end): (u32, u32)) -> &[Point] {
         &self.gather.points[start as usize..end as usize]
     }
@@ -323,7 +371,7 @@ impl Delivery {
         let options = ReadOptions::new(selection(reading));
         let mut read = workers.iter().map(|documents| {
             let mut builder = IndexBuilder::new();
-            let mut gather = Gather::default();
+            let mut gather = Gather::new(reading.geometry);
             for &(name, xml) in documents.iter() {
                 gather.begin(name);
                 builder

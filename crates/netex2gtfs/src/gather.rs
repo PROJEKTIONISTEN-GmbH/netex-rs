@@ -11,8 +11,10 @@
 //!
 //! [`IndexBuilder::add_streamed_with`]: netex_rs::index::IndexBuilder::add_streamed_with
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 
+use netex_rs::geometry::Geometry;
 use netex_rs::model::{
     self, AdditionalOperator, CallItem, DirectionType, Element, FrameDefaults, LimitationStatus,
     PointInSequenceItem, QuayItem, StopPointRef, StopUse, TrainNumberRefItem,
@@ -170,16 +172,33 @@ pub(crate) struct LevelFacts {
     pub(crate) index: Option<f64>,
 }
 
-/// The geometry of a service link: from and to which stop point, in which
-/// reference system, its positions as written — a range of the gather's
-/// positions.
+/// A service link: from and to which stop point, and its geometry — in which
+/// reference system, its positions as written, a range of the gather's
+/// positions, empty where the link states none.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct LinkGeometry {
     pub(crate) document: Name,
+    pub(crate) id: Name,
     pub(crate) from: Name,
     pub(crate) to: Name,
     pub(crate) system: Option<Name>,
     pub(crate) positions: (u32, u32),
+}
+
+impl LinkGeometry {
+    /// Whether the link states a geometry.
+    pub(crate) fn has_geometry(&self) -> bool {
+        self.positions.0 < self.positions.1
+    }
+}
+
+/// The service links a journey pattern names in sequence
+/// (`linksInSequence`): a range of the gather's link references.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct PatternLinks {
+    pub(crate) document: Name,
+    pub(crate) id: Name,
+    pub(crate) links: (u32, u32),
 }
 
 /// What a document's frame defaults state: the first time zone, language
@@ -227,6 +246,9 @@ const FRAME_FURNITURE: &[&str] = &[
 /// What one worker gathers from the documents it reads.
 #[derive(Debug, Default)]
 pub(crate) struct Gather {
+    /// Whether the service links each journey pattern names are gathered,
+    /// for the feed's shapes.
+    pattern_links_wanted: bool,
     pub(crate) names: Names,
     document: Name,
     pub(crate) documents: FxHashMap<Name, DocumentFacts>,
@@ -242,11 +264,22 @@ pub(crate) struct Gather {
     pub(crate) levels: FxHashMap<Name, LevelFacts>,
     pub(crate) links: Vec<LinkGeometry>,
     pub(crate) positions: Vec<(f64, f64)>,
+    pub(crate) pattern_links: Vec<PatternLinks>,
+    pub(crate) link_refs: Vec<Name>,
     pub(crate) data_sources: Vec<(Name, Name, Option<Name>)>,
     pub(crate) not_carried: BTreeMap<Name, NotCarried>,
 }
 
 impl Gather {
+    /// A gather of what a feed needs, with the service links each journey
+    /// pattern names where the feed's shapes are wanted.
+    pub(crate) fn new(shapes: bool) -> Gather {
+        Gather {
+            pattern_links_wanted: shapes,
+            ..Gather::default()
+        }
+    }
+
     /// Starts gathering the document named `name`.
     pub(crate) fn begin(&mut self, name: &str) {
         self.document = self.names.intern(name);
@@ -345,8 +378,11 @@ impl Gather {
         }
     }
 
-    fn pattern(&mut self, pattern: &model::ServiceJourneyPattern) {
+    fn pattern(&mut self, pattern: &model::ServiceJourneyPattern) -> netex_rs::Result<()> {
         self.notices(pattern.notice_assignments.as_ref());
+        if self.pattern_links_wanted {
+            self.pattern_links(pattern)?;
+        }
         let start = position_of(self.points.len());
         let mut any_display = pattern.destination_display_ref.is_some();
         for item in pattern.points_in_sequence.iter().flat_map(|p| &p.items) {
@@ -371,7 +407,7 @@ impl Gather {
         if !any_display && direction.is_none() && direction_ref.is_none() {
             // Nothing a feed takes from it beyond the index's calls.
             self.points.truncate(start as usize);
-            return;
+            return Ok(());
         }
         let record = PatternFacts {
             document: self.document,
@@ -382,6 +418,54 @@ impl Gather {
             points: (start, position_of(self.points.len())),
         };
         self.patterns.push(record);
+        Ok(())
+    }
+
+    /// The service links a pattern names in sequence (`linksInSequence`,
+    /// which the model carries through untyped), in their order.
+    fn pattern_links(&mut self, pattern: &model::ServiceJourneyPattern) -> netex_rs::Result<()> {
+        let Some(fragment) = pattern
+            .unprocessed
+            .iter()
+            .find(|fragment| &*fragment.name == "linksInSequence")
+        else {
+            return Ok(());
+        };
+        let mut named: Vec<(Option<i64>, Name)> = Vec::new();
+        let mut cursor = Cursor::new(&fragment.xml, netex_rs::Limits::default());
+        let sequence = cursor.root()?;
+        cursor.enter(&sequence)?;
+        while let Some(link) = cursor.next_child()? {
+            if link.local != "ServiceLinkInJourneyPattern" || link.empty {
+                cursor.skip_over(&link)?;
+                continue;
+            }
+            let order = attribute(&link, "order")?.and_then(|order| order.trim().parse().ok());
+            cursor.enter(&link)?;
+            while let Some(child) = cursor.next_child()? {
+                if child.local == "ServiceLinkRef" {
+                    if let Some(id) = attribute(&child, "ref")? {
+                        named.push((order, self.names.intern(&id)));
+                    }
+                }
+                cursor.skip_over(&child)?;
+            }
+            cursor.leave();
+        }
+        if named.is_empty() {
+            return Ok(());
+        }
+        // In the order they state, those stating none after them.
+        named.sort_by_key(|&(order, _)| (order.is_none(), order));
+        let start = position_of(self.link_refs.len());
+        self.link_refs.extend(named.into_iter().map(|(_, id)| id));
+        let record = PatternLinks {
+            document: self.document,
+            id: self.id(pattern.id.as_ref()),
+            links: (start, position_of(self.link_refs.len())),
+        };
+        self.pattern_links.push(record);
+        Ok(())
     }
 
     fn journey(&mut self, journey: &model::ServiceJourney) {
@@ -521,31 +605,45 @@ impl Gather {
             .or_insert(facts);
     }
 
-    fn link(&mut self, link: &model::ServiceLink) {
+    /// A service link between two stop points, with its geometry where it
+    /// states one: a `LineString` of its own, else the one of its link
+    /// sequence projection — where the Nordic deliveries state it.
+    fn link(&mut self, link: &model::ServiceLink) -> netex_rs::Result<()> {
         let (Some(from), Some(to)) = (
             link.from_point_ref.as_ref().and_then(|r| r.r#ref.as_ref()),
             link.to_point_ref.as_ref().and_then(|r| r.r#ref.as_ref()),
         ) else {
-            return;
+            return Ok(());
         };
-        let Some(geometry) = link
+        let mut geometry = link
             .unprocessed
             .iter()
             .filter(|fragment| &*fragment.name == "LineString")
-            .find_map(|fragment| netex_rs::geometry::geometry(&fragment.xml))
-        else {
-            return;
-        };
+            .find_map(|fragment| netex_rs::geometry::geometry(&fragment.xml));
+        for projections in link
+            .unprocessed
+            .iter()
+            .filter(|fragment| &*fragment.name == "projections")
+        {
+            if geometry.is_some() {
+                break;
+            }
+            geometry = projected_geometry(&projections.xml)?;
+        }
         let start = position_of(self.positions.len());
-        self.positions.extend(geometry.positions());
+        if let Some(geometry) = &geometry {
+            self.positions.extend(geometry.positions());
+        }
         let record = LinkGeometry {
             document: self.document,
+            id: self.id(link.id.as_ref()),
             from: self.names.intern(from.as_str()),
             to: self.names.intern(to.as_str()),
-            system: self.intern(geometry.srs_name.as_deref()),
+            system: self.intern(geometry.as_ref().and_then(|g| g.srs_name.as_deref())),
             positions: (start, position_of(self.positions.len())),
         };
         self.links.push(record);
+        Ok(())
     }
 
     fn frame_defaults(&mut self, defaults: &FrameDefaults) {
@@ -693,6 +791,7 @@ impl Gather {
         self.links
             .extend(other.links.into_iter().map(|l| LinkGeometry {
                 document: name(l.document),
+                id: name(l.id),
                 from: name(l.from),
                 to: name(l.to),
                 system: option(l.system),
@@ -700,6 +799,14 @@ impl Gather {
                     l.positions.0 + position_offset,
                     l.positions.1 + position_offset,
                 ),
+            }));
+        let reference_offset = position_of(self.link_refs.len());
+        self.link_refs.extend(other.link_refs.into_iter().map(name));
+        self.pattern_links
+            .extend(other.pattern_links.into_iter().map(|p| PatternLinks {
+                document: name(p.document),
+                id: name(p.id),
+                links: (p.links.0 + reference_offset, p.links.1 + reference_offset),
             }));
         self.data_sources.extend(
             other
@@ -759,12 +866,12 @@ impl<'i> Sink<'i> for Gather {
                 }
             }
             Entity::ServiceJourneyPattern(pattern) | Entity::JourneyPattern(pattern) => {
-                self.pattern(pattern)
+                self.pattern(pattern)?
             }
             Entity::ServiceJourney(journey)
             | Entity::DatedServiceJourney(journey)
             | Entity::TemplateServiceJourney(journey) => self.journey(journey),
-            Entity::ServiceLink(link) => self.link(link),
+            Entity::ServiceLink(link) => self.link(link)?,
             // Read for the index or for the feed's furniture, but not carried:
             // GTFS has no notices, its transfers name stops and trips, not
             // the lines and stop areas a rule names, and the journeys of a
@@ -820,6 +927,44 @@ impl<'i> Sink<'i> for Gather {
         }
         cursor.skip_over(element)
     }
+}
+
+/// The geometry of the first link sequence projection of a link's
+/// `projections` that states one.
+fn projected_geometry(projections: &str) -> netex_rs::Result<Option<Geometry>> {
+    let mut cursor = Cursor::new(projections, netex_rs::Limits::default());
+    let root = cursor.root()?;
+    cursor.enter(&root)?;
+    while let Some(projection) = cursor.next_child()? {
+        if projection.local != "LinkSequenceProjection" || projection.empty {
+            cursor.skip_over(&projection)?;
+            continue;
+        }
+        cursor.enter(&projection)?;
+        while let Some(child) = cursor.next_child()? {
+            if child.local == "LineString" {
+                let line = cursor.skip(&child, 0)?;
+                if let Some(geometry) = netex_rs::geometry::geometry(&line.xml) {
+                    return Ok(Some(geometry));
+                }
+            } else {
+                cursor.skip_over(&child)?;
+            }
+        }
+        cursor.leave();
+    }
+    Ok(None)
+}
+
+/// The value of the attribute `name` of an element, if it states one.
+fn attribute<'i>(element: &Child<'i>, name: &str) -> netex_rs::Result<Option<Cow<'i, str>>> {
+    for attribute in element.attributes() {
+        let (key, value) = attribute?;
+        if key == name {
+            return Ok(Some(value));
+        }
+    }
+    Ok(None)
 }
 
 /// A text as stated, without the white space around it; none where it is

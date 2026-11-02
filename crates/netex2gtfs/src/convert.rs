@@ -15,7 +15,7 @@ use netex_rs::model::Date;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::delivery::{Agency, Delivery};
-use crate::gather::{Direction, Wheelchair};
+use crate::gather::{Direction, LinkGeometry, Wheelchair};
 use crate::names::Name;
 use crate::output::{Output, Table};
 use crate::report::{Decisions, NotCarried, Profile, Report};
@@ -782,46 +782,44 @@ impl<'d> Conversion<'d> {
         }
     }
 
-    /// The shapes: for each trip, the geometry of the service links between
-    /// its calls, one after the other, read in each link's reference system
-    /// and axis order; trips of the same links share a shape. A trip with a
-    /// pair of calls no link joins has none.
+    /// The shapes: for each trip, the geometry of the service links it runs
+    /// over ([`Conversion::links_of`]), one after the other, read in each
+    /// link's reference system and axis order; trips over the same links
+    /// share a shape. A trip with a pair of calls no link with a geometry
+    /// joins has none.
     fn plan_shapes(&mut self) {
+        let gather = &self.delivery.gather;
+        let mut without: Vec<(&str, &str)> = gather
+            .links
+            .iter()
+            .filter(|link| !link.has_geometry())
+            .map(|link| (gather.names.text(link.document), gather.names.text(link.id)))
+            .collect();
+        without.sort_unstable();
+        for (_, link) in without {
+            self.decisions.take(
+                "link-without-geometry",
+                "a service link stating no geometry, on itself or in a link sequence projection: no shape follows it",
+                || link.to_owned(),
+            );
+        }
         let mut shape_of_links: FxHashMap<Vec<u32>, u32> = FxHashMap::default();
         for trip_number in 0..self.trips.len() {
-            let trip = &self.trips[trip_number];
-            let record = self.index.journey(trip.journey);
-            let Some(document) = self.delivery.name(record.document) else {
-                continue;
-            };
-            let links: Option<Vec<u32>> = self
-                .calls(trip.journey)
-                .windows(2)
-                .map(|pair| {
-                    let from = self
-                        .delivery
-                        .name(self.index.stop_point(record.stop_points[pair[0].0]).id)?;
-                    let to = self
-                        .delivery
-                        .name(self.index.stop_point(record.stop_points[pair[1].0]).id)?;
-                    self.delivery.links.get(&(document, from, to)).copied()
-                })
-                .collect();
-            let Some(links) = links else {
-                if !self.delivery.links.is_empty() {
-                    self.decisions.take(
-                        "shape-incomplete",
-                        "a trip with a pair of calls no service link with a geometry joins: no shape",
-                        || record.id.to_owned(),
-                    );
-                }
+            let journey = self.trips[trip_number].journey;
+            let Some(links) = self.links_of(journey) else {
+                let record = self.index.journey(journey);
+                self.decisions.take(
+                    "shape-incomplete",
+                    "a trip with a pair of calls no service link with a geometry joins: no shape",
+                    || record.id.to_owned(),
+                );
                 continue;
             };
             let next = u32::try_from(shape_of_links.len()).expect("fewer than 2^32 shapes");
             let shape = match shape_of_links.get(&links) {
                 Some(&shape) => shape,
                 None => {
-                    let points = self.shape_points(&links, document);
+                    let points = self.shape_points(&links);
                     self.shapes.push(points);
                     shape_of_links.insert(links, next);
                     next
@@ -832,27 +830,73 @@ impl<'d> Conversion<'d> {
         }
     }
 
+    /// The service links a journey runs over, each with a geometry, as
+    /// positions among the gather's links: from each call on, the links its
+    /// pattern names in sequence from that call's stop point to a later
+    /// one's — a link to the next call each, or one for the whole way, as
+    /// Finland's deliveries name them —, else a link the delivery states to
+    /// the next call's; each as the journey's document sees it, the
+    /// codespace's shared data where the Nordic deliveries define them. None
+    /// where a call has neither on to the next.
+    fn links_of(&self, journey: JourneyId) -> Option<Vec<u32>> {
+        let delivery = self.delivery;
+        let record = self.index.journey(journey);
+        let document = delivery.name(record.document)?;
+        let named: Vec<Option<u32>> = record
+            .pattern
+            .and_then(|pattern| delivery.name(pattern))
+            .map_or(&[][..], |pattern| delivery.pattern_links(document, pattern))
+            .iter()
+            .map(|&link| delivery.link(document, link))
+            .collect();
+        let stop_points: Vec<Name> = self
+            .calls(journey)
+            .iter()
+            .map(|&(position, _)| {
+                delivery.name(self.index.stop_point(record.stop_points[position]).id)
+            })
+            .collect::<Option<_>>()?;
+        let links = &delivery.gather.links;
+        let mut found = Vec::new();
+        let (mut call, mut next) = (0, 0);
+        while call + 1 < stop_points.len() {
+            let (from, later) = (stop_points[call], &stop_points[call + 1..]);
+            match named_run(&named, next, links, from, later) {
+                Some(run) => {
+                    found.extend(named[run.start..run.end].iter().flatten());
+                    next = run.end;
+                    call += 1 + run.calls_on;
+                }
+                None => {
+                    found.push(delivery.link_between(document, from, later[0])?);
+                    call += 1;
+                }
+            }
+        }
+        Some(found)
+    }
+
     /// The positions of `links` one after the other, as latitude and
     /// longitude: each link read in its system — its own `srsName`, else its
     /// document's default — in the order its first position lies near its
     /// start, a position repeated where one link ends and the next begins
     /// written once.
-    fn shape_points(&mut self, links: &[u32], document: Name) -> Vec<(f64, f64)> {
+    fn shape_points(&mut self, links: &[u32]) -> Vec<(f64, f64)> {
         let gather = &self.delivery.gather;
-        let default_system = self
-            .delivery
-            .document_facts(document)
-            .location_system
-            .map(|system| gather.names.text(system));
         let mut points: Vec<(f64, f64)> = Vec::new();
         for &link in links {
             let link = gather.links[link as usize];
             let named = link.system.map(|system| gather.names.text(system));
+            let default_system = self
+                .delivery
+                .document_facts(link.document)
+                .location_system
+                .map(|system| gather.names.text(system));
             let Ok(system) = crs::system_of(named, default_system) else {
                 self.decisions.take(
                     "shape-in-unknown-system",
                     "a service link geometry in a reference system the crate does not know: its stretch of the shape is left out",
-                    || gather.names.text(link.from).to_owned(),
+                    || gather.names.text(link.id).to_owned(),
                 );
                 continue;
             };
@@ -1625,6 +1669,43 @@ fn goes_back(times: &[PassingTime], positions: impl Iterator<Item = usize>) -> b
         }
     }
     false
+}
+
+/// A run of the links a pattern names in sequence: where it starts, where it
+/// ends — past its last —, and which of the calls after the one it leads
+/// from it leads to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Run {
+    start: usize,
+    end: usize,
+    calls_on: usize,
+}
+
+/// Of the links a pattern names in sequence — positions among `links`, none
+/// for a link the delivery does not define —, from the one at `next` on, the
+/// run leading from stop point `from` to the first of the `later` calls'
+/// stop points one of its links leads to. None where there is none, or a
+/// link of it states no geometry.
+fn named_run(
+    named: &[Option<u32>],
+    next: usize,
+    links: &[LinkGeometry],
+    from: Name,
+    later: &[Name],
+) -> Option<Run> {
+    let link = |at: usize| named[at].map(|link| &links[link as usize]);
+    let start = (next..named.len()).find(|&at| link(at).is_some_and(|link| link.from == from))?;
+    for at in start..named.len() {
+        let link = link(at).filter(|link| link.has_geometry())?;
+        if let Some(calls_on) = later.iter().position(|&stop_point| stop_point == link.to) {
+            return Some(Run {
+                start,
+                end: at + 1,
+                calls_on,
+            });
+        }
+    }
+    None
 }
 
 /// Each stop's place in the order of the stops' identifiers, versions and
