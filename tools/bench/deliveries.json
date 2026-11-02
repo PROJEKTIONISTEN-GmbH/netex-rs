@@ -25,7 +25,8 @@
       "url": "https://data.mobilitaetsverbuende.at/",
       "stand": "2026-10-08",
       "threads": [8, 16],
-      "shapes": true
+      "shapes": true,
+      "convert": ["--time-zone", "Europe/Vienna"]
     },
     {
       "id": "at-esg",
@@ -37,7 +38,8 @@
       "url": "https://data.mobilitaetsverbuende.at/",
       "stand": "2026-09-24",
       "threads": [8, 16],
-      "shapes": true
+      "shapes": true,
+      "convert": ["--time-zone", "Europe/Vienna"]
     },
     {
       "id": "at-ooevv",
@@ -49,7 +51,8 @@
       "url": "https://data.mobilitaetsverbuende.at/",
       "stand": "2026-10-07",
       "threads": [8, 16],
-      "shapes": true
+      "shapes": true,
+      "convert": ["--time-zone", "Europe/Vienna"]
     },
     {
       "id": "at-salzburg",
@@ -61,7 +64,8 @@
       "url": "https://data.mobilitaetsverbuende.at/",
       "stand": "2026-10-08",
       "threads": [8, 16],
-      "shapes": true
+      "shapes": true,
+      "convert": ["--time-zone", "Europe/Vienna"]
     },
     {
       "id": "at-kaernten",
@@ -73,7 +77,8 @@
       "url": "https://data.mobilitaetsverbuende.at/",
       "stand": "2026-10-08",
       "threads": [8, 16],
-      "shapes": true
+      "shapes": true,
+      "convert": ["--time-zone", "Europe/Vienna"]
     },
     {
       "id": "at-vor",
@@ -85,7 +90,8 @@
       "url": "https://data.mobilitaetsverbuende.at/",
       "stand": "2026-10-08",
       "threads": [8, 16],
-      "shapes": true
+      "shapes": true,
+      "convert": ["--time-zone", "Europe/Vienna"]
     },
     {
       "id": "at-steiermark",
@@ -97,7 +103,8 @@
       "url": "https://data.mobilitaetsverbuende.at/",
       "stand": "2026-10-08",
       "threads": [8, 16],
-      "shapes": true
+      "shapes": true,
+      "convert": ["--time-zone", "Europe/Vienna"]
     },
     {
       "id": "at-tirol",
@@ -109,7 +116,8 @@
       "url": "https://data.mobilitaetsverbuende.at/",
       "stand": "2026-10-07",
       "threads": [8, 16],
-      "shapes": true
+      "shapes": true,
+      "convert": ["--time-zone", "Europe/Vienna"]
     },
     {
       "id": "at-vorarlberg",
@@ -121,7 +129,8 @@
       "url": "https://data.mobilitaetsverbuende.at/",
       "stand": "2026-10-08",
       "threads": [8, 16],
-      "shapes": true
+      "shapes": true,
+      "convert": ["--time-zone", "Europe/Vienna"]
     },
     {
       "id": "ch",
@@ -160,7 +169,8 @@
       "url": "https://api-management-discovery-production.azure-api.net/api/netex/feed/nmbssncb/static",
       "stand": "2026-10-22 (GTFS 2026-10-31)",
       "threads": [8, 16],
-      "shapes": true
+      "shapes": true,
+      "convert": ["--time-zone", "Europe/Brussels"]
     },
     {
       "id": "be-delijn",
@@ -173,7 +183,8 @@
       "url": "https://api-management-discovery-production.azure-api.net/api/netex/feed/delijn/static",
       "stand": "2026-10-31",
       "threads": [8, 16],
-      "shapes": true
+      "shapes": true,
+      "convert": ["--time-zone", "Europe/Brussels"]
     },
     {
       "id": "be-tec",
@@ -186,7 +197,8 @@
       "url": "https://api-management-discovery-production.azure-api.net/api/netex/feed/tec/static",
       "stand": "2026-10-31",
       "threads": [8, 16],
-      "shapes": true
+      "shapes": true,
+      "convert": ["--time-zone", "Europe/Brussels"]
     },
     {
       "id": "be-stib",
@@ -199,7 +211,8 @@
       "url": "https://api-management-discovery-production.azure-api.net/api/netex/feed/stibmivb/static",
       "stand": "2026-10-31",
       "threads": [8, 16],
-      "shapes": true
+      "shapes": true,
+      "convert": ["--time-zone", "Europe/Brussels"]
     },
     {
       "id": "lu",

@@ -18,8 +18,9 @@ delivery the size of its archives and of the XML they inflate to, of the feed
 its size and the rows written to each file. With `--lock FILE` the runs take
 an exclusive lock on the file first (`flock`), so that measurements on a
 shared machine do not overlap: each run on its own, or with `--lock-scope` the
-runs of a delivery on one number of threads, or all of a delivery's runs,
-together — a delivery of seconds need not queue for the lock a hundred times.
+runs of a delivery on one number of threads, all of a delivery's runs, or
+every run of the call together — a delivery of seconds need not queue for the
+lock a hundred times. The feeds are checked outside the lock.
 
 With `--window FIRST LAST` each feed written is compared with the publisher's
 over that window (`gtfs_days.py`); with `--validator JAR` both are checked by
@@ -36,7 +37,7 @@ Only the standard library is used; Linux only (`/proc`, `wait4`). Usage:
 
     python3 tools/bench/netex_bench.py run tools/bench/deliveries.json \\
         --netex target/release/netex --data DIR --out DIR \\
-        [--runs 2] [--only ID]... [--lock FILE [--lock-scope run|threads|delivery]]
+        [--runs 2] [--only ID]... [--lock FILE [--lock-scope run|threads|delivery|all]]
         [--window FIRST LAST] [--validator JAR]
     python3 tools/bench/netex_bench.py table OUT
 """
@@ -69,8 +70,8 @@ MB = 1000**2
 SAMPLE_EVERY = 0.5
 SAMPLES_KEPT = 240
 # What the lock is held over: each run, the runs of a delivery on one number of
-# threads, or all runs of a delivery.
-LOCK_SCOPES = ("run", "threads", "delivery")
+# threads, all runs of a delivery, or every run of the call.
+LOCK_SCOPES = ("run", "threads", "delivery", "all")
 # The severities the GTFS validator reports notices with.
 SEVERITIES = ("ERROR", "WARNING", "INFO")
 
@@ -372,11 +373,11 @@ def validate(validator, feed, into, day, threads):
 
 
 def measure_delivery(delivery, options):
-    """Every measurement of one delivery, as `OUT/deliveries/<id>.json` keeps it."""
+    """Every measurement of one delivery, as `OUT/deliveries/<id>.json` keeps it,
+    but the checks of its feed (`check_delivery`)."""
     data, out = options.data, options.out
     source = resolve(data, delivery["netex"])
     along = [resolve(data, path) for path in delivery.get("with", [])]
-    published = resolve(data, delivery["gtfs"]) if delivery.get("gtfs") else None
     threads = delivery["threads"]
     logs = out / "logs" / delivery["id"]
     feeds = out / "feeds"
@@ -458,7 +459,16 @@ def measure_delivery(delivery, options):
             for shapes, (feed, report) in reports.items()
         },
     }
-    plain = reports[False][0]
+    return result
+
+
+def check_delivery(delivery, result, options):
+    """The feed written from a delivery against its publisher's over the
+    window, and both by the GTFS validator where the list asks for it — after
+    the measurements, outside any lock."""
+    out = options.out
+    plain = out / result["feeds"]["plain"]["file"]
+    published = resolve(options.data, delivery["gtfs"]) if delivery.get("gtfs") else None
     if published is not None and options.window:
         first, last = options.window
         result["comparison"] = gtfs_days.compare(plain, published, first, last)
@@ -472,11 +482,12 @@ def measure_delivery(delivery, options):
             # A validator that fails is a finding about the validator and the
             # feed, not a reason to lose the measurements taken.
             try:
-                checked_feed = validate(options.validator, feed, checked / which, day, max(threads))
+                checked_feed = validate(
+                    options.validator, feed, checked / which, day, max(delivery["threads"])
+                )
             except RunFailed as failure:
                 checked_feed = {"failed": str(failure)}
             result["validation"][which] = checked_feed
-    return result
 
 
 def netex_version(netex):
@@ -707,13 +718,28 @@ def run(options):
     if unknown:
         raise SystemExit(f"not in the list: {', '.join(sorted(unknown))}")
     (options.out / "deliveries").mkdir(parents=True, exist_ok=True)
-    for delivery in listed:
-        if options.only and delivery["id"] not in options.only:
-            continue
-        result = measure_delivery(delivery, options)
+    selected = [d for d in listed if not options.only or d["id"] in options.only]
+
+    def finish(delivery, result):
+        check_delivery(delivery, result, options)
         (options.out / "deliveries" / f"{delivery['id']}.json").write_text(
             json.dumps(result, indent=1, ensure_ascii=False)
         )
+
+    # Held over every run of the call, the lock is let go before the feeds
+    # are checked; otherwise each delivery is checked as soon as it is measured.
+    whole = options.lock if options.lock_scope == "all" else None
+    measured = []
+    with lock_held(whole, options.lock_wait) as waited:
+        for delivery in selected:
+            result = measure_delivery(delivery, options)
+            if whole is None:
+                finish(delivery, result)
+            else:
+                result["lock"]["waited_s"] = round(waited, 1)
+                measured.append((delivery, result))
+    for delivery, result in measured:
+        finish(delivery, result)
     write_results(options.out, identifiers)
 
 
@@ -733,7 +759,8 @@ def main(arguments):
                            help="seconds to wait for the lock (7200)")
     measuring.add_argument("--lock-scope", choices=LOCK_SCOPES, default="run",
                            help="what the lock is held over: each run (the default), the runs "
-                                "on one number of threads, or a delivery's every run")
+                                "on one number of threads, a delivery's every run, or every run "
+                                "of the call")
     measuring.add_argument("--window", nargs=2, type=datetime.date.fromisoformat,
                            metavar=("FIRST", "LAST"), help="the days a feed is compared over")
     measuring.add_argument("--validator", type=Path, help="the GTFS validator of MobilityData (jar)")

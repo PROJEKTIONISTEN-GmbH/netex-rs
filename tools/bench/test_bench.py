@@ -369,6 +369,49 @@ class LockScopes(unittest.TestCase):
                 self.assertFalse(any(call["lock_free"] for call in ran), "every run holds the lock")
                 self.assertEqual(result["lock"]["scope"], scope)
 
+    def test_held_over_the_whole_call_the_lock_is_taken_once_and_let_go_before_the_checks(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            scratch = Path(scratch)
+            lock, calls = scratch / "lock", scratch / "calls.jsonl"
+            netex = scratch / "netex"
+            netex.write_text(FAKE_NETEX.format(python=sys.executable, lock=str(lock), calls=str(calls)))
+            netex.chmod(0o755)
+            listed = {"deliveries": [
+                {"id": name, "name": name, "netex": name, "threads": [1]} for name in ("a", "b")
+            ]}
+            for name in ("a", "b"):
+                (scratch / "data" / name).mkdir(parents=True)
+                (scratch / "data" / name / "line.xml").write_text("<PublicationDelivery/>")
+            (scratch / "list.json").write_text(json.dumps(listed))
+            options = SimpleNamespace(
+                list=scratch / "list.json", netex=netex, data=scratch / "data", out=scratch / "out",
+                runs=1, only=[], lock=lock, lock_wait=10.0, lock_scope="all", window=None,
+                validator=None,
+            )
+
+            def lock_free_while_checking(_delivery, _result, _options):
+                with open(lock, "a") as probe:
+                    try:
+                        fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        fcntl.flock(probe, fcntl.LOCK_UN)
+                        checked.append(True)
+                    except BlockingIOError:
+                        checked.append(False)
+
+            checked = []
+            with open(os.devnull, "w") as quiet, contextlib.redirect_stderr(quiet):
+                with mock.patch.object(netex_bench, "lock_held", wraps=netex_bench.lock_held) as held, \
+                        mock.patch.object(netex_bench, "check_delivery", side_effect=lock_free_while_checking):
+                    netex_bench.run(options)
+            taken = [call for call in held.call_args_list if call.args[0] is not None]
+            ran = [json.loads(line) for line in calls.read_text().splitlines()]
+            written = sorted(path.name for path in (scratch / "out" / "deliveries").iterdir())
+        self.assertEqual(len(taken), 1)
+        self.assertEqual(len(ran), 4)
+        self.assertFalse(any(call["lock_free"] for call in ran), "every run holds the lock")
+        self.assertEqual(checked, [True, True], "the feeds are checked with the lock let go")
+        self.assertEqual(written, ["a.json", "b.json"])
+
     def test_the_steps_run_thread_count_by_thread_count(self):
         _, _, ran = self.measured_with("run")
         steps = [
