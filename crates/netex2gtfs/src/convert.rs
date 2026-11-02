@@ -14,6 +14,7 @@ use netex_rs::index::{
 use netex_rs::model::Date;
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use crate::country;
 use crate::delivery::{Agency, Delivery};
 use crate::gather::{Direction, LinkGeometry, Wheelchair};
 use crate::names::Name;
@@ -66,8 +67,9 @@ pub struct Options {
 pub enum Error {
     /// A file of the feed could not be written.
     Write(io::Error),
-    /// No document names a time zone, the options give none, and the
-    /// delivery's profile has none: GTFS needs one for every agency.
+    /// No document names a time zone, the options give none, and neither
+    /// the delivery's identifiers nor the positions of its stops show its
+    /// country: GTFS needs one for every agency.
     NoTimeZone,
 }
 
@@ -76,7 +78,7 @@ impl fmt::Display for Error {
         match self {
             Error::Write(error) => write!(f, "writing the feed: {error}"),
             Error::NoTimeZone => f.write_str(
-                "no document of the delivery names a time zone (FrameDefaults/DefaultLocale/TimeZone), nor is it of a profile whose country has one; give one",
+                "no document of the delivery names a time zone (FrameDefaults/DefaultLocale/TimeZone), nor do its identifiers or the positions of its stops show its country; give one",
             ),
         }
     }
@@ -226,17 +228,7 @@ impl<'d> Conversion<'d> {
             .map(|zone| delivery.text(zone).to_owned());
         let time_zone = match named.or_else(|| options.time_zone.clone()) {
             Some(zone) => zone,
-            None => {
-                // The Swiss and Austrian documents state offsets from UTC, no
-                // zone: their profile's country is the zone.
-                let zone = profile.time_zone().ok_or(Error::NoTimeZone)?;
-                decisions.take(
-                    "time-zone-of-profile",
-                    "no document names a time zone and none is given: the time zone of the delivery's profile",
-                    || zone.to_owned(),
-                );
-                zone.to_owned()
-            }
+            None => time_zone_of_country(index, &mut decisions)?.to_owned(),
         };
         Ok(Conversion {
             delivery,
@@ -1758,6 +1750,16 @@ impl UniqueIds {
 }
 
 impl Profile {
+    /// The prefix of the identifiers of a national profile.
+    fn prefix(self) -> Option<&'static str> {
+        match self {
+            Profile::Delfi => Some("DE::"),
+            Profile::Austria => Some("at:"),
+            Profile::Switzerland => Some("ch:"),
+            Profile::Epip | Profile::Other => None,
+        }
+    }
+
     /// The time zone of the profile's country, where it has one.
     fn time_zone(self) -> Option<&'static str> {
         match self {
@@ -1769,35 +1771,83 @@ impl Profile {
     }
 }
 
-/// The profile a delivery's identifiers show: the prefix most of its
-/// journeys' identifiers carry.
+/// The profile a delivery's frames or identifiers show: the European one
+/// where a frame is typed as its, else the national one most of its
+/// journeys' identifiers show.
 fn profile(index: &Index, epip: bool) -> Profile {
     if epip {
         return Profile::Epip;
     }
+    identified(index).map_or(Profile::Other, |(profile, _, _)| profile)
+}
+
+/// The national profile most of a delivery's journeys' identifiers show by
+/// their prefix — `DE::`, `at:`, `ch:` —, with how many show it of how many
+/// there are; none where no prefix is on more than half.
+fn identified(index: &Index) -> Option<(Profile, u32, u32)> {
+    const PROFILES: [Profile; 3] = [Profile::Delfi, Profile::Austria, Profile::Switzerland];
     let mut counts = [0u32; 3];
     for journey in (0..index.journey_count() as u32).map(JourneyId) {
         let id = index.journey(journey).id;
-        let slot = if id.starts_with("DE::") {
-            0
-        } else if id.starts_with("at:") {
-            1
-        } else if id.starts_with("ch:") {
-            2
-        } else {
+        if let Some(slot) = PROFILES.iter().position(|profile| {
+            profile
+                .prefix()
+                .is_some_and(|prefix| id.starts_with(prefix))
+        }) {
+            counts[slot] += 1;
+        }
+    }
+    let total = u32::try_from(index.journey_count()).expect("fewer than 2^32 journeys");
+    let (slot, &most) = counts
+        .iter()
+        .enumerate()
+        .max_by_key(|&(slot, &count)| (count, std::cmp::Reverse(slot)))?;
+    (most > 0 && most * 2 > total).then_some((PROFILES[slot], most, total))
+}
+
+/// The time zone of a delivery whose documents name none and that is given
+/// none: of the country its journeys' identifiers show — the Swiss and
+/// Austrian documents state offsets from UTC, or nothing —, else of the
+/// country most of its stops with a position lie in; the decision taken.
+fn time_zone_of_country(index: &Index, decisions: &mut Decisions) -> Result<&'static str, Error> {
+    if let Some((profile, count, total)) = identified(index) {
+        let zone = profile
+            .time_zone()
+            .expect("a national profile has a time zone");
+        let prefix = profile.prefix().expect("a national profile has a prefix");
+        decisions.take(
+            "time-zone-of-identifiers",
+            "no document names a time zone and none is given: the time zone of the country most of the journeys' identifiers show (`DE::`, `at:`, `ch:`)",
+            || format!("{zone}: {count} of {total} journeys identified {prefix}"),
+        );
+        return Ok(zone);
+    }
+    let mut placed = 0u32;
+    let mut by_country: BTreeMap<&'static str, (&'static str, u32)> = BTreeMap::new();
+    for stop in index.stops() {
+        let record = index.stop(stop);
+        let Some(position) = record.latitude.zip(record.longitude) else {
             continue;
         };
-        counts[slot] += 1;
+        placed += 1;
+        if let Some(country) = country::country_of(position) {
+            by_country
+                .entry(country.code)
+                .or_insert((country.zone, 0))
+                .1 += 1;
+        }
     }
-    let most = counts.iter().copied().max().unwrap_or(0);
-    if most * 2 <= index.journey_count() as u32 || most == 0 {
-        return Profile::Other;
-    }
-    match counts.iter().position(|&count| count == most) {
-        Some(0) => Profile::Delfi,
-        Some(1) => Profile::Austria,
-        _ => Profile::Switzerland,
-    }
+    let (code, (zone, count)) = by_country
+        .into_iter()
+        .max_by_key(|&(code, (_, count))| (count, std::cmp::Reverse(code)))
+        .filter(|&(_, (_, count))| count * 2 > placed)
+        .ok_or(Error::NoTimeZone)?;
+    decisions.take(
+        "time-zone-of-stops",
+        "no document names a time zone, none is given, and the journeys' identifiers show no country: the time zone of the country most of the stops with a position lie in",
+        || format!("{zone}: {count} of {placed} stops with a position in {code}"),
+    );
+    Ok(zone)
 }
 
 /// The GTFS route type of a NeTEx mode; none for a mode GTFS has none for.
