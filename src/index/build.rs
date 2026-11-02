@@ -11,7 +11,9 @@ use super::positions::{self, FrameSystems};
 use super::scope::Table;
 use super::strings::{Strings, Sym};
 use super::{CallUse, Index, PassingTime, StopId, StopKind, Unresolved};
-use crate::calendar::{assignment_rank, bound_day, period_days, PeriodDays, Properties, Span};
+use crate::calendar::{
+    assignment_rank, bound_day, names_no_day, period_days, PeriodDays, Properties, Span,
+};
 use crate::geometry::first_position;
 use crate::model::{
     AssignedDayType, AssignedDays, AvailabilityCondition, Date, DateTime, DayType, Frame,
@@ -1878,10 +1880,20 @@ impl Visit<'_> {
             .as_ref()
             .map_or(&[][..], |p| &p.properties);
         let span = Span::of(&day_type.valid_between);
+        let read = crate::calendar::properties(properties);
+        if matches!(read, Properties::DaysOfWeek(_)) && properties.iter().any(names_no_day) {
+            self.builder.gathered.push(FindingRecord {
+                concern: Concern::PropertyOfDayWithoutDays,
+                element: "DayType",
+                document: self.origin,
+                entity: key.id,
+                about: None,
+            });
+        }
         self.builder.day_types.push(DayTypeRecord {
             key,
             origin: self.origin,
-            properties: crate::calendar::properties(properties),
+            properties: read,
             validity: span.from.zip(span.to),
         });
     }

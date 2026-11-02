@@ -128,6 +128,14 @@ pub enum Concern {
     /// run time for: its calls from there on are untimed. Names the time
     /// demand type.
     LinkWithoutRunTime,
+    /// A day type with a property of day naming no day — no days of the
+    /// week, nothing more —, which the standard reads as every day of the
+    /// week ([`crate::calendar::properties`]): where an operating period
+    /// without day bits gives it its days, it runs on every day of the
+    /// period. A delivery whose day types lost their days of the week runs
+    /// every journey daily. Not made where another property of the day type
+    /// names more than days of the week, which leaves its properties unread.
+    PropertyOfDayWithoutDays,
 }
 
 impl Concern {
@@ -156,6 +164,7 @@ impl Concern {
         Concern::WalkWithoutDuration,
         Concern::LocalIdentifier,
         Concern::LinkWithoutRunTime,
+        Concern::PropertyOfDayWithoutDays,
     ];
 
     /// The concern's name in reports and on command lines, in lower case with
@@ -185,6 +194,7 @@ impl Concern {
             Concern::WalkWithoutDuration => "walk-without-duration",
             Concern::LocalIdentifier => "local-identifier",
             Concern::LinkWithoutRunTime => "link-without-run-time",
+            Concern::PropertyOfDayWithoutDays => "property-of-day-without-days",
         }
     }
 
@@ -241,6 +251,9 @@ impl Concern {
             }
             Concern::LinkWithoutRunTime => {
                 "timing link of the pattern without a run time, the calls after it untimed"
+            }
+            Concern::PropertyOfDayWithoutDays => {
+                "day type whose property of day names no day, read as every day"
             }
         }
     }

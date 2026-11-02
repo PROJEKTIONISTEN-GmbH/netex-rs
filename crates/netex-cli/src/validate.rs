@@ -3,16 +3,19 @@
 //!
 //! Every finding of the index ([`netex_rs::index::Concern`]) and every check
 //! of the report's own — journeys without travel time, times going back,
-//! stop points without a place, definitions nothing refers to — is a class
-//! with its count, examples naming the document and the entity, and the
-//! journeys it affects: found backwards through the references of the
-//! delivery ([`netex_rs::index::Referrers`]), from the entity a finding is
-//! about to the journeys that depend on it. A [`Policy`] says which classes
-//! refuse the delivery, and how many of each it tolerates.
+//! references to stops nothing defines, stop points without a place,
+//! definitions nothing refers to — is a class with its count, examples naming
+//! the document and the entity, and the journeys it affects: found backwards
+//! through the references of the delivery ([`netex_rs::index::Referrers`]),
+//! from the entity a finding is about to the journeys that depend on it. A
+//! [`Policy`] says which classes refuse the delivery, and how many of each it
+//! tolerates.
 
 use std::collections::BTreeMap;
 
-use netex_rs::index::{Concern, Index, JourneyId, ObjectId, Policy, Referrers, StopPointId};
+use netex_rs::index::{
+    Concern, Index, JourneyId, ObjectId, Policy, Referrers, StopPointId, Unresolved,
+};
 use serde::Serialize;
 
 /// The version of the report's layout, `schema/validate-report.schema.json`.
@@ -29,6 +32,10 @@ pub enum Check {
     JourneyWithoutTravelTime,
     /// A journey whose passing times go back in time from one call to the next.
     TimeGoesBack,
+    /// A reference to a stop place, quay or stop point no document defines:
+    /// of the references to nothing ([`Concern::Unresolved`]), those that
+    /// leave a stop point unplaced or a pattern without its stop.
+    StopReferenceToNothing,
     /// A stop point a journey calls at that no assignment places at a stop
     /// place or quay.
     StopPointWithoutPlace,
@@ -46,6 +53,7 @@ impl Check {
     pub const ALL: &'static [Check] = &[
         Check::JourneyWithoutTravelTime,
         Check::TimeGoesBack,
+        Check::StopReferenceToNothing,
         Check::StopPointWithoutPlace,
         Check::StopPointWithoutPosition,
         Check::Unreferenced,
@@ -56,6 +64,7 @@ impl Check {
         match self {
             Check::JourneyWithoutTravelTime => "journey-without-travel-time",
             Check::TimeGoesBack => "time-goes-back",
+            Check::StopReferenceToNothing => "stop-reference-to-nothing",
             Check::StopPointWithoutPlace => "stop-point-without-place",
             Check::StopPointWithoutPosition => "stop-point-without-position",
             Check::Unreferenced => "unreferenced",
@@ -76,6 +85,9 @@ impl Check {
                 "journey whose calls are all at one time: no travel time from its first stop to its last"
             }
             Check::TimeGoesBack => "journey whose passing times go back in time along its calls",
+            Check::StopReferenceToNothing => {
+                "reference to a stop place, quay or stop point no document defines"
+            }
             Check::StopPointWithoutPlace => {
                 "stop point called at that no assignment places at a stop place or quay"
             }
@@ -143,10 +155,13 @@ impl Class {
                     | Concern::ResolvedAsOtherClass
                     | Concern::UnknownReferenceSystem
                     | Concern::LocalIdentifier
+                    | Concern::PropertyOfDayWithoutDays
             ),
             Class::Check(check) => matches!(
                 check,
-                Check::StopPointWithoutPlace | Check::StopPointWithoutPosition
+                Check::StopReferenceToNothing
+                    | Check::StopPointWithoutPlace
+                    | Check::StopPointWithoutPosition
             ),
         }
     }
@@ -422,25 +437,25 @@ fn find(index: &Index, referrers: &Referrers<'_>, class: Class) -> Vec<Found> {
             .next()
             .or_else(|| referrers.find(element, id, None).next())
     };
+    // A reference to nothing, as a finding about the element holding it.
+    let unresolved_found = |unresolved: &Unresolved| {
+        // The referrer is written `element identifier`.
+        let (element, id) = unresolved
+            .referrer
+            .split_once(' ')
+            .unwrap_or((unresolved.referrer.as_str(), ""));
+        Found {
+            document: Some(unresolved.origin.clone()),
+            element: element.to_owned(),
+            entity: id.to_owned(),
+            about: Some(format!("<{}> {}", unresolved.element, unresolved.id)),
+            start: object(element, id, Some(&unresolved.origin)),
+        }
+    };
     match class {
-        Class::Concern(Concern::Unresolved) => index
-            .unresolved()
-            .iter()
-            .map(|unresolved| {
-                // The referrer is written `element identifier`.
-                let (element, id) = unresolved
-                    .referrer
-                    .split_once(' ')
-                    .unwrap_or((unresolved.referrer.as_str(), ""));
-                Found {
-                    document: Some(unresolved.origin.clone()),
-                    element: element.to_owned(),
-                    entity: id.to_owned(),
-                    about: Some(format!("<{}> {}", unresolved.element, unresolved.id)),
-                    start: object(element, id, Some(&unresolved.origin)),
-                }
-            })
-            .collect(),
+        Class::Concern(Concern::Unresolved) => {
+            index.unresolved().iter().map(unresolved_found).collect()
+        }
         Class::Concern(concern) => index
             .findings()
             .filter(|finding| finding.concern == concern)
@@ -486,6 +501,12 @@ fn find(index: &Index, referrers: &Referrers<'_>, class: Class) -> Vec<Found> {
                 .collect();
             stated.windows(2).any(|pair| pair[1] < pair[0])
         }),
+        Class::Check(Check::StopReferenceToNothing) => index
+            .unresolved()
+            .iter()
+            .filter(|unresolved| STOP_REFERENCES.contains(&unresolved.element.as_str()))
+            .map(unresolved_found)
+            .collect(),
         Class::Check(Check::StopPointWithoutPlace) => called_stop_points(index)
             .into_iter()
             .filter(|&point| index.stop_of_stop_point(point).is_none())
@@ -511,6 +532,11 @@ fn find(index: &Index, referrers: &Referrers<'_>, class: Class) -> Vec<Found> {
             .collect(),
     }
 }
+
+/// The elements of the references to a stop place, quay or stop point the
+/// index resolves: in a stop assignment, a pattern's points, a journey's
+/// calls, a walk between sites, a stop place's list of its quays.
+const STOP_REFERENCES: [&str; 3] = ["StopPlaceRef", "QuayRef", "ScheduledStopPointRef"];
 
 /// The journeys whose passing times `matches`, as findings about themselves.
 fn journeys_where(

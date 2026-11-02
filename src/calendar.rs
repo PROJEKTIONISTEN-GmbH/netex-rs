@@ -277,24 +277,34 @@ pub fn properties(properties: &[PropertyOfDay]) -> Properties {
     }
     let mut days = DaysOfWeek::NONE;
     for property in properties {
-        let more = property.weeks_of_month.is_some()
-            || property.month_of_year.is_some()
-            || property.day_of_month.is_some()
-            || property.day_of_year.is_some()
-            || property.country_ref.is_some()
-            || property.holiday_types.is_some()
-            || property.seasons.is_some()
-            || !property.unprocessed.is_empty();
         let named = match &property.days_of_week {
             Some(list) => DaysOfWeek::parse(list),
             None => Some(DaysOfWeek::EVERY),
         };
         match named {
-            Some(named) if !more => days.0 |= named.0,
+            Some(named) if !names_more_than_days_of_week(property) => days.0 |= named.0,
             _ => return Properties::Unread,
         }
     }
     Properties::DaysOfWeek(days)
+}
+
+/// Whether a property of day names more of its days than days of the week.
+fn names_more_than_days_of_week(property: &PropertyOfDay) -> bool {
+    property.weeks_of_month.is_some()
+        || property.month_of_year.is_some()
+        || property.day_of_month.is_some()
+        || property.day_of_year.is_some()
+        || property.country_ref.is_some()
+        || property.holiday_types.is_some()
+        || property.seasons.is_some()
+        || !property.unprocessed.is_empty()
+}
+
+/// Whether a property of day names nothing of its days — no days of the
+/// week, nothing more —, which [`properties`] reads as every day.
+pub(crate) fn names_no_day(property: &PropertyOfDay) -> bool {
+    property.days_of_week.is_none() && !names_more_than_days_of_week(property)
 }
 
 /// Where an assignment of a day type with `order` stands among the
@@ -438,6 +448,26 @@ mod tests {
             properties(&[property(Some("Feiertag"))]),
             Properties::Unread
         );
+    }
+
+    #[test]
+    fn a_property_names_no_day_where_it_states_neither_days_of_the_week_nor_more() {
+        let named = |name: &str| PropertyOfDay {
+            name: Some(crate::model::MultilingualString::from(name)),
+            ..PropertyOfDay::default()
+        };
+        assert!(names_no_day(&PropertyOfDay::default()));
+        assert!(names_no_day(&named("Mo-Fr")), "a name names no day");
+        let everyday = PropertyOfDay {
+            days_of_week: Some("Everyday".into()),
+            ..PropertyOfDay::default()
+        };
+        assert!(!names_no_day(&everyday));
+        let summer = PropertyOfDay {
+            seasons: Some("Summer".into()),
+            ..PropertyOfDay::default()
+        };
+        assert!(!names_no_day(&summer));
     }
 
     #[test]

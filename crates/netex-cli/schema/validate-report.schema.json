@@ -52,8 +52,9 @@
             "resolved-ignoring-version", "resolved-as-other-class", "unknown-reference-system",
             "quay-of-two-stop-places", "passing-times-other-than-points", "properties-of-day-unread",
             "walk-without-duration", "local-identifier", "link-without-run-time",
-            "journey-without-travel-time", "time-goes-back", "stop-point-without-place",
-            "stop-point-without-position", "unreferenced"
+            "property-of-day-without-days",
+            "journey-without-travel-time", "time-goes-back", "stop-reference-to-nothing",
+            "stop-point-without-place", "stop-point-without-position", "unreferenced"
           ]
         },
         "kind": { "enum": ["index", "check"] },

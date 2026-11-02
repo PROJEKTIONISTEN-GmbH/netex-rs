@@ -920,6 +920,14 @@ producers publish: TBM's 555 768 journey days and Naolib's 682 559, each
 journey's days and stop times one for one; Fluo's 209 362 within the period of
 its NeTEx (`docs/FR-PROFILE.md`).
 
+**Built in 0.8.1.** A property of day naming no day — no days of the week,
+nothing more — is every day of the week, as the profile has it ("tous les jours
+par défaut") and as the crate read it before. Where the day type's properties
+are read, it is a finding now (`Concern::PropertyOfDayWithoutDays`,
+`property-of-day-without-days` in `netex validate`, with the journeys running
+on the day type): a delivery whose day types lost their days of the week runs
+every journey on every day of its periods, and only the finding shows it.
+
 ## 27. Walks stating a distance alone
 
 **Problem.** Fluo states 826 walks between quays (`SiteConnection`), Normandy's
@@ -1330,7 +1338,7 @@ as by `GlobalID` and `SLOID`.
 | 23 | Frames that hold everything | adopt: general frames typed, read as the specific frames | S | ✓ (0.8.0) |
 | 24 | Quays beside their stop place | adopt: the stop place naming the quay, else the quay's `SiteRef` | S | ✓ (0.8.0) |
 | 25 | Passing times naming no point | adopt: by position in the pattern | S | ✓ (0.8.0) |
-| 26 | A day type's properties | adopt: days of the week within the validity where no assignment gives a day of its own; plain periods by days of the week | S | ✓ (0.8.0) |
+| 26 | A day type's properties | adopt: days of the week within the validity where no assignment gives a day of its own; plain periods by days of the week | S | ✓ (0.8.0; a property naming no day a finding, 0.8.1) |
 | 27 | Walks stating a distance alone | count them; no walking speed chosen | S | counted (0.8.0) |
 | 28 | Journeys dated by dated journeys | adopt: a dated journey stating no journey dates the one it names; cancelled or replaced, no day | S | ✓ (0.8.0) |
 | 29 | A flexible line named by a route | adopt: a flexible line is a line; its journeys, however they reach it, left out | S | ✓ (0.8.0) |

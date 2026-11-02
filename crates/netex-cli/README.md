@@ -29,12 +29,14 @@ netex validate netex.zip --refuse unresolved --at-most journey-without-travel-ti
 The report lists every class with findings — the concerns the index of
 netex-rs finds (references to nothing, definitions repeated with other content,
 points passed through, days a line version does not govern, link geometries
-written longitude first, …) and the checks of the report's own:
+written longitude first, day types whose property of day names no day, …) and
+the checks of the report's own:
 
 | Class | What it finds |
 |---|---|
 | `journey-without-travel-time` | a journey whose calls are all at one time |
 | `time-goes-back` | a journey whose passing times go back along its calls |
+| `stop-reference-to-nothing` | a reference to a stop place, quay or stop point no document defines — of the references to nothing (`unresolved`), those that leave a stop point unplaced or a pattern without its stop |
 | `stop-point-without-place` | a stop point called at that no assignment places at a stop place or quay |
 | `stop-point-without-position` | a stop point called at without a position of its own or its stop's |
 | `unreferenced` | a definition nothing refers to: a stop place none of whose quays is used either, a stop point, line, pattern, day type, operating period or day, availability condition |
