@@ -21,6 +21,12 @@
           <lines>
             <Line id="m:Line:2" version="1"><Name>2</Name><TransportMode>bus</TransportMode></Line>
           </lines>
+          <stopAssignments>
+            <PassengerStopAssignment id="m:PassengerStopAssignment:ohne-punkt" version="1" order="1">
+              <ScheduledStopPointRef ref="m:ScheduledStopPoint:fehlt" version="1"/>
+              <StopPlaceRef ref="m:StopPlace:zwei" version="1"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
         </ServiceFrame>
       </frames>
     </CompositeFrame>

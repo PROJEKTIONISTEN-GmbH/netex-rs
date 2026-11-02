@@ -86,8 +86,10 @@ fn every_defect_is_a_class_with_its_count_examples_and_the_journeys_it_affects()
             "redefined-otherwise",
             "journey-without-days",
             "local-identifier",
+            "property-of-day-without-days",
             "journey-without-travel-time",
             "time-goes-back",
+            "stop-reference-to-nothing",
             "stop-point-without-place",
             "stop-point-without-position",
             "unreferenced",
@@ -96,7 +98,7 @@ fn every_defect_is_a_class_with_its_count_examples_and_the_journeys_it_affects()
     // The quay nothing defines leaves its stop point unplaced, and every
     // journey of the pattern calling there is affected.
     let unresolved = class(&report, "unresolved");
-    assert_eq!(unresolved["count"], 2);
+    assert_eq!(unresolved["count"], 3);
     assert_eq!(unresolved["affected_journeys"], 4);
     let quay = &unresolved["examples"][0];
     assert_eq!(quay["element"], "PassengerStopAssignment");
@@ -115,6 +117,33 @@ fn every_defect_is_a_class_with_its_count_examples_and_the_journeys_it_affects()
     let day_type = &unresolved["examples"][1];
     assert_eq!(day_type["entity"], "m:ServiceJourney:ohne-tage");
     assert_eq!(day_type["affected_journeys"], 1);
+    // Of the references to nothing, those to a quay, stop place or stop
+    // point are a class of their own: the day type's is none of them.
+    let stops = class(&report, "stop-reference-to-nothing");
+    assert_eq!(stops["kind"], "check");
+    assert_eq!(stops["count"], 2);
+    assert_eq!(stops["affected_journeys"], 4);
+    assert_eq!(stops["examples"][0], *quay);
+    let point = &stops["examples"][1];
+    assert_eq!(point["document"], "b-line-2.xml");
+    assert_eq!(point["element"], "PassengerStopAssignment");
+    assert_eq!(point["entity"], "m:PassengerStopAssignment:ohne-punkt");
+    assert_eq!(
+        point["about"],
+        "<ScheduledStopPointRef> m:ScheduledStopPoint:fehlt"
+    );
+    assert_eq!(point["affected_journeys"], 0);
+    // The working day's property of day names no day: every day of the
+    // week, for each journey running on it.
+    let every_day = class(&report, "property-of-day-without-days");
+    assert_eq!(every_day["kind"], "index");
+    assert_eq!(every_day["count"], 1);
+    assert_eq!(every_day["affected_journeys"], 3);
+    let werktag = &every_day["examples"][0];
+    assert_eq!(werktag["document"], "a-line-1.xml");
+    assert_eq!(werktag["element"], "DayType");
+    assert_eq!(werktag["entity"], "m:DayType:werktag");
+    assert_eq!(werktag["affected_journeys"], 3);
     let redefined = class(&report, "redefined-otherwise");
     assert_eq!(redefined["examples"][0]["entity"], "m:StopPlace:zwei");
     assert_eq!(redefined["examples"][0]["document"], "b-line-2.xml");
@@ -170,8 +199,16 @@ fn the_policy_refuses_or_tolerates_by_class_and_the_exit_status_says_which() {
     assert_eq!(report["refused"], true);
     assert_eq!(class(&report, "unresolved")["refused"], true);
     assert_eq!(class(&report, "unresolved")["limit"], 0);
-    let (_, status) = checked(&["--at-most", "unresolved=2", "--at-most", "time-goes-back=1"]);
+    let (_, status) = checked(&["--at-most", "unresolved=3", "--at-most", "time-goes-back=1"]);
     assert_eq!(status, Some(0), "as many as tolerated");
+    let (report, status) = checked(&["--refuse", "stop-reference-to-nothing"]);
+    assert_eq!(
+        status,
+        Some(1),
+        "references to a stop refused, other references to nothing tolerated"
+    );
+    assert_eq!(class(&report, "stop-reference-to-nothing")["refused"], true);
+    assert_eq!(class(&report, "unresolved")["refused"], false);
     let (report, status) = checked(&["--at-most", "journey-without-travel-time=0"]);
     assert_eq!(
         status,
@@ -207,7 +244,7 @@ fn the_human_report_names_each_class_its_examples_and_the_verdict() {
         "{text}"
     );
     assert!(
-        text.contains("2 × unresolved — reference to nothing, 4 journeys affected"),
+        text.contains("3 × unresolved — reference to nothing, 4 journeys affected"),
         "{text}"
     );
     assert!(text.contains("    PassengerStopAssignment m:PassengerStopAssignment:irgendwo in a-line-1.xml (<QuayRef> m:Quay:fehlt) — 4 journeys"), "{text}");

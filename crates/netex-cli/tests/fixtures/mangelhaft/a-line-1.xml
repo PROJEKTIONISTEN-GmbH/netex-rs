@@ -69,7 +69,10 @@
         </ServiceFrame>
         <ServiceCalendarFrame id="m:ServiceCalendarFrame:1" version="1">
           <dayTypes>
-            <DayType id="m:DayType:werktag" version="1"><Name>Werktag</Name></DayType>
+            <DayType id="m:DayType:werktag" version="1">
+              <Name>Werktag</Name>
+              <properties><PropertyOfDay/></properties>
+            </DayType>
           </dayTypes>
           <operatingPeriods>
             <UicOperatingPeriod id="m:UicOperatingPeriod:1" version="1">

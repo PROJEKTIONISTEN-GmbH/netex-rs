@@ -439,6 +439,56 @@ fn properties_naming_more_than_days_of_the_week_are_a_finding_where_they_would_d
     }
 }
 
+/// A property of day naming no day — empty, or with a name alone — is every
+/// day, as the standard reads it; a delivery that lost its days of the week
+/// runs every journey daily. The day type is read so and is a finding, unlike
+/// one stating every day in so many words or stating no properties at all.
+#[test]
+fn a_property_of_day_naming_no_day_is_every_day_and_a_finding() {
+    let documents = journeys_on(
+        Timetable::new()
+            .day_type_with("EMPTY", None, &[""])
+            .day_type_with("NAMED", None, &["<Name>Mo-Fr</Name>"])
+            .day_type_with("EVERYDAY", None, &["<DaysOfWeek>Everyday</DaysOfWeek>"])
+            .day_type("WITHOUT")
+            .period("THREE-DAYS", Some("2026-10-16"), "2026-10-18")
+            .assignment("EMPTY-1", 1, "THREE-DAYS", "EMPTY", true)
+            .assignment("NAMED-1", 1, "THREE-DAYS", "NAMED", true)
+            .assignment("EVERYDAY-1", 1, "THREE-DAYS", "EVERYDAY", true)
+            .assignment("WITHOUT-1", 1, "THREE-DAYS", "WITHOUT", true),
+        &["EMPTY", "NAMED", "EVERYDAY", "WITHOUT"],
+    );
+    for index in [serially(&documents), merged(&documents)] {
+        for journey in ["J-EMPTY", "J-NAMED", "J-EVERYDAY", "J-WITHOUT"] {
+            assert_eq!(october_days(&index, journey), [16, 17, 18], "{journey}");
+        }
+        assert_eq!(
+            findings(&index, Concern::PropertyOfDayWithoutDays),
+            [
+                "day type whose property of day names no day, read as every day: DayType EMPTY in A.xml",
+                "day type whose property of day names no day, read as every day: DayType NAMED in A.xml"
+            ]
+        );
+    }
+}
+
+/// A property of day naming no day beside one naming more than days of the
+/// week leaves the properties unread, not read as every day: that finding,
+/// not this one.
+#[test]
+fn a_property_of_day_naming_no_day_among_unread_ones_is_no_reading_as_every_day() {
+    let documents = journeys_on(
+        Timetable::new()
+            .day_type_with("MIXED", None, &["", "<Seasons>Autumn</Seasons>"])
+            .period("THREE-DAYS", Some("2026-10-16"), "2026-10-18")
+            .assignment("MIXED-1", 1, "THREE-DAYS", "MIXED", true),
+        &["MIXED"],
+    );
+    let index = serially(&documents);
+    assert_eq!(index.finding_count(Concern::PropertyOfDayWithoutDays), 0);
+    assert_eq!(index.finding_count(Concern::PropertiesOfDayUnread), 1);
+}
+
 #[test]
 fn journeys_running_on_the_same_days_share_one_calendar() {
     let index = support::timetable::serially(&support::timetable::two_calendars());
