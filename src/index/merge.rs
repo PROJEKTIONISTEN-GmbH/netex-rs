@@ -35,14 +35,18 @@ struct Renumbered {
 }
 
 impl Renumbered {
-    /// Renumbers every string of `other` into `strings`.
+    /// Renumbers every string of `other` into `strings`, taking over the
+    /// strings `strings` does not hold yet.
     ///
     /// Most of `other`'s strings are in `strings` already — the stops a line
     /// file repeats are in every worker's builder — so the lookups run on
     /// every thread of the pool first, and only the strings none found are
     /// interned, one after the other; those are distinct within `other`, so
-    /// each is interned once.
-    fn of(strings: &mut Strings, other: &Strings) -> Renumbered {
+    /// each is interned once. They are moved, not copied: a copy is
+    /// allocated anew while the worker's string, freed, stays with the
+    /// allocator of the thread that read it — converting the Swiss delivery
+    /// on sixteen threads, the copies held 4.1 GiB at the peak.
+    fn of(strings: &mut Strings, other: Strings) -> Renumbered {
         let found: Vec<Option<Sym>> = other
             .as_slice()
             .par_iter()
@@ -50,8 +54,8 @@ impl Renumbered {
             .collect();
         let syms = found
             .into_iter()
-            .zip(other.as_slice())
-            .map(|(sym, text)| sym.unwrap_or_else(|| strings.intern(text)))
+            .zip(other.into_list())
+            .map(|(sym, text)| sym.unwrap_or_else(|| strings.intern_owned(text)))
             .collect();
         Renumbered { syms }
     }
@@ -98,7 +102,7 @@ impl IndexBuilder {
     /// ([`with_referrers`](Self::with_referrers)) if either builder keeps them.
     pub fn merge(&mut self, mut other: IndexBuilder) {
         self.referrers |= other.referrers;
-        let renumbered = Renumbered::of(&mut self.strings, &other.strings);
+        let renumbered = Renumbered::of(&mut self.strings, std::mem::take(&mut other.strings));
         self.document_names.extend(
             other
                 .document_names
@@ -203,7 +207,7 @@ impl IndexBuilder {
         let call_offset = offset_of(&self.raw_calls);
         self.raw_calls
             .extend(other.raw_calls.into_iter().map(|mut call| {
-                call.id = renumbered.sym(call.id);
+                call.passed_through = call.passed_through.map(|id| renumbered.sym(id));
                 call.stop_point = renumbered.pending(call.stop_point);
                 call
             }));

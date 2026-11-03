@@ -678,7 +678,7 @@ impl Gather {
 
     /// Takes in what `other` gathered.
     pub(crate) fn merge(&mut self, other: Gather) {
-        let renamed = self.names.absorb(&other.names);
+        let renamed = self.names.absorb(other.names);
         let name = |name: Name| renamed[name as usize];
         let option = |name: Option<Name>| name.map(|n| renamed[n as usize]);
         for (document, facts) in other.documents {

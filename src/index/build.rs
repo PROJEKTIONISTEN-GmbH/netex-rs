@@ -370,11 +370,14 @@ pub(crate) struct RawTime {
     pub(crate) time: PassingTime,
 }
 
-/// A call as gathered: its identifier, the stop point it is at, what it states
-/// about stopping there, and its times.
+/// A call as gathered: the stop point it is at, what it states about stopping
+/// there, its times, and its identifier where the vehicle passes through.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct RawCall {
-    pub(crate) id: Sym,
+    /// The identifier of a call the vehicle passes through, which its finding
+    /// names; the index has no other use for a call's identifier, and kept
+    /// for every call, the Swiss delivery's were nine in ten of its strings.
+    pub(crate) passed_through: Option<Sym>,
     pub(crate) stop_point: Pending,
     pub(crate) point_use: PointUse,
     pub(crate) time: PassingTime,
@@ -1752,17 +1755,19 @@ impl Visit<'_> {
                 None => continue,
             };
             let (arrival, departure) = (call.arrival.as_ref(), call.departure.as_ref());
+            let point_use = PointUse::of(
+                call.stop_use.as_ref(),
+                departure.and_then(|d| d.for_boarding),
+                arrival.and_then(|a| a.for_alighting),
+            );
             let raw = RawCall {
-                id: self
-                    .builder
-                    .strings
-                    .intern(call.id.as_ref().map_or("", |id| id.as_str())),
+                passed_through: point_use.passes.then(|| {
+                    self.builder
+                        .strings
+                        .intern(call.id.as_ref().map_or("", |id| id.as_str()))
+                }),
                 stop_point,
-                point_use: PointUse::of(
-                    call.stop_use.as_ref(),
-                    departure.and_then(|d| d.for_boarding),
-                    arrival.and_then(|a| a.for_alighting),
-                ),
+                point_use,
                 time: PassingTime {
                     arrival: arrival.and_then(|a| seconds(&a.time, a.day_offset)),
                     departure: departure.and_then(|d| seconds(&d.time, d.day_offset)),

@@ -1887,8 +1887,8 @@ impl Finish {
     fn lay_out_calls(&mut self, record: &JourneyRecord, calls: &[RawCall], laid_out: &mut LaidOut) {
         laid_out.clear();
         for call in calls {
-            if call.point_use.passes {
-                let entity = (record.origin, call.id);
+            if let Some(id) = call.passed_through {
+                let entity = (record.origin, id);
                 self.found(Concern::PassedThrough, "Call", entity, Some(record.key.id));
                 self.record_passed(&call.stop_point);
                 continue;
