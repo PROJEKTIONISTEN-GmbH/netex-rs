@@ -1,0 +1,79 @@
+<!--
+  Journey patterns naming their service links in sequence (linksInSequence
+  of netex_journeyPattern_version.xsd, ServiceLinkInJourneyPattern of
+  netex_servicePattern_version.xsd), the links defined in
+  pattern-links-shared.xml: a pattern naming a link for each of its hops,
+  one naming a single link for its whole way, one naming a link between
+  other stop points than its own — the defect of 2 149 patterns of the
+  Finnish delivery —, one naming a link its own document defines otherwise,
+  in a version of its own, and one naming a link no document defines. A
+  reference into the other document names no version: the schema's keys
+  hold within one document. Written for netex-rs's tests
+  (MIT OR Apache-2.0); places, lines and times are invented.
+-->
+<ServiceFrame id="ex:ServiceFrame:line" version="1">
+  <lines>
+    <Line id="ex:Line:R" version="1"><Name>R</Name><TransportMode>bus</TransportMode></Line>
+  </lines>
+  <serviceLinks>
+    <ServiceLink id="ex:ServiceLink:local" version="2">
+      <FromPointRef ref="ex:ScheduledStopPoint:Clausthal"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Altenau"/>
+    </ServiceLink>
+  </serviceLinks>
+  <journeyPatterns>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:hops" version="1">
+      <RouteView><LineRef ref="ex:Line:R" version="1"/></RouteView>
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:hops-1" version="1" order="1"><ScheduledStopPointRef ref="ex:ScheduledStopPoint:Clausthal"/></StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:hops-2" version="1" order="2"><ScheduledStopPointRef ref="ex:ScheduledStopPoint:Altenau"/></StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:hops-3" version="1" order="3"><ScheduledStopPointRef ref="ex:ScheduledStopPoint:Torfhaus"/></StopPointInJourneyPattern>
+      </pointsInSequence>
+      <linksInSequence>
+        <ServiceLinkInJourneyPattern id="ex:ServiceLinkInJourneyPattern:hops-1" version="1" order="1"><ServiceLinkRef ref="ex:ServiceLink:Clausthal-Altenau"/></ServiceLinkInJourneyPattern>
+        <ServiceLinkInJourneyPattern id="ex:ServiceLinkInJourneyPattern:hops-2" version="1" order="2"><ServiceLinkRef ref="ex:ServiceLink:Altenau-Torfhaus"/></ServiceLinkInJourneyPattern>
+      </linksInSequence>
+    </ServiceJourneyPattern>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:whole-way" version="1">
+      <RouteView><LineRef ref="ex:Line:R" version="1"/></RouteView>
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:whole-way-1" version="1" order="1"><ScheduledStopPointRef ref="ex:ScheduledStopPoint:Clausthal"/></StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:whole-way-2" version="1" order="2"><ScheduledStopPointRef ref="ex:ScheduledStopPoint:Altenau"/></StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:whole-way-3" version="1" order="3"><ScheduledStopPointRef ref="ex:ScheduledStopPoint:Torfhaus"/></StopPointInJourneyPattern>
+      </pointsInSequence>
+      <linksInSequence>
+        <ServiceLinkInJourneyPattern id="ex:ServiceLinkInJourneyPattern:whole-way-1" version="1" order="1"><ServiceLinkRef ref="ex:ServiceLink:Clausthal-Torfhaus"/></ServiceLinkInJourneyPattern>
+      </linksInSequence>
+    </ServiceJourneyPattern>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:other" version="1">
+      <RouteView><LineRef ref="ex:Line:R" version="1"/></RouteView>
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:other-1" version="1" order="1"><ScheduledStopPointRef ref="ex:ScheduledStopPoint:Clausthal"/></StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:other-2" version="1" order="2"><ScheduledStopPointRef ref="ex:ScheduledStopPoint:Altenau"/></StopPointInJourneyPattern>
+      </pointsInSequence>
+      <linksInSequence>
+        <ServiceLinkInJourneyPattern id="ex:ServiceLinkInJourneyPattern:other-1" version="1" order="1"><ServiceLinkRef ref="ex:ServiceLink:Braunlage-Elend"/></ServiceLinkInJourneyPattern>
+      </linksInSequence>
+    </ServiceJourneyPattern>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:local" version="1">
+      <RouteView><LineRef ref="ex:Line:R" version="1"/></RouteView>
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:local-1" version="1" order="1"><ScheduledStopPointRef ref="ex:ScheduledStopPoint:Clausthal"/></StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:local-2" version="1" order="2"><ScheduledStopPointRef ref="ex:ScheduledStopPoint:Altenau"/></StopPointInJourneyPattern>
+      </pointsInSequence>
+      <linksInSequence>
+        <ServiceLinkInJourneyPattern id="ex:ServiceLinkInJourneyPattern:local-1" version="1" order="1"><ServiceLinkRef ref="ex:ServiceLink:local"/></ServiceLinkInJourneyPattern>
+      </linksInSequence>
+    </ServiceJourneyPattern>
+    <ServiceJourneyPattern id="ex:ServiceJourneyPattern:missing" version="1">
+      <RouteView><LineRef ref="ex:Line:R" version="1"/></RouteView>
+      <pointsInSequence>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:missing-1" version="1" order="1"><ScheduledStopPointRef ref="ex:ScheduledStopPoint:Clausthal"/></StopPointInJourneyPattern>
+        <StopPointInJourneyPattern id="ex:StopPointInJourneyPattern:missing-2" version="1" order="2"><ScheduledStopPointRef ref="ex:ScheduledStopPoint:Altenau"/></StopPointInJourneyPattern>
+      </pointsInSequence>
+      <linksInSequence>
+        <ServiceLinkInJourneyPattern id="ex:ServiceLinkInJourneyPattern:missing-1" version="1" order="1"><ServiceLinkRef ref="ex:ServiceLink:nowhere"/></ServiceLinkInJourneyPattern>
+      </linksInSequence>
+    </ServiceJourneyPattern>
+  </journeyPatterns>
+</ServiceFrame>

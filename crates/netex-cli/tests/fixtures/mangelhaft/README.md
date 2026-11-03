@@ -6,5 +6,6 @@ and one to a day type nothing defines, a stop place another document places
 otherwise and one it names otherwise, a day type whose property of day names
 no day, a journey without travel time, one whose times go back, a stop point
 placed nowhere and without a position, a stop place and a line nothing refers
-to. Places, lines and times are invented; licensed as the crate is (MIT OR
+to, a pattern naming a service link between other stop points than its own.
+Places, lines and times are invented; licensed as the crate is (MIT OR
 Apache-2.0).

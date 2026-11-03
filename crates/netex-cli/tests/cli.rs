@@ -87,6 +87,7 @@ fn every_defect_is_a_class_with_its_count_examples_and_the_journeys_it_affects()
             "journey-without-days",
             "local-identifier",
             "property-of-day-without-days",
+            "link-between-other-points",
             "journey-without-travel-time",
             "time-goes-back",
             "stop-reference-to-nothing",
@@ -144,6 +145,19 @@ fn every_defect_is_a_class_with_its_count_examples_and_the_journeys_it_affects()
     assert_eq!(werktag["element"], "DayType");
     assert_eq!(werktag["entity"], "m:DayType:werktag");
     assert_eq!(werktag["affected_journeys"], 3);
+    // The pattern names a link from its last stop point to one it does not
+    // call at, as 2 149 patterns of the Finnish delivery do: every journey
+    // running it is affected.
+    let links = class(&report, "link-between-other-points");
+    assert_eq!(links["kind"], "index");
+    assert_eq!(links["count"], 1);
+    assert_eq!(links["affected_journeys"], 4);
+    let pattern = &links["examples"][0];
+    assert_eq!(pattern["document"], "a-line-1.xml");
+    assert_eq!(pattern["element"], "ServiceJourneyPattern");
+    assert_eq!(pattern["entity"], "m:ServiceJourneyPattern:1");
+    assert_eq!(pattern["about"], "m:ServiceLink:zwei-woanders");
+    assert_eq!(pattern["affected_journeys"], 4);
     let redefined = class(&report, "redefined-otherwise");
     assert_eq!(redefined["examples"][0]["entity"], "m:StopPlace:zwei");
     assert_eq!(redefined["examples"][0]["document"], "b-line-2.xml");
@@ -208,6 +222,14 @@ fn the_policy_refuses_or_tolerates_by_class_and_the_exit_status_says_which() {
         "references to a stop refused, other references to nothing tolerated"
     );
     assert_eq!(class(&report, "stop-reference-to-nothing")["refused"], true);
+    assert_eq!(class(&report, "unresolved")["refused"], false);
+    let (report, status) = checked(&["--refuse", "link-between-other-points"]);
+    assert_eq!(
+        status,
+        Some(1),
+        "a pattern's links between other stop points refused"
+    );
+    assert_eq!(class(&report, "link-between-other-points")["refused"], true);
     assert_eq!(class(&report, "unresolved")["refused"], false);
     let (report, status) = checked(&["--at-most", "journey-without-travel-time=0"]);
     assert_eq!(

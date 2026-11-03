@@ -34,6 +34,8 @@ Apache-2.0**.
 | `frames/submodes.xml` | the submode a stop place, its entrance and its quay state beside their mode, and a stop place stating none |
 | `frames/quays-beside-their-stop-place.xml` | quays defined beside their stop place, as the French profile writes them: named by their stop place's `QuayRef`, naming it by their `SiteRef`, claimed by two, by none, a `QuayRef` to nothing and to a stop place |
 | `frames/axis-order.xml` | link geometries written longitude first, latitude first, far away, from nothing, without geometry |
+| `frames/pattern-links-shared.xml` | service links shared among line documents, from one stop point to another, without geometry; one defined again otherwise in the line document |
+| `frames/pattern-links-line.xml` | patterns naming their service links in sequence: a link per hop, one for the whole way, one between other stop points, one its own document defines, one no document defines |
 | `entities/day-types.xml` | day types with and without the schema defaults of their attributes, a name's language, properties of day |
 | `entities/calendar.xml` | a day type, a UIC period and the assignment of the one to the other |
 | `entities/stop-point.xml` | a scheduled stop point, with and without its position |

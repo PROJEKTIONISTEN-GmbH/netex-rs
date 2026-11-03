@@ -151,7 +151,7 @@ fn read_document(xml: &str) -> Result<Vec<String>, String> {
 #[test]
 fn every_set_of_frames_reads_writes_back_and_indexes_alike_in_full_and_streamed() {
     let frames = fragments::frames();
-    assert_eq!(frames.len(), 23);
+    assert_eq!(frames.len(), 25);
     let mut failures = Vec::new();
     for fixture in &frames {
         let document = fragments::publication(&fixture.xml);

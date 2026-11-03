@@ -21,6 +21,16 @@
           <lines>
             <Line id="m:Line:2" version="1"><Name>2</Name><TransportMode>bus</TransportMode></Line>
           </lines>
+          <serviceLinks>
+            <ServiceLink id="m:ServiceLink:eins-irgendwo" version="1">
+              <FromPointRef ref="m:ScheduledStopPoint:eins"/>
+              <ToPointRef ref="m:ScheduledStopPoint:irgendwo"/>
+            </ServiceLink>
+            <ServiceLink id="m:ServiceLink:zwei-woanders" version="1">
+              <FromPointRef ref="m:ScheduledStopPoint:zwei"/>
+              <ToPointRef ref="m:ScheduledStopPoint:woanders"/>
+            </ServiceLink>
+          </serviceLinks>
           <stopAssignments>
             <PassengerStopAssignment id="m:PassengerStopAssignment:ohne-punkt" version="1" order="1">
               <ScheduledStopPointRef ref="m:ScheduledStopPoint:fehlt" version="1"/>

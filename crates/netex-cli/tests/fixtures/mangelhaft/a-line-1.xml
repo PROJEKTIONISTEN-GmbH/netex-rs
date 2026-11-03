@@ -64,6 +64,14 @@
                   <ScheduledStopPointRef ref="m:ScheduledStopPoint:zwei" version="1"/>
                 </StopPointInJourneyPattern>
               </pointsInSequence>
+              <linksInSequence>
+                <ServiceLinkInJourneyPattern id="m:ServiceLinkInJourneyPattern:1-1" version="1" order="1">
+                  <ServiceLinkRef ref="m:ServiceLink:eins-irgendwo"/>
+                </ServiceLinkInJourneyPattern>
+                <ServiceLinkInJourneyPattern id="m:ServiceLinkInJourneyPattern:1-2" version="1" order="2">
+                  <ServiceLinkRef ref="m:ServiceLink:zwei-woanders"/>
+                </ServiceLinkInJourneyPattern>
+              </linksInSequence>
             </ServiceJourneyPattern>
           </journeyPatterns>
         </ServiceFrame>

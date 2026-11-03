@@ -1,0 +1,40 @@
+<!--
+  The service links a delivery shares among its line documents, as the
+  Finnish and Nordic deliveries write them: stop points in the Harz and the
+  links between them, each from one stop point to another (FromPointRef and
+  ToPointRef of netex_servicePattern_version.xsd), none with a geometry.
+  `ex:ServiceLink:local` is defined again, otherwise, in
+  pattern-links-line.xml. Written for netex-rs's tests (MIT OR Apache-2.0);
+  places, lines and times are invented.
+-->
+<ServiceFrame id="ex:ServiceFrame:shared" version="1">
+  <scheduledStopPoints>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Clausthal" version="1"><Name>Clausthal</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Altenau" version="1"><Name>Altenau</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Torfhaus" version="1"><Name>Torfhaus</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Braunlage" version="1"><Name>Braunlage</Name></ScheduledStopPoint>
+    <ScheduledStopPoint id="ex:ScheduledStopPoint:Elend" version="1"><Name>Elend</Name></ScheduledStopPoint>
+  </scheduledStopPoints>
+  <serviceLinks>
+    <ServiceLink id="ex:ServiceLink:Clausthal-Altenau" version="1">
+      <FromPointRef ref="ex:ScheduledStopPoint:Clausthal" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Altenau" version="1"/>
+    </ServiceLink>
+    <ServiceLink id="ex:ServiceLink:Altenau-Torfhaus" version="1">
+      <FromPointRef ref="ex:ScheduledStopPoint:Altenau" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Torfhaus" version="1"/>
+    </ServiceLink>
+    <ServiceLink id="ex:ServiceLink:Clausthal-Torfhaus" version="1">
+      <FromPointRef ref="ex:ScheduledStopPoint:Clausthal" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Torfhaus" version="1"/>
+    </ServiceLink>
+    <ServiceLink id="ex:ServiceLink:Braunlage-Elend" version="1">
+      <FromPointRef ref="ex:ScheduledStopPoint:Braunlage" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Elend" version="1"/>
+    </ServiceLink>
+    <ServiceLink id="ex:ServiceLink:local" version="1">
+      <FromPointRef ref="ex:ScheduledStopPoint:Braunlage" version="1"/>
+      <ToPointRef ref="ex:ScheduledStopPoint:Elend" version="1"/>
+    </ServiceLink>
+  </serviceLinks>
+</ServiceFrame>
