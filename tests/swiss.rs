@@ -278,6 +278,38 @@ fn a_journey_stating_its_calls_calls_there_but_where_it_passes_through() {
     }
 }
 
+/// The calls of a journey identified anew: `c1` … `c4` become `{prefix}1` … `{prefix}4`.
+fn calls_named(journey: &str, prefix: &str) -> String {
+    (1..=4).fold(journey.to_owned(), |journey, n| {
+        journey.replace(&format!(r#"id="c{n}""#), &format!(r#"id="{prefix}{n}""#))
+    })
+}
+
+#[test]
+fn the_identifiers_of_the_calls_a_journey_stops_at_take_no_room_in_the_index() {
+    // A second train, its calls identified anew, against the same train
+    // naming the first one's calls but for the call it passes through: the
+    // index holds no more strings for it, and its finding still names the
+    // call passed through. The Swiss delivery states 42 million calls.
+    let first = train("ch:1:ServiceJourney:1", &["week"], &[]);
+    let second = train("ch:1:ServiceJourney:2", &["week"], &[]);
+    let fresh = delivery(&[first.clone(), calls_named(&second, "d")].concat());
+    let reused = delivery(&[first, second.replace(r#"id="c3""#, r#"id="d3""#)].concat());
+    for (fresh, reused) in [
+        (serially(&fresh), serially(&reused)),
+        (merged(&fresh), merged(&reused)),
+    ] {
+        assert_eq!(fresh.string_count(), reused.string_count());
+        assert_eq!(
+            findings(&fresh, Concern::PassedThrough),
+            [
+                "point passed through, no call: Call c3 in PROD_NETEX_TT_1.10_CHE_SKI_2026_OEV-SCHWEIZ_TIMETABLE_1_515.xml (ch:1:ServiceJourney:1)",
+                "point passed through, no call: Call d3 in PROD_NETEX_TT_1.10_CHE_SKI_2026_OEV-SCHWEIZ_TIMETABLE_1_515.xml (ch:1:ServiceJourney:2)",
+            ]
+        );
+    }
+}
+
 #[test]
 fn a_journey_runs_on_the_days_of_its_conditions_within_its_day_types() {
     let journeys = [
