@@ -64,7 +64,14 @@ def unpack(archive, into):
         if hasattr(tarfile, "data_filter"):
             tar.extraction_filter = tarfile.data_filter
         tar.extractall(into)
-    return into / archive.name.removesuffix(".crate")
+    unpacked = into / archive.name.removesuffix(".crate")
+    # Cargo takes an unpacked package for unchanged by its files' times,
+    # which the archive keeps, and a test binary built in an earlier run
+    # would read its fixtures from that run's directory, gone since: the
+    # files dated now are built anew, what they depend on is not.
+    for file in unpacked.rglob("*"):
+        os.utime(file)
+    return unpacked
 
 
 def main():
