@@ -337,6 +337,10 @@ netex_element! {
             pub version: Option<Version> = "version",
         }
         children {
+            /// Key-value pairs.
+            pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// Name.
             pub name: Option<MultilingualString> = "Name",
             /// When the first run leaves.

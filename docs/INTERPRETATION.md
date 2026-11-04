@@ -1306,9 +1306,10 @@ and the model did not type `privateCodes`.
 it types. A passing time and a stop point in a pattern are versioned children
 (`VersionedChildStructure`), which the schema allows neither: the model reads
 a `keyList` written there anyway, `privateCodes` stay among the untyped
-children, carried through as written. So do the codes of five managed objects
-whose keys the model does not type: a data source, a responsibility set, a
-passenger capacity, an allowed line direction, a headway journey group. A stop
+children, carried through as written. Since 0.10.0 the model types both on the
+five managed objects that carried them untyped until then: a data source, a
+responsibility set, a passenger capacity, an allowed line direction, a headway
+journey group (`key_list`, `private_codes`). A stop
 place's or quay's global identifier (`Stop::dhid`, `Index::stop_by_dhid`) is
 its `GlobalID`, else its `StopPlaceCode` or `QuayCode`;
 `netex convert --stop-ids global` writes it, and `netex merge` pairs a stop of

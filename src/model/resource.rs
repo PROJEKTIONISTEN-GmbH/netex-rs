@@ -64,6 +64,10 @@ netex_element! {
             pub version: Option<Version> = "version",
         }
         children {
+            /// Key-value pairs.
+            pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// Name of the source.
             pub name: Option<MultilingualString> = "Name",
             /// Its short name.
@@ -137,6 +141,10 @@ netex_element! {
             pub version: Option<Version> = "version",
         }
         children {
+            /// Key-value pairs.
+            pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// Name of the set.
             pub name: Option<MultilingualString> = "Name",
             /// Its own code.
@@ -230,6 +238,10 @@ netex_element! {
             pub version: Option<Version> = "version",
         }
         children {
+            /// Key-value pairs.
+            pub key_list: Option<KeyList> = "keyList",
+            /// Codes it is known by in other systems, each with its type.
+            pub private_codes: Option<PrivateCodes> = "privateCodes",
             /// The class.
             pub fare_class: Option<FareClass> = "FareClass",
             /// All places.
