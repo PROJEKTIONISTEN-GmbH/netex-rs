@@ -13,8 +13,9 @@ its shapes; five managed objects type their codes.
   vehicle passes through, the one finding naming it: the Swiss delivery's
   42 million call identifiers were nine in ten of its index's strings.
   Converting Switzerland peaks at 7.4 to 7.5 GiB on one to sixteen threads,
-  before 12.4 GiB on one and 16.1 to 16.9 GiB on four to sixteen; the feeds
-  are the same bytes (`docs/PERFORMANCE.md`). `Index::string_count` counts
+  before 12.4 GiB on one and 16.1 to 16.9 GiB on four to sixteen; Germany
+  on eight threads at 11.6 GiB, before 12.7 GiB, as fast as before; the
+  feeds are the same bytes (`docs/PERFORMANCE.md`). `Index::string_count` counts
   fewer strings where calls state identifiers.
 - **index**: a service link a journey pattern names in sequence that leads
   from or to a stop point the pattern does not name is a finding about the

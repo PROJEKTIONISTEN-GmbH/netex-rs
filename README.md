@@ -334,7 +334,8 @@ invent identifiers or tokens to satisfy the other release's validator.
 
 - **The index is in memory.** A whole national delivery needs the memory
   the table under Performance says — Germany 12.8 GiB, Switzerland 16.9 GiB
-  —; the lean stream without an index needs well under a gigabyte.
+  on sixteen threads; since 0.10.0, on eight, Germany 11.6 GiB, Switzerland
+  7.4 GiB —; the lean stream without an index needs well under a gigabyte.
 - **Typed where routing and GTFS need it.** Fares (Part 3), vehicle schedules
   and many rarer elements are carried through untyped: kept and written back,
   not modelled. Flexible (on-demand) lines are not indexed; their journeys are

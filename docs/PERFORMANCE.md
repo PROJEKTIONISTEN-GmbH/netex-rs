@@ -43,6 +43,17 @@ on 3 and 4 November in a container of 8 CPUs and 16 GiB: above 16 GiB the
 process was swapping, which is why the column before counts resident and
 swapped memory together.
 
+Germany converts as fast as before and in less memory: `netex convert --to
+gtfs` on 8 threads, before and after called in the order before, after,
+after, before, twice — 350.4, 354.4, 328.0 and 320.8 s before, 347.6, 350.0,
+318.1 and 321.7 s after (the means 338.4 and 334.4 s); the peak 12.64 to
+12.73 GiB before, 11.53 to 11.56 GiB after; the feed the same bytes. The
+measuring lock of the host was held elsewhere for more than two hours, so
+these runs went without it, on a host loaded at 75 to 90 (one minute): the
+times are two thirds longer than the 200 s of 0.9.0's comparison below,
+measured at a load of 12.7 in the median, and before and after differ less
+than the two rounds do (8 %).
+
 ## Writing the feed on every thread (0.9.0)
 
 netex2gtfs 0.3.0 writes its zip archive itself and deflates each file in
