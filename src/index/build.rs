@@ -17,11 +17,12 @@ use crate::calendar::{
 use crate::geometry::first_position;
 use crate::model::{
     AssignedDayType, AssignedDays, AvailabilityCondition, Date, DateTime, DayType, Frame,
-    GeneralFrameMember, JourneyPatternItem, JourneyPatternRef, JourneyRef, LineRef, OperatingDay,
-    OperatingDayRef, OperatingPeriod, OperatingPeriodItem, PeriodEnd, PeriodStart,
-    PointInPatternRef, PointInSequenceItem, Quay, QuayItem, Ref, RouteRefOrView, ServiceJourney,
-    ServiceJourneyPattern, SiteConnectionEnd, StopPlace, StopPointRef, StopUse, Time,
-    TimeDemandType, TimingPointRef, ValidBetween, ValidityConditionItem, VehicleJourney,
+    GeneralFrameMember, JourneyPatternItem, JourneyPatternRef, JourneyRef, LineRef,
+    LinkInSequenceItem, OperatingDay, OperatingDayRef, OperatingPeriod, OperatingPeriodItem,
+    PeriodEnd, PeriodStart, PointInPatternRef, PointInSequenceItem, Quay, QuayItem, Ref,
+    RouteRefOrView, ServiceJourney, ServiceJourneyPattern, SiteConnectionEnd, StopPlace,
+    StopPointRef, StopUse, Time, TimeDemandType, TimingPointRef, ValidBetween,
+    ValidityConditionItem, VehicleJourney,
 };
 use crate::stream::{self, Entity, ReadOptions, Scope, Sink, Skipped};
 use crate::xml::{Child, Cursor};
@@ -248,6 +249,9 @@ pub(crate) struct PatternRecord {
     /// onward from any: a range of the builder's `pattern_steps`; empty where
     /// it names none.
     pub(crate) steps: (u32, u32),
+    /// The service links it names in sequence, by identifier: a range of the
+    /// builder's `pattern_links`.
+    pub(crate) links: (u32, u32),
     pub(crate) validity: Validity,
 }
 
@@ -483,6 +487,16 @@ pub(crate) struct DatingRecord {
     pub(crate) runs: bool,
 }
 
+/// A service link as gathered for the patterns naming it: its identifier, its
+/// document, and the stop points it leads from and to, by identifier.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct LinkEnds {
+    pub(crate) id: Sym,
+    pub(crate) origin: Sym,
+    pub(crate) from: Option<Sym>,
+    pub(crate) to: Option<Sym>,
+}
+
 /// A service link with a geometry, as gathered: where it starts, and the two
 /// readings of its geometry's first position as latitude and longitude — as
 /// its reference system states it, and the other way round.
@@ -665,6 +679,10 @@ pub struct IndexBuilder {
     pub(crate) operating_days: Vec<OperatingDayRecord>,
     pub(crate) datings: Vec<DatingRecord>,
     pub(crate) links: Vec<LinkRecord>,
+    /// Every service link read, with its ends.
+    pub(crate) link_ends: Vec<LinkEnds>,
+    /// The service links patterns name in sequence, by identifier.
+    pub(crate) pattern_links: Vec<Sym>,
     pub(crate) transfers: Vec<TransferRecord>,
     pub(crate) interchanges: Vec<InterchangeRecord>,
     pub(crate) unresolved: Vec<Unresolved>,
@@ -727,7 +745,9 @@ impl IndexBuilder {
     /// the full model of the same document, when the document's containers
     /// stand in schema order and the selection holds service links — whose
     /// geometries are checked ([`Concern::AxisOrderSwapped`](super::Concern))
-    /// where they are read, and which [`Selection::routing`](crate::stream::Selection::routing)
+    /// and whose ends are checked against the patterns naming them
+    /// ([`Concern::LinkBetweenOtherPoints`](super::Concern)) where they are
+    /// read, and which [`Selection::routing`](crate::stream::Selection::routing)
     /// does not hold.
     pub fn add_streamed(
         &mut self,
@@ -1517,6 +1537,14 @@ impl Visit<'_> {
             number_passes(&mut steps);
             self.builder.pattern_steps.extend(steps);
         }
+        let links_start = len_of(&self.builder.pattern_links);
+        for item in pattern.links_in_sequence.iter().flat_map(|l| &l.items) {
+            if let LinkInSequenceItem::ServiceLinkInJourneyPattern(link) = item {
+                if let Some(link) = self.id_of(link.service_link_ref.as_ref()) {
+                    self.builder.pattern_links.push(link);
+                }
+            }
+        }
         self.builder.patterns.push(PatternRecord {
             key,
             origin,
@@ -1524,6 +1552,7 @@ impl Visit<'_> {
             route,
             points: (start, end),
             steps: (steps_start, len_of(&self.builder.pattern_steps)),
+            links: (links_start, len_of(&self.builder.pattern_links)),
             validity,
         });
     }
@@ -1995,9 +2024,20 @@ impl Visit<'_> {
             });
     }
 
-    /// A service link, where it states a geometry: the readings of its first
-    /// position, to be judged against where the link starts.
+    /// A service link: its ends, for the patterns naming it; and where it
+    /// states a geometry, the readings of its first position, to be judged
+    /// against where the link starts.
     fn service_link(&mut self, link: &crate::model::ServiceLink) {
+        let ends = LinkEnds {
+            id: self
+                .builder
+                .strings
+                .intern(link.id.as_ref().map_or("", |id| id.as_str())),
+            origin: self.origin,
+            from: self.id_of(link.from_point_ref.as_ref()),
+            to: self.id_of(link.to_point_ref.as_ref()),
+        };
+        self.builder.link_ends.push(ends);
         let Some((first, geometry)) = link
             .unprocessed
             .iter()

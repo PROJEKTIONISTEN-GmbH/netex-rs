@@ -136,6 +136,15 @@ pub enum Concern {
     /// every journey daily. Not made where another property of the day type
     /// names more than days of the week, which leaves its properties unread.
     PropertyOfDayWithoutDays,
+    /// A service link a journey pattern names in its sequence of links
+    /// (`linksInSequence`) that leads from or to a stop point the pattern
+    /// does not name — 2 149 patterns of the Finnish delivery name the link
+    /// of another line —: the link is not the way between the pattern's
+    /// stops. The link is the one of the pattern's own document, else of the
+    /// document named first defining it; one no document defines is no
+    /// finding of this kind. Read only where service links are read. Names
+    /// the link.
+    LinkBetweenOtherPoints,
 }
 
 impl Concern {
@@ -165,6 +174,7 @@ impl Concern {
         Concern::LocalIdentifier,
         Concern::LinkWithoutRunTime,
         Concern::PropertyOfDayWithoutDays,
+        Concern::LinkBetweenOtherPoints,
     ];
 
     /// The concern's name in reports and on command lines, in lower case with
@@ -195,6 +205,7 @@ impl Concern {
             Concern::LocalIdentifier => "local-identifier",
             Concern::LinkWithoutRunTime => "link-without-run-time",
             Concern::PropertyOfDayWithoutDays => "property-of-day-without-days",
+            Concern::LinkBetweenOtherPoints => "link-between-other-points",
         }
     }
 
@@ -254,6 +265,9 @@ impl Concern {
             }
             Concern::PropertyOfDayWithoutDays => {
                 "day type whose property of day names no day, read as every day"
+            }
+            Concern::LinkBetweenOtherPoints => {
+                "service link a pattern names from or to a stop point not its own"
             }
         }
     }
@@ -319,7 +333,8 @@ pub struct Finding<'a> {
     /// the delivery answers with; for a point passed through, its pattern or
     /// journey; for days a line version does not govern or a journey of a
     /// flexible line, the line; for a headway group, its journey; for a local
-    /// identifier, the document whose stop the identifier alone names.
+    /// identifier, the document whose stop the identifier alone names; for a
+    /// pattern's link between other stop points, the link.
     pub about: Option<&'a str>,
 }
 

@@ -894,6 +894,37 @@ netex_container! {
 }
 
 netex_element! {
+    /// A service link of a journey pattern, in its order: the way between
+    /// two of its stop points the vehicle takes.
+    pub struct ServiceLinkInJourneyPattern {
+        attributes {
+            /// The `id` attribute.
+            pub id: Option<Id> = "id",
+            /// The `version` attribute.
+            pub version: Option<Version> = "version",
+            /// The `order` attribute.
+            pub order: Option<Order> = "order",
+        }
+        children {
+            /// When the entity is valid.
+            pub valid_between: Vec<ValidBetween> = "ValidBetween",
+            /// What it is.
+            pub description: Option<MultilingualString> = "Description",
+            /// The service link.
+            pub service_link_ref: Option<Ref> = "ServiceLinkRef",
+        }
+    }
+}
+
+netex_container! {
+    /// The links of a journey pattern, in order (`linksInSequence`).
+    pub struct LinksInSequence of LinkInSequenceItem {
+        /// A service link.
+        ServiceLinkInJourneyPattern(ServiceLinkInJourneyPattern) = "ServiceLinkInJourneyPattern",
+    }
+}
+
+netex_element! {
     /// A journey pattern: the stops a journey calls at, in order.
     ///
     /// Read for `<ServiceJourneyPattern>` and for `<JourneyPattern>`, which
@@ -942,6 +973,8 @@ netex_element! {
             pub notice_assignments: Option<NoticeAssignments> = "noticeAssignments",
             /// The stops, in order.
             pub points_in_sequence: Option<PointsInSequence> = "pointsInSequence",
+            /// The service links between them, in order.
+            pub links_in_sequence: Option<LinksInSequence> = "linksInSequence",
             /// What kind of service pattern: `passenger`, `garageRunOut`, …
             pub service_journey_pattern_type: Option<Box<str>> = "ServiceJourneyPatternType",
         }

@@ -190,7 +190,8 @@ fn the_sink_can_stop_the_read() {
 fn the_index_built_from_the_stream_is_the_index_the_full_model_builds() {
     let mut fixtures = support::delfi_fixtures();
     fixtures.sort_by_key(|f| std::cmp::Reverse(f.xml.len()));
-    let options = ReadOptions::new(Selection::routing());
+    // The full model holds the service links; so must the selection.
+    let options = ReadOptions::new(Selection::routing().with(Kind::ServiceLink));
     let mut full = IndexBuilder::new();
     let mut lean = IndexBuilder::new();
     for fixture in &fixtures {

@@ -159,6 +159,13 @@ impl IndexBuilder {
                 step.onward = step.onward.map(|link| renumbered.sym(link));
                 step
             }));
+        let link_offset = offset_of(&self.pattern_links);
+        self.pattern_links.extend(
+            other
+                .pattern_links
+                .into_iter()
+                .map(|link| renumbered.sym(link)),
+        );
         let moved = |(start, end): (u32, u32), by: u32| (start + by, end + by);
         for mut record in other.patterns {
             record.key = renumbered.key(record.key);
@@ -167,6 +174,7 @@ impl IndexBuilder {
             record.route = record.route.map(|p| renumbered.pending(p));
             record.points = moved(record.points, point_offset);
             record.steps = moved(record.steps, step_offset);
+            record.links = moved(record.links, link_offset);
             self.patterns.push(record);
         }
         let demand_offset = offset_of(&self.demand_times);
@@ -278,6 +286,13 @@ impl IndexBuilder {
             link.origin = renumbered.sym(link.origin);
             link.from = link.from.map(|p| renumbered.pending(p));
             self.links.push(link);
+        }
+        for mut ends in other.link_ends {
+            ends.id = renumbered.sym(ends.id);
+            ends.origin = renumbered.sym(ends.origin);
+            ends.from = ends.from.map(|point| renumbered.sym(point));
+            ends.to = ends.to.map(|point| renumbered.sym(point));
+            self.link_ends.push(ends);
         }
         for record in other.transfers {
             self.transfers.push(TransferRecord {

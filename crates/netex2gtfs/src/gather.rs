@@ -11,13 +11,12 @@
 //!
 //! [`IndexBuilder::add_streamed_with`]: netex_rs::index::IndexBuilder::add_streamed_with
 
-use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use netex_rs::geometry::Geometry;
 use netex_rs::model::{
     self, AdditionalOperator, CallItem, DirectionType, Element, FrameDefaults, LimitationStatus,
-    PointInSequenceItem, QuayItem, StopPointRef, StopUse, TrainNumberRefItem,
+    LinkInSequenceItem, PointInSequenceItem, QuayItem, StopPointRef, StopUse, TrainNumberRefItem,
 };
 use netex_rs::stream::{Entity, Scope, Sink, Skipped};
 use netex_rs::xml::{Child, Cursor};
@@ -378,10 +377,10 @@ impl Gather {
         }
     }
 
-    fn pattern(&mut self, pattern: &model::ServiceJourneyPattern) -> netex_rs::Result<()> {
+    fn pattern(&mut self, pattern: &model::ServiceJourneyPattern) {
         self.notices(pattern.notice_assignments.as_ref());
         if self.pattern_links_wanted {
-            self.pattern_links(pattern)?;
+            self.pattern_links(pattern);
         }
         let start = position_of(self.points.len());
         let mut any_display = pattern.destination_display_ref.is_some();
@@ -407,7 +406,7 @@ impl Gather {
         if !any_display && direction.is_none() && direction_ref.is_none() {
             // Nothing a feed takes from it beyond the index's calls.
             self.points.truncate(start as usize);
-            return Ok(());
+            return;
         }
         let record = PatternFacts {
             document: self.document,
@@ -418,42 +417,22 @@ impl Gather {
             points: (start, position_of(self.points.len())),
         };
         self.patterns.push(record);
-        Ok(())
     }
 
-    /// The service links a pattern names in sequence (`linksInSequence`,
-    /// which the model carries through untyped), in their order.
-    fn pattern_links(&mut self, pattern: &model::ServiceJourneyPattern) -> netex_rs::Result<()> {
-        let Some(fragment) = pattern
-            .unprocessed
-            .iter()
-            .find(|fragment| &*fragment.name == "linksInSequence")
-        else {
-            return Ok(());
-        };
-        let mut named: Vec<(Option<i64>, Name)> = Vec::new();
-        let mut cursor = Cursor::new(&fragment.xml, netex_rs::Limits::default());
-        let sequence = cursor.root()?;
-        cursor.enter(&sequence)?;
-        while let Some(link) = cursor.next_child()? {
-            if link.local != "ServiceLinkInJourneyPattern" || link.empty {
-                cursor.skip_over(&link)?;
+    /// The service links a pattern names in sequence (`linksInSequence`), in
+    /// their order.
+    fn pattern_links(&mut self, pattern: &model::ServiceJourneyPattern) {
+        let mut named: Vec<(Option<u32>, Name)> = Vec::new();
+        for item in pattern.links_in_sequence.iter().flat_map(|l| &l.items) {
+            let LinkInSequenceItem::ServiceLinkInJourneyPattern(link) = item else {
                 continue;
+            };
+            if let Some(id) = self.reference(link.service_link_ref.as_ref()) {
+                named.push((link.order.as_ref().and_then(|o| o.value()), id));
             }
-            let order = attribute(&link, "order")?.and_then(|order| order.trim().parse().ok());
-            cursor.enter(&link)?;
-            while let Some(child) = cursor.next_child()? {
-                if child.local == "ServiceLinkRef" {
-                    if let Some(id) = attribute(&child, "ref")? {
-                        named.push((order, self.names.intern(&id)));
-                    }
-                }
-                cursor.skip_over(&child)?;
-            }
-            cursor.leave();
         }
         if named.is_empty() {
-            return Ok(());
+            return;
         }
         // In the order they state, those stating none after them.
         named.sort_by_key(|&(order, _)| (order.is_none(), order));
@@ -465,7 +444,6 @@ impl Gather {
             links: (start, position_of(self.link_refs.len())),
         };
         self.pattern_links.push(record);
-        Ok(())
     }
 
     fn journey(&mut self, journey: &model::ServiceJourney) {
@@ -866,7 +844,7 @@ impl<'i> Sink<'i> for Gather {
                 }
             }
             Entity::ServiceJourneyPattern(pattern) | Entity::JourneyPattern(pattern) => {
-                self.pattern(pattern)?
+                self.pattern(pattern)
             }
             Entity::ServiceJourney(journey)
             | Entity::DatedServiceJourney(journey)
@@ -952,17 +930,6 @@ fn projected_geometry(projections: &str) -> netex_rs::Result<Option<Geometry>> {
             }
         }
         cursor.leave();
-    }
-    Ok(None)
-}
-
-/// The value of the attribute `name` of an element, if it states one.
-fn attribute<'i>(element: &Child<'i>, name: &str) -> netex_rs::Result<Option<Cow<'i, str>>> {
-    for attribute in element.attributes() {
-        let (key, value) = attribute?;
-        if key == name {
-            return Ok(Some(value));
-        }
     }
     Ok(None)
 }

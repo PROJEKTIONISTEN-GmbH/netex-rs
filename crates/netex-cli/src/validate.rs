@@ -158,6 +158,7 @@ impl Class {
                     | Concern::UnknownReferenceSystem
                     | Concern::LocalIdentifier
                     | Concern::PropertyOfDayWithoutDays
+                    | Concern::LinkBetweenOtherPoints
             ),
             Class::Check(check) => matches!(
                 check,

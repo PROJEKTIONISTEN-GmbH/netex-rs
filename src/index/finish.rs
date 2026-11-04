@@ -52,6 +52,7 @@ pub(super) fn finish(builder: IndexBuilder) -> Index {
     work.resolve_quay_places();
     work.resolve_assignments();
     work.check_links();
+    work.check_pattern_links(&ranks);
     work.variant_findings();
     let scopes = work.scopes();
     let lines = work.lines(&scopes);
@@ -594,6 +595,58 @@ impl Finish {
                 AxisOrder::Undecided => Concern::AxisOrderUndecided,
             };
             self.found(concern, "ServiceLink", (link.origin, link.id), None);
+        }
+    }
+
+    /// The service links patterns name in sequence that lead from or to a
+    /// stop point the pattern does not name, each a finding about the
+    /// pattern. A link is the one its document defines, else the one of the
+    /// document named first; within a document, the first it states.
+    fn check_pattern_links(&mut self, ranks: &Ranks) {
+        let ends = std::mem::take(&mut self.b.link_ends);
+        let named = std::mem::take(&mut self.b.pattern_links);
+        let mut own: FxHashMap<(Sym, Sym), usize> = FxHashMap::default();
+        let mut first: FxHashMap<Sym, usize> = FxHashMap::default();
+        for (at, link) in ends.iter().enumerate() {
+            own.entry((link.origin, link.id)).or_insert(at);
+            first
+                .entry(link.id)
+                .and_modify(|kept| {
+                    if ranks.of_document(link.origin) < ranks.of_document(ends[*kept].origin) {
+                        *kept = at;
+                    }
+                })
+                .or_insert(at);
+        }
+        let mut found = Vec::new();
+        for pattern in &self.b.patterns {
+            let mut links = range(&named, pattern.links).to_vec();
+            links.sort_unstable();
+            links.dedup();
+            let points: Vec<Sym> = range(&self.b.pattern_point_refs, pattern.points)
+                .iter()
+                .map(|point| point.key.id)
+                .collect();
+            let elsewhere = |point: Option<Sym>| point.is_some_and(|p| !points.contains(&p));
+            for link in links {
+                let Some(&at) = own
+                    .get(&(pattern.origin, link))
+                    .or_else(|| first.get(&link))
+                else {
+                    continue;
+                };
+                if elsewhere(ends[at].from) || elsewhere(ends[at].to) {
+                    found.push(((pattern.origin, pattern.key.id), link));
+                }
+            }
+        }
+        for (entity, link) in found {
+            self.found(
+                Concern::LinkBetweenOtherPoints,
+                "ServiceJourneyPattern",
+                entity,
+                Some(link),
+            );
         }
     }
 
