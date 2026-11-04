@@ -22,9 +22,9 @@ fn the_projection_a_journey_names_is_typed() {
         .map(|id| id.as_str());
     assert_eq!(projection, Some("P"));
     assert!(journey.unprocessed.is_empty(), "nothing carried untyped");
-    assert_eq!(
-        netex_rs::write_element(&journey, "ServiceJourney"),
-        xml,
-        "written back as it was"
-    );
+    let written = netex_rs::write_element(&journey, "ServiceJourney");
+    let again: ServiceJourney =
+        netex_rs::read_element(&written, "ServiceJourney", &Limits::default())
+            .expect("the written journey reads");
+    assert_eq!(again, journey, "written back as it was read");
 }

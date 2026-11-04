@@ -9,7 +9,7 @@ use rustc_hash::FxHashMap;
 
 use crate::gather::{
     Direction, DirectionFacts, Display, DocumentFacts, Gather, JourneyFacts, LineFacts,
-    LinkGeometry, Organisation, PatternFacts, PatternLinks, Point, TrainNumber,
+    LinkGeometry, Organisation, PatternFacts, PatternLinks, Point, ProjectionGeometry, TrainNumber,
 };
 use crate::names::{Name, Names};
 
@@ -123,6 +123,8 @@ pub struct Delivery {
     /// The service links with a geometry, by the stop points they lead from
     /// and to.
     links_between: Scoped<(Name, Name)>,
+    /// The link sequence projections standing on their own.
+    projections: Scoped,
 }
 
 /// An organisation responsible for a line, as the feed names it.
@@ -205,6 +207,7 @@ impl Delivery {
                 LinkGeometry::has_geometry,
                 |l| (l.document, (l.from, l.to)),
             ),
+            projections: Scoped::of(names, &gather.projections, |p| (p.document, p.id)),
             index,
             gather,
         }
@@ -307,6 +310,14 @@ impl Delivery {
         let records: &[LinkGeometry] = &self.gather.links;
         self.links
             .get(records, document, id, |l| (l.document, l.id))
+    }
+
+    /// The link sequence projection `id` as `document` sees it: its position
+    /// among the gather's projections.
+    pub(crate) fn projection(&self, document: Name, id: Name) -> Option<u32> {
+        let records: &[ProjectionGeometry] = &self.gather.projections;
+        self.projections
+            .get(records, document, id, |p| (p.document, p.id))
     }
 
     /// A service link with a geometry from stop point `from` to `to`, as

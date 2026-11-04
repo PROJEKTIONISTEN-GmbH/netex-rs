@@ -774,11 +774,12 @@ impl<'d> Conversion<'d> {
         }
     }
 
-    /// The shapes: for each trip, the geometry of the service links it runs
-    /// over ([`Conversion::links_of`]), one after the other, read in each
-    /// link's reference system and axis order; trips over the same links
-    /// share a shape. A trip with a pair of calls no link with a geometry
-    /// joins has none.
+    /// The shapes: for each trip, the geometry of the link sequence
+    /// projection its journey names, else of the service links it runs over
+    /// ([`Conversion::links_of`]), one after the other, read in each one's
+    /// reference system and axis order; trips over the same course share a
+    /// shape. A trip with neither — no projection with a geometry, a pair of
+    /// calls no link with a geometry joins — has none.
     fn plan_shapes(&mut self) {
         let gather = &self.delivery.gather;
         let mut without: Vec<(&str, &str)> = gather
@@ -795,10 +796,29 @@ impl<'d> Conversion<'d> {
                 || link.to_owned(),
             );
         }
-        let mut shape_of_links: FxHashMap<Vec<u32>, u32> = FxHashMap::default();
+        let mut without: Vec<(&str, &str)> = gather
+            .projections
+            .iter()
+            .filter(|projection| !projection.has_geometry())
+            .map(|projection| {
+                (
+                    gather.names.text(projection.document),
+                    gather.names.text(projection.id),
+                )
+            })
+            .collect();
+        without.sort_unstable();
+        for (_, projection) in without {
+            self.decisions.take(
+                "projection-without-geometry",
+                "a link sequence projection stating no geometry: a journey naming it takes the shape of its service links",
+                || projection.to_owned(),
+            );
+        }
+        let mut shape_of_course: FxHashMap<Course, u32> = FxHashMap::default();
         for trip_number in 0..self.trips.len() {
             let journey = self.trips[trip_number].journey;
-            let Some(links) = self.links_of(journey) else {
+            let Some(course) = self.course_of(journey) else {
                 let record = self.index.journey(journey);
                 self.decisions.take(
                     "shape-incomplete",
@@ -807,18 +827,37 @@ impl<'d> Conversion<'d> {
                 );
                 continue;
             };
-            let next = u32::try_from(shape_of_links.len()).expect("fewer than 2^32 shapes");
-            let shape = match shape_of_links.get(&links) {
+            let next = u32::try_from(shape_of_course.len()).expect("fewer than 2^32 shapes");
+            let shape = match shape_of_course.get(&course) {
                 Some(&shape) => shape,
                 None => {
-                    let points = self.shape_points(&links);
+                    let points = self.shape_points(journey, &course);
                     self.shapes.push(points);
-                    shape_of_links.insert(links, next);
+                    shape_of_course.insert(course, next);
                     next
                 }
             };
             let trip_number = u32::try_from(trip_number).expect("fewer than 2^32 trips");
             self.shape_of_trip.insert(trip_number, shape);
+        }
+    }
+
+    /// What a journey's shape is drawn from: the link sequence projection it
+    /// names, where that states a geometry, else the service links it runs
+    /// over.
+    fn course_of(&self, journey: JourneyId) -> Option<Course> {
+        let delivery = self.delivery;
+        let record = self.index.journey(journey);
+        let projection = delivery.name(record.document).and_then(|document| {
+            let id = delivery.name(record.id)?;
+            let named = delivery.journey_facts(document, id)?.projection?;
+            delivery.projection(document, named)
+        });
+        match projection {
+            Some(projection) if delivery.gather.projections[projection as usize].has_geometry() => {
+                Some(Course::Projection(projection))
+            }
+            _ => self.links_of(journey).map(Course::Links),
         }
     }
 
@@ -868,54 +907,93 @@ impl<'d> Conversion<'d> {
         Some(found)
     }
 
-    /// The positions of `links` one after the other, as latitude and
-    /// longitude: each link read in its system — its own `srsName`, else its
-    /// document's default — in the order its first position lies near its
-    /// start, a position repeated where one link ends and the next begins
-    /// written once.
-    fn shape_points(&mut self, links: &[u32]) -> Vec<(f64, f64)> {
-        let gather = &self.delivery.gather;
+    /// The positions of `course` as latitude and longitude: a projection's,
+    /// read in the order that starts nearest the journey's first stop; or
+    /// each link's one after the other, read in the order that starts
+    /// nearest the stop point it leads from — each in its system, its own
+    /// `srsName` else its document's default, a position repeated where one
+    /// link ends and the next begins written once.
+    fn shape_points(&mut self, journey: JourneyId, course: &Course) -> Vec<(f64, f64)> {
         let mut points: Vec<(f64, f64)> = Vec::new();
-        for &link in links {
-            let link = gather.links[link as usize];
-            let named = link.system.map(|system| gather.names.text(system));
-            let default_system = self
-                .delivery
-                .document_facts(link.document)
-                .location_system
-                .map(|system| gather.names.text(system));
-            let Ok(system) = crs::system_of(named, default_system) else {
-                self.decisions.take(
-                    "shape-in-unknown-system",
-                    "a service link geometry in a reference system the crate does not know: its stretch of the shape is left out",
-                    || gather.names.text(link.id).to_owned(),
-                );
-                continue;
-            };
-            let written = &gather.positions[link.positions.0 as usize..link.positions.1 as usize];
-            let start = self
-                .index
-                .stop_point_by_id(gather.names.text(link.from))
-                .and_then(|point| self.position_of_stop_point(point));
-            let first = written[0];
-            let readings = [
-                system.to_wgs84(first.0, first.1),
-                system.to_wgs84(first.1, first.0),
-            ];
-            let swapped = start
-                .is_some_and(|start| reading_order(readings, start) == AxisOrder::LongitudeFirst);
-            for &(a, b) in written {
-                let point = if swapped {
-                    system.to_wgs84(b, a)
-                } else {
-                    system.to_wgs84(a, b)
+        match course {
+            Course::Projection(projection) => {
+                let projection = self.delivery.gather.projections[*projection as usize];
+                let start = self
+                    .index
+                    .journey(journey)
+                    .stop_points
+                    .first()
+                    .and_then(|&point| self.position_of_stop_point(point));
+                let stretch = Stretch {
+                    id: projection.id,
+                    document: projection.document,
+                    system: projection.system,
+                    positions: projection.positions,
                 };
-                if points.last() != Some(&point) {
-                    points.push(point);
+                self.add_stretch(&mut points, stretch, start);
+            }
+            Course::Links(links) => {
+                for &link in links {
+                    let link = self.delivery.gather.links[link as usize];
+                    let start = self
+                        .index
+                        .stop_point_by_id(self.delivery.gather.names.text(link.from))
+                        .and_then(|point| self.position_of_stop_point(point));
+                    let stretch = Stretch {
+                        id: link.id,
+                        document: link.document,
+                        system: link.system,
+                        positions: link.positions,
+                    };
+                    self.add_stretch(&mut points, stretch, start);
                 }
             }
         }
         points
+    }
+
+    /// Appends the positions of `stretch` to `points` in WGS 84, read in the
+    /// axis order that puts its first position near `start`, where that is
+    /// known.
+    fn add_stretch(
+        &mut self,
+        points: &mut Vec<(f64, f64)>,
+        stretch: Stretch,
+        start: Option<(f64, f64)>,
+    ) {
+        let gather = &self.delivery.gather;
+        let named = stretch.system.map(|system| gather.names.text(system));
+        let default_system = self
+            .delivery
+            .document_facts(stretch.document)
+            .location_system
+            .map(|system| gather.names.text(system));
+        let Ok(system) = crs::system_of(named, default_system) else {
+            self.decisions.take(
+                "shape-in-unknown-system",
+                "a geometry of a service link or link sequence projection in a reference system the crate does not know: its stretch of the shape is left out",
+                || gather.names.text(stretch.id).to_owned(),
+            );
+            return;
+        };
+        let written = &gather.positions[stretch.positions.0 as usize..stretch.positions.1 as usize];
+        let first = written[0];
+        let readings = [
+            system.to_wgs84(first.0, first.1),
+            system.to_wgs84(first.1, first.0),
+        ];
+        let swapped =
+            start.is_some_and(|start| reading_order(readings, start) == AxisOrder::LongitudeFirst);
+        for &(a, b) in written {
+            let point = if swapped {
+                system.to_wgs84(b, a)
+            } else {
+                system.to_wgs84(a, b)
+            };
+            if points.last() != Some(&point) {
+                points.push(point);
+            }
+        }
     }
 
     /// Where a stop point is: its own position, else its stop's, else that
@@ -1661,6 +1739,27 @@ fn goes_back(times: &[PassingTime], positions: impl Iterator<Item = usize>) -> b
         }
     }
     false
+}
+
+/// What a trip's shape is drawn from, the key trips share a shape by.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum Course {
+    /// The link sequence projection its journey names: its position among
+    /// the gather's projections.
+    Projection(u32),
+    /// The service links it runs over: their positions among the gather's links.
+    Links(Vec<u32>),
+}
+
+/// A geometry of a course: the link's or projection's identifier and
+/// document, the reference system it names, and its positions, a range of
+/// the gather's.
+#[derive(Debug, Clone, Copy)]
+struct Stretch {
+    id: Name,
+    document: Name,
+    system: Option<Name>,
+    positions: (u32, u32),
 }
 
 /// A run of the links a pattern names in sequence: where it starts, where it

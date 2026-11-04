@@ -127,6 +127,9 @@ pub(crate) struct JourneyFacts {
     pub(crate) public_code: Option<Name>,
     pub(crate) train_number: Option<Name>,
     pub(crate) wheelchair: Option<Wheelchair>,
+    /// The link sequence projection it names as its course, where the
+    /// feed's shapes are wanted.
+    pub(crate) projection: Option<Name>,
     /// The calls it states, a range of the gather's points; empty for a
     /// journey following a pattern.
     pub(crate) calls: (u32, u32),
@@ -191,6 +194,25 @@ impl LinkGeometry {
     }
 }
 
+/// A link sequence projection standing on its own among a frame's members,
+/// as Bordeaux's deliveries state the course of each journey: its
+/// geometry's reference system, if it names one, and its positions, a range
+/// of the gather's positions — empty where it states no geometry.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ProjectionGeometry {
+    pub(crate) document: Name,
+    pub(crate) id: Name,
+    pub(crate) system: Option<Name>,
+    pub(crate) positions: (u32, u32),
+}
+
+impl ProjectionGeometry {
+    /// Whether the projection states a geometry.
+    pub(crate) fn has_geometry(&self) -> bool {
+        self.positions.0 < self.positions.1
+    }
+}
+
 /// The service links a journey pattern names in sequence
 /// (`linksInSequence`): a range of the gather's link references.
 #[derive(Debug, Clone, Copy)]
@@ -245,9 +267,10 @@ const FRAME_FURNITURE: &[&str] = &[
 /// What one worker gathers from the documents it reads.
 #[derive(Debug, Default)]
 pub(crate) struct Gather {
-    /// Whether the service links each journey pattern names are gathered,
-    /// for the feed's shapes.
-    pattern_links_wanted: bool,
+    /// Whether what the feed's shapes are drawn from is gathered: the
+    /// service links each journey pattern names, the link sequence
+    /// projections standing on their own and the one each journey names.
+    shapes_wanted: bool,
     pub(crate) names: Names,
     document: Name,
     pub(crate) documents: FxHashMap<Name, DocumentFacts>,
@@ -262,6 +285,7 @@ pub(crate) struct Gather {
     pub(crate) stops: FxHashMap<Name, StopFacts>,
     pub(crate) levels: FxHashMap<Name, LevelFacts>,
     pub(crate) links: Vec<LinkGeometry>,
+    pub(crate) projections: Vec<ProjectionGeometry>,
     pub(crate) positions: Vec<(f64, f64)>,
     pub(crate) pattern_links: Vec<PatternLinks>,
     pub(crate) link_refs: Vec<Name>,
@@ -270,11 +294,11 @@ pub(crate) struct Gather {
 }
 
 impl Gather {
-    /// A gather of what a feed needs, with the service links each journey
-    /// pattern names where the feed's shapes are wanted.
+    /// A gather of what a feed needs, with what its shapes are drawn from
+    /// where they are wanted.
     pub(crate) fn new(shapes: bool) -> Gather {
         Gather {
-            pattern_links_wanted: shapes,
+            shapes_wanted: shapes,
             ..Gather::default()
         }
     }
@@ -379,7 +403,7 @@ impl Gather {
 
     fn pattern(&mut self, pattern: &model::ServiceJourneyPattern) {
         self.notices(pattern.notice_assignments.as_ref());
-        if self.pattern_links_wanted {
+        if self.shapes_wanted {
             self.pattern_links(pattern);
         }
         let start = position_of(self.points.len());
@@ -488,6 +512,11 @@ impl Gather {
             public_code: self.intern(journey.public_code.as_deref()),
             train_number: self.reference(train_number),
             wheelchair: Wheelchair::of(journey.accessibility_assessment.as_ref()),
+            projection: if self.shapes_wanted {
+                self.reference(journey.link_sequence_projection_ref.as_ref())
+            } else {
+                None
+            },
             calls: (start, position_of(self.points.len())),
         };
         let says_something = record.direction.is_some()
@@ -496,6 +525,7 @@ impl Gather {
             || record.public_code.is_some()
             || record.train_number.is_some()
             || record.wheelchair.is_some()
+            || record.projection.is_some()
             || record.calls.0 < record.calls.1;
         if says_something {
             let id = self.id(journey.id.as_ref());
@@ -624,6 +654,36 @@ impl Gather {
         Ok(())
     }
 
+    /// A link sequence projection standing on its own among a frame's
+    /// members, with the geometry of its line string.
+    fn projection<'i>(
+        &mut self,
+        cursor: &mut Cursor<'i>,
+        element: &Child<'i>,
+    ) -> netex_rs::Result<()> {
+        let mut id = None;
+        for attribute in element.attributes() {
+            let (key, value) = attribute?;
+            if key == "id" {
+                id = Some(self.names.intern(&value));
+            }
+        }
+        let projection = cursor.skip(element, 0)?;
+        let geometry = netex_rs::geometry::geometry(&projection.xml);
+        let start = position_of(self.positions.len());
+        if let Some(geometry) = &geometry {
+            self.positions.extend(geometry.positions());
+        }
+        let record = ProjectionGeometry {
+            document: self.document,
+            id: id.unwrap_or_else(|| self.names.intern("")),
+            system: self.intern(geometry.as_ref().and_then(|g| g.srs_name.as_deref())),
+            positions: (start, position_of(self.positions.len())),
+        };
+        self.projections.push(record);
+        Ok(())
+    }
+
     fn frame_defaults(&mut self, defaults: &FrameDefaults) {
         let locale = defaults.default_locale.as_ref();
         let time_zone = self.intern(locale.and_then(|l| l.time_zone.as_deref()));
@@ -723,6 +783,7 @@ impl Gather {
                 public_code: option(j.public_code),
                 train_number: option(j.train_number),
                 wheelchair: j.wheelchair,
+                projection: option(j.projection),
                 calls: shift(j.calls),
             }));
         self.train_numbers
@@ -776,6 +837,16 @@ impl Gather {
                 positions: (
                     l.positions.0 + position_offset,
                     l.positions.1 + position_offset,
+                ),
+            }));
+        self.projections
+            .extend(other.projections.into_iter().map(|p| ProjectionGeometry {
+                document: name(p.document),
+                id: name(p.id),
+                system: option(p.system),
+                positions: (
+                    p.positions.0 + position_offset,
+                    p.positions.1 + position_offset,
                 ),
             }));
         let reference_offset = position_of(self.link_refs.len());
@@ -894,6 +965,9 @@ impl<'i> Sink<'i> for Gather {
                         self.documents.entry(self.document).or_default().epip = true;
                     }
                 }
+            }
+            (Skipped::Item(_), "LinkSequenceProjection") if self.shapes_wanted => {
+                return self.projection(cursor, element);
             }
             (Skipped::Item(_), item) => self.not_carried(item),
             (Skipped::Frame(_) | Skipped::Calendar | Skipped::Frames, name)

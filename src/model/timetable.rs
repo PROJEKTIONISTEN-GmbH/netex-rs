@@ -418,6 +418,9 @@ netex_element! {
             pub type_of_product_category_ref: Option<Ref> = "TypeOfProductCategoryRef",
             /// The kind of service.
             pub type_of_service_ref: Option<Ref> = "TypeOfServiceRef",
+            /// Its course drawn on a map: the link sequence projection it
+            /// follows.
+            pub link_sequence_projection_ref: Option<Ref> = "LinkSequenceProjectionRef",
             /// Whether it is monitored in real time.
             pub monitored: Option<bool> = "Monitored",
             /// How accessible it is.
