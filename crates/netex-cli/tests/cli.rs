@@ -146,7 +146,7 @@ fn every_defect_is_a_class_with_its_count_examples_and_the_journeys_it_affects()
     assert_eq!(werktag["entity"], "m:DayType:werktag");
     assert_eq!(werktag["affected_journeys"], 3);
     // The pattern names a link from its last stop point to one it does not
-    // call at, as 2 149 patterns of the Finnish delivery do: every journey
+    // call at, as 2 148 patterns of the Finnish delivery do: every journey
     // running it is affected.
     let links = class(&report, "link-between-other-points");
     assert_eq!(links["kind"], "index");

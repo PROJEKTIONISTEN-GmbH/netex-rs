@@ -4,7 +4,7 @@
   netex_servicePattern_version.xsd), the links defined in
   pattern-links-shared.xml: a pattern naming a link for each of its hops,
   one naming a single link for its whole way, one naming a link between
-  other stop points than its own — the defect of 2 149 patterns of the
+  other stop points than its own — the defect of 2 148 patterns of the
   Finnish delivery —, one naming a link its own document defines otherwise,
   in a version of its own, and one naming a link no document defines. A
   reference into the other document names no version: the schema's keys

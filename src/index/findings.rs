@@ -138,7 +138,7 @@ pub enum Concern {
     PropertyOfDayWithoutDays,
     /// A service link a journey pattern names in its sequence of links
     /// (`linksInSequence`) that leads from or to a stop point the pattern
-    /// does not name — 2 149 patterns of the Finnish delivery name the link
+    /// does not name — 2 148 patterns of the Finnish delivery name the link
     /// of another line —: the link is not the way between the pattern's
     /// stops. The link is the one of the pattern's own document, else of the
     /// document named first defining it; one no document defines is no

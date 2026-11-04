@@ -1,6 +1,6 @@
 //! The service links a journey pattern names in sequence, against the stop
 //! points it names: a link from or to a stop point that is not the pattern's
-//! is a finding — the defect of 2 149 patterns of the Finnish delivery —,
+//! is a finding — the defect of 2 148 patterns of the Finnish delivery —,
 //! the link found in the pattern's own document first.
 
 mod support;

@@ -254,8 +254,11 @@ largest one's.
   eight and sixteen threads. Its peak, 11.1 to
   12.8 GiB by the threads, is the reading's: converting needs no more memory
   than reading alone, and the feed is written from 6 to 8 GiB.
-- **Switzerland** needs 16.9 GiB on sixteen threads, 12.4 GiB on one: on a
-  16 GiB machine, convert it with `--threads 1`.
+- **Switzerland** needed 16.9 GiB on sixteen threads, 12.4 GiB on one. Since
+  0.10.0 the threads' builders are merged without copying their strings, and
+  a call's identifier is kept only where a finding names it: it converts in
+  7.4 to 7.5 GiB on one to sixteen threads — measured before and after on one
+  machine, the feed the same bytes.
 - **Czechia** reads whole but converts to an empty feed: no stop of its
   deliveries states a position, and GTFS requires one.
 - **Each feed against its publisher's GTFS**, trip days of a week: Norway,
@@ -287,7 +290,7 @@ library behind it) writes from the resolved delivery:
 | `calendar.txt`, `calendar_dates.txt` | the days each journey runs, by the calendar rules of the delivery's profile |
 | `frequencies.txt` | template journeys run at a headway |
 | `transfers.txt` | walks between stops and planned interchanges (staying seated, guaranteed) |
-| `shapes.txt` | the geometry of the service links a trip runs over (`--shapes`), those its pattern names first: the geometry a link states on itself, as Austria's and Denmark's deliveries do, or in its link sequence projection, as Norway's, Sweden's and Finland's |
+| `shapes.txt` | the course a trip's journey names, as Bordeaux's deliveries state one for each journey, else the geometry of the service links it runs over (`--shapes`), those its pattern names first: the geometry a link states on itself, as Austria's and Denmark's deliveries do, or in its link sequence projection, as Norway's, Sweden's and Finland's |
 | `feed_info.txt`, `attributions.txt` | the publisher given, the delivery's data sources and participants |
 
 Positions in a national reference system are written in WGS 84. GlobalIDs

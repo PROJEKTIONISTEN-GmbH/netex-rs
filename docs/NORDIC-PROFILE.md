@@ -211,10 +211,14 @@ than 0.07 m from the other's line.
 Sweden: 388 316 of 438 778 trips, 19 640 718 points, 18 208 links without a
 geometry. Finland's patterns name one link each for the whole way: 495 064 of
 521 058 trips have a shape, 2 061 520 points; of the 9 182 patterns naming a
-link, 2 149 name one between other stop points — `OYM:JourneyPattern:237598_7010`,
+link, 2 148 name one between other stop points — `OYM:JourneyPattern:237598_7010`,
 in Porvoo, names `OYM:ServiceLink:16`, from Helsinki into central Finland —,
 and their trips take the link between their stop points where one is stated,
-else have no shape.
+else have no shape. (Counted first as 2 149, the patterns whose link does not
+run from their first stop point to their last: one of those,
+`OYM:JourneyPattern:247277_131_v2`, names a link between two of its own.)
+Since 0.10.0 `netex validate` reports the 2 148 as the class
+`link-between-other-points` (`docs/INTERPRETATION.md` § 41).
 
 ## Several deliveries into one
 

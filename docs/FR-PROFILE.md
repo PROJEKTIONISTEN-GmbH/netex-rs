@@ -109,7 +109,8 @@ model where it converts.
 the kind of place of a stop place (`placeTypes`, `monomodalStopPlace`), the
 Lambert-93 position written beside latitude and longitude (`gml:pos`),
 suitabilities, line presentations, networks and groups of lines, route links,
-TBM's link projections and vehicle schedules, fares, SNCF's journey parts,
+TBM's link projections — the reference a journey makes to its own is typed
+since 0.10.0 — and vehicle schedules, fares, SNCF's journey parts,
 coupled journeys and its service facilities. None of it is a stop, a line, a
 journey, a passing time or a day.
 
@@ -161,7 +162,10 @@ Fluo gives 1 771 trips with 27 800 stop times, Normandy 85 356 trips with
 1 890 835 stop times, its trains named by the train numbers its general frames
 hold, SNCF 60 142 trips with 523 621 stop times. Not carried into the feed, and said
 so in the report: networks and groups of lines, route links, TBM's link
-projections and fares, SNCF's journey parts.
+projections and fares, SNCF's journey parts. With `--shapes`, since
+netex2gtfs 0.4.0, TBM's link projections are the shapes of its trips: each
+journey names its own (`docs/INTERPRETATION.md` § 42); all 39 749 trips have
+one, within 0.007 m of Bordeaux's GTFS shapes.
 
 ## One document of 647 MB
 

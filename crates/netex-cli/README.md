@@ -29,8 +29,9 @@ netex validate netex.zip --refuse unresolved --at-most journey-without-travel-ti
 The report lists every class with findings — the concerns the index of
 netex-rs finds (references to nothing, definitions repeated with other content,
 points passed through, days a line version does not govern, link geometries
-written longitude first, day types whose property of day names no day, …) and
-the checks of the report's own:
+written longitude first, day types whose property of day names no day,
+patterns naming a service link between other stop points than their own, …)
+and the checks of the report's own:
 
 | Class | What it finds |
 |---|---|

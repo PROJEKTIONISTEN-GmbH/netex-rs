@@ -1,10 +1,47 @@
 # Performance
 
 What reading a NeTEx delivery and converting it to GTFS costs: first what
-0.9.0 changed in writing the feed, then whole national deliveries as of
+0.10.0 changed in merging what the threads read, and what 0.9.0 changed in
+writing the feed, then whole national deliveries as of
 0.8.1, read and converted to GTFS, each feed checked against the GTFS its
 publisher writes from the same data; then how reading the German delivery got
 fast, in 0.2 and 0.3.
+
+## Merging the threads' builders (0.10.0)
+
+Converting Switzerland needed 16.9 GiB on sixteen threads and 12.4 GiB on
+one. Measured with the resident memory over time, and with what each builder
+held: after reading, the memory was the same on one thread and on eight
+(11.4 GiB); merging the eight builders raised it to 15.2 GiB, `finish` to the
+peak, and 11.4 GiB stayed resident afterwards against 7.9 GiB on one thread.
+The merge copied each string of a worker's interner into the merged one,
+allocating it anew, while the worker's own, freed, stayed with the allocator
+of the thread that had read it. Of the 45.2 million strings of the Swiss
+index, 41.9 million were the identifiers of calls, which the index names in
+one finding only, of a call the vehicle passes through.
+
+netex-rs 0.10.0 moves the strings of a worker into the merged interner rather
+than copying them, and interns a call's identifier only where the vehicle
+passes through: 3.4 million strings remain. Peak memory (resident and
+swapped, sampled every 0.2 s) of `netex convert --to gtfs` over the Swiss
+delivery of 26 October 2026, by build and thread count:
+
+| Threads | Before (0.9.0) | Strings moved only | 0.10.0 |
+|---:|---:|---:|---:|
+| 1 | 12.39 GiB | 12.69 GiB | 7.35 GiB |
+| 4 | 16.14 GiB | 12.89 GiB | 7.38 GiB |
+| 8 | 16.56 GiB | 12.77 GiB | 7.42 GiB |
+| 16 | 16.91 GiB | 12.78 GiB | 7.46 GiB |
+
+Moving the strings takes away what the threads added (4.1 GiB on sixteen),
+dropping the call identifiers what every thread count held: the peak no
+longer grows with the threads. Every one of the twelve conversions wrote the
+same archive, byte for byte. The difference on one thread between the first
+two builds, which do the same there, is the spread of one run against
+another; it was not traced further. Measured for the memory, not the time,
+on 3 and 4 November in a container of 8 CPUs and 16 GiB: above 16 GiB the
+process was swapping, which is why the column before counts resident and
+swapped memory together.
 
 ## Writing the feed on every thread (0.9.0)
 
@@ -93,8 +130,9 @@ Norway's shapes against Entur's GTFS of the same stand: each feed gives
 of ours against Entur's line and up to 200 points of Entur's against ours,
 point to segment: the farthest point lies 0.062 m off, the median of each
 trip's farthest 0.000 m. Finland's patterns name one link for the whole way;
-2 149 of them name a link between other stop points, and their trips take
-the link between their stop points where one is stated (`docs/NORDIC-PROFILE.md`).
+2 148 of them name a link between other stop points, and their trips take
+the link between their stop points where one is stated (`docs/NORDIC-PROFILE.md`;
+`netex validate` reports them since 0.10.0).
 
 Austria's deliveries state their geometry on the link itself, as before, and
 name the links of each pattern: a trip now runs over those, else over a link
@@ -326,8 +364,8 @@ steadily to the peak of 11.0 GiB at 548 s and the feed is written from
   for Germany.
 
 Germany converts in under 13 GiB, which a machine with 16 GiB holds.
-**Switzerland** needs more: 16.6 GiB on 8 threads, 16.9 GiB on 16, 13.6 GiB
-while the feed is written — its index of 2.6 million journeys, with their
+**Switzerland** needed more until 0.10.0 (see above): 16.6 GiB on 8
+threads, 16.9 GiB on 16, 13.6 GiB while the feed is written — its index of 2.6 million journeys, with their
 calls and availability conditions, is larger than Germany's of 4.8 million,
 and its timetable documents run to 717 MB, each inflated whole by the thread
 reading it. On fewer
@@ -341,7 +379,9 @@ holding the builders and the merged index at once, or read the delivery
 document by document into the feed: a German line document states its own
 stops, but stops and transfers are merged across documents, so the feed of
 one document is not a part of the feed of the delivery. That is a change of
-the index, not made here.
+the index, not made here. 0.10.0 took the copies of the workers' strings out
+of the merge and the calls' identifiers out of the index: Switzerland peaks
+at 7.5 GiB on sixteen threads (see above).
 
 ### Shapes
 

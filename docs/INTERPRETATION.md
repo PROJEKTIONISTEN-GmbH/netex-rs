@@ -1315,6 +1315,73 @@ its `GlobalID`, else its `StopPlaceCode` or `QuayCode`;
 `netex convert --stop-ids global` writes it, and `netex merge` pairs a stop of
 a later delivery with an earlier one by it, as by `GlobalID` and `SLOID`.
 
+## 41. A pattern naming the link of other stop points
+
+**Problem.** Finland's national delivery names, in 9 182 journey patterns,
+the service links each runs over (`linksInSequence`). 2 148 of them name a
+link leading from or to a stop point the pattern does not name:
+`OYM:JourneyPattern:237598_7010` in Porvoo names `OYM:ServiceLink:16`, from
+Helsinki into central Finland. The links are numbered per codespace in the
+shared data, and those patterns name another line's — a defect of the
+delivery. A shape drawn from such a link would be a line through other
+towns.
+
+**Standard.** A service link in a journey pattern (`ServiceLinkInJourneyPattern`)
+is the way between two of the pattern's stop points, in its order; the link
+leads from its `FromPointRef` to its `ToPointRef`.
+
+**netex-rs.** Up to 0.9.0 the model carried `linksInSequence` through untyped;
+netex2gtfs read it from the fragment for its shapes and took the link between
+the two stop points instead where a named link did not lead there, so no
+wrong shape was drawn, but nothing said why the shape was missing.
+
+**Proposal: adopt, and say so.** Effort **S**.
+
+**Built in 0.10.0.** The model types a pattern's links
+(`ServiceJourneyPattern::links_in_sequence`, `ServiceLinkInJourneyPattern`).
+Where service links are read, a link a pattern names that leads from or to a
+stop point it does not name is a finding about the pattern
+(`Concern::LinkBetweenOtherPoints`, naming the link); the link is the one the
+pattern's document defines, else the one of the document named first, as
+netex2gtfs resolves it. A link no document defines is no such finding.
+`netex validate` reports the class `link-between-other-points` with the
+journeys running each pattern: Finland 2 148, 13 893 journeys — the same
+2 148 an independent count of the delivery's XML gives. One more pattern
+names a single link that does not run from its first stop point to its last
+(`OYM:JourneyPattern:247277_131_v2`, from its 14th to its 74th of 75): both
+ends are its own, so it is not this defect.
+
+## 42. A journey's course in a projection of its own
+
+**Problem.** Bordeaux's delivery (TBM) states no service link. Each journey
+names its course instead, a link sequence projection
+(`LinkSequenceProjectionRef`), and the projections stand on their own among
+the members of a general frame of each line document, their line strings
+written as positions (`gml:pos`), latitude first, under `srsName="WGS84"`.
+No shape was written for any of its 39 749 trips.
+
+**Standard.** A journey may name or state the link sequence projection it
+follows (`LinkSequenceProjectionRef` or `LinkSequenceProjection` in the
+journey, NeTEx 1.x and 2.0): its course drawn on a map. `WGS84` is the legacy
+name of a system writing longitude first.
+
+**netex-rs.** Up to 0.9.0 the model carried the reference through untyped;
+netex2gtfs read projections only within a service link's `projections`.
+
+**Proposal: adopt.** Effort **S**.
+
+**Built in 0.10.0.** The model types the reference
+(`ServiceJourney::link_sequence_projection_ref`). With `--shapes`, netex2gtfs
+reads a link sequence projection standing among a frame's members, and a
+trip's shape is the projection its journey names, where it states a geometry,
+else the service links it runs over as before. Its axis order is read as
+that of a link: in the order that starts nearest the journey's first stop. A
+projection stating no geometry is the decision
+`projection-without-geometry`. TBM: every one of its 39 749 trips has a
+shape, 475 distinct, each point within 0.007 m of Bordeaux's own GTFS
+shapes and theirs of ours — the rounding to seven decimals. Read without
+shapes, the projections are among what the feed does not carry, as before.
+
 ## Summary
 
 | § | Question | Proposal | Effort | Built (0.3.0 unless named) |
@@ -1359,3 +1426,5 @@ a later delivery with an earlier one by it, as by `GlobalID` and `SLOID`.
 | 38 | A link or a point passed twice | adopt: each pass its own run time in order; the waits of a point its last visits' | S | ✓ (0.8.0) |
 | 39 | A journey naming only conditions not available | adopt: no day | S | ✓ (0.8.0) |
 | 40 | A stop known by the register's code | adopt: the code a global identifier where no `GlobalID` | S | ✓ (0.8.0) |
+| 41 | A pattern naming the link of other stop points | adopt, and say so: a finding about the pattern | S | ✓ (0.10.0) |
+| 42 | A journey's course in a projection of its own | adopt: the shape of the projection it names | S | ✓ (0.10.0) |

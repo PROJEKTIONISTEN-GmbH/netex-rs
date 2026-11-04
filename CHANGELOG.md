@@ -1,5 +1,60 @@
 # Changelog
 
+## 0.10.0 — unreleased
+
+Switzerland converts in 7.5 GiB on sixteen threads, not 16.9 GiB; a pattern
+naming the link of other stop points is a finding; Bordeaux's courses are
+its shapes; five managed objects type their codes.
+
+- **index**: merging the builders of the threads takes over the strings a
+  worker allocated rather than copying them — the copies were allocated anew
+  while the worker's strings, freed, stayed with the allocator of the thread
+  that had read them —, and a call's identifier is kept only where the
+  vehicle passes through, the one finding naming it: the Swiss delivery's
+  42 million call identifiers were nine in ten of its index's strings.
+  Converting Switzerland peaks at 7.4 to 7.5 GiB on one to sixteen threads,
+  before 12.4 GiB on one and 16.1 to 16.9 GiB on four to sixteen; the feeds
+  are the same bytes (`docs/PERFORMANCE.md`). `Index::string_count` counts
+  fewer strings where calls state identifiers.
+- **index**: a service link a journey pattern names in sequence that leads
+  from or to a stop point the pattern does not name is a finding about the
+  pattern, naming the link (`Concern::LinkBetweenOtherPoints`, code
+  `link-between-other-points`), where service links are read: the link the
+  pattern's document defines, else the one of the document named first. 2 148
+  patterns of Finland's delivery name such a link (`docs/INTERPRETATION.md`
+  § 41). Every service link read keeps its ends for it.
+- **model** (breaking: fields more on structs built by name):
+  `ServiceJourneyPattern::links_in_sequence` (`LinksInSequence`,
+  `ServiceLinkInJourneyPattern`), `ServiceJourney::link_sequence_projection_ref`,
+  and `key_list` and `private_codes` on `DataSource`, `ResponsibilitySet`,
+  `PassengerCapacity`, `AllowedLineDirection` and `HeadwayJourneyGroup`, all
+  carried through untyped before.
+
+### netex2gtfs 0.4.0
+
+Built on netex-rs 0.10.0.
+
+- **Shapes from a journey's own projection**: with shapes, a link sequence
+  projection standing among a frame's members is read, and a trip's shape is
+  the projection its journey names (`LinkSequenceProjectionRef`), where it
+  states a geometry, else the service links it runs over as before. Bordeaux's
+  delivery (TBM) states its courses so: all its 39 749 trips have a shape,
+  within 0.007 m of Bordeaux's own GTFS (`docs/INTERPRETATION.md` § 42).
+  The decision `projection-without-geometry` names a projection stating
+  none; `shape-in-unknown-system` now speaks of links and projections.
+  Read without shapes, the projections are among what the feed does not
+  carry, as before.
+- The links a pattern names are read from the typed model, the feeds the same.
+- Merging what the threads gathered takes over their strings rather than
+  copying them.
+
+### netex-cli 0.5.0
+
+Built on netex-rs 0.10.0 and netex2gtfs 0.4.0. `netex validate` reports the
+class `link-between-other-points`, with the journeys running each pattern,
+refusable as the others are; the report's schema lists it (layout version 1,
+unchanged).
+
 ## 0.9.0 — 2026-11-02
 
 What converting the national deliveries to GTFS showed, taken up: a time zone
