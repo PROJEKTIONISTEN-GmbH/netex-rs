@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" xmlns:gml="http://www.opengis.net/gml/3.2" version="1.10:FR-NETEX-2.3">
+  <PublicationTimestamp>2026-10-31T03:00:00</PublicationTimestamp>
+  <ParticipantRef>RIVE</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="RV:CompositeFrame:R:LOC" version="any">
+      <TypeOfFrameRef ref="FR:TypeOfFrame:NETEX_LIGNE:"/>
+      <frames>
+        <GeneralFrame id="RV:GeneralFrame:structure:LOC" version="any">
+          <TypeOfFrameRef ref="FR:TypeOfFrame:NETEX_LIGNE_STRUCTURE:"/>
+          <members>
+            <Operator id="RV:Operator:rive:LOC" version="any">
+              <Name>Rive</Name>
+              <ContactDetails><Url>https://rive.example/</Url></ContactDetails>
+            </Operator>
+            <Line id="RV:Line:R:LOC" version="any">
+              <Name>Quai – Lac</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>R</PublicCode>
+              <OperatorRef ref="RV:Operator:rive:LOC" version="any"/>
+            </Line>
+            <ScheduledStopPoint id="RV:ScheduledStopPoint:quai:LOC" version="any">
+              <Name>Quai</Name>
+              <Location><Longitude>-0.5700</Longitude><Latitude>44.8400</Latitude></Location>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="RV:ScheduledStopPoint:pont:LOC" version="any">
+              <Name>Pont</Name>
+              <Location><Longitude>-0.5600</Longitude><Latitude>44.8450</Latitude></Location>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="RV:ScheduledStopPoint:lac:LOC" version="any">
+              <Name>Lac</Name>
+              <Location><Longitude>-0.5500</Longitude><Latitude>44.8500</Latitude></Location>
+            </ScheduledStopPoint>
+            <ServiceJourneyPattern id="RV:ServiceJourneyPattern:R:LOC" version="any">
+              <RouteView><LineRef ref="RV:Line:R:LOC" version="any"/></RouteView>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="RV:StopPointInJourneyPattern:R-1:LOC" version="any" order="1">
+                  <ScheduledStopPointRef ref="RV:ScheduledStopPoint:quai:LOC" version="any"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="RV:StopPointInJourneyPattern:R-2:LOC" version="any" order="2">
+                  <ScheduledStopPointRef ref="RV:ScheduledStopPoint:pont:LOC" version="any"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="RV:StopPointInJourneyPattern:R-3:LOC" version="any" order="3">
+                  <ScheduledStopPointRef ref="RV:ScheduledStopPoint:lac:LOC" version="any"/>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+            <DayType id="RV:DayType:semaine:LOC" version="any"/>
+            <UicOperatingPeriod id="RV:UicOperatingPeriod:novembre:LOC" version="any">
+              <FromDate>2026-11-02T00:00:00</FromDate>
+              <ToDate>2026-11-08T00:00:00</ToDate>
+              <ValidDayBits>1111100</ValidDayBits>
+            </UicOperatingPeriod>
+            <DayTypeAssignment id="RV:DayTypeAssignment:semaine:LOC" version="any" order="1">
+              <OperatingPeriodRef ref="RV:UicOperatingPeriod:novembre:LOC" version="any"/>
+              <DayTypeRef ref="RV:DayType:semaine:LOC" version="any"/>
+            </DayTypeAssignment>
+          </members>
+        </GeneralFrame>
+        <GeneralFrame id="RV:GeneralFrame:horaire:LOC" version="any">
+          <TypeOfFrameRef ref="FR:TypeOfFrame:NETEX_HORAIRE:"/>
+          <members>
+            <ServiceJourney id="RV:ServiceJourney:0700:LOC" version="any">
+              <LinkSequenceProjectionRef ref="RV:LinkSequenceProjection:rive:LOC" version="any"/>
+              <dayTypes><DayTypeRef ref="RV:DayType:semaine:LOC" version="any"/></dayTypes>
+              <ServiceJourneyPatternRef ref="RV:ServiceJourneyPattern:R:LOC" version="any"/>
+              <LineRef ref="RV:Line:R:LOC" version="any"/>
+              <passingTimes>
+                <TimetabledPassingTime version="any"><DepartureTime>07:00:00</DepartureTime></TimetabledPassingTime>
+                <TimetabledPassingTime version="any"><ArrivalTime>07:05:00</ArrivalTime><DepartureTime>07:05:00</DepartureTime></TimetabledPassingTime>
+                <TimetabledPassingTime version="any"><ArrivalTime>07:10:00</ArrivalTime></TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="RV:ServiceJourney:0800:LOC" version="any">
+              <LinkSequenceProjectionRef ref="RV:LinkSequenceProjection:rive:LOC" version="any"/>
+              <dayTypes><DayTypeRef ref="RV:DayType:semaine:LOC" version="any"/></dayTypes>
+              <ServiceJourneyPatternRef ref="RV:ServiceJourneyPattern:R:LOC" version="any"/>
+              <LineRef ref="RV:Line:R:LOC" version="any"/>
+              <passingTimes>
+                <TimetabledPassingTime version="any"><DepartureTime>08:00:00</DepartureTime></TimetabledPassingTime>
+                <TimetabledPassingTime version="any"><ArrivalTime>08:05:00</ArrivalTime><DepartureTime>08:05:00</DepartureTime></TimetabledPassingTime>
+                <TimetabledPassingTime version="any"><ArrivalTime>08:10:00</ArrivalTime></TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="RV:ServiceJourney:0900:LOC" version="any">
+              <LinkSequenceProjectionRef ref="RV:LinkSequenceProjection:detour:LOC" version="any"/>
+              <dayTypes><DayTypeRef ref="RV:DayType:semaine:LOC" version="any"/></dayTypes>
+              <ServiceJourneyPatternRef ref="RV:ServiceJourneyPattern:R:LOC" version="any"/>
+              <LineRef ref="RV:Line:R:LOC" version="any"/>
+              <passingTimes>
+                <TimetabledPassingTime version="any"><DepartureTime>09:00:00</DepartureTime></TimetabledPassingTime>
+                <TimetabledPassingTime version="any"><ArrivalTime>09:06:00</ArrivalTime><DepartureTime>09:06:00</DepartureTime></TimetabledPassingTime>
+                <TimetabledPassingTime version="any"><ArrivalTime>09:12:00</ArrivalTime></TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="RV:ServiceJourney:1000:LOC" version="any">
+              <LinkSequenceProjectionRef ref="RV:LinkSequenceProjection:sans-trace:LOC" version="any"/>
+              <dayTypes><DayTypeRef ref="RV:DayType:semaine:LOC" version="any"/></dayTypes>
+              <ServiceJourneyPatternRef ref="RV:ServiceJourneyPattern:R:LOC" version="any"/>
+              <LineRef ref="RV:Line:R:LOC" version="any"/>
+              <passingTimes>
+                <TimetabledPassingTime version="any"><DepartureTime>10:00:00</DepartureTime></TimetabledPassingTime>
+                <TimetabledPassingTime version="any"><ArrivalTime>10:05:00</ArrivalTime><DepartureTime>10:05:00</DepartureTime></TimetabledPassingTime>
+                <TimetabledPassingTime version="any"><ArrivalTime>10:10:00</ArrivalTime></TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="RV:ServiceJourney:1100:LOC" version="any">
+              <dayTypes><DayTypeRef ref="RV:DayType:semaine:LOC" version="any"/></dayTypes>
+              <ServiceJourneyPatternRef ref="RV:ServiceJourneyPattern:R:LOC" version="any"/>
+              <LineRef ref="RV:Line:R:LOC" version="any"/>
+              <passingTimes>
+                <TimetabledPassingTime version="any"><DepartureTime>11:00:00</DepartureTime></TimetabledPassingTime>
+                <TimetabledPassingTime version="any"><ArrivalTime>11:05:00</ArrivalTime><DepartureTime>11:05:00</DepartureTime></TimetabledPassingTime>
+                <TimetabledPassingTime version="any"><ArrivalTime>11:10:00</ArrivalTime></TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </members>
+        </GeneralFrame>
+        <GeneralFrame id="RV:GeneralFrame:traces:LOC" version="any">
+          <TypeOfFrameRef ref="FR:TypeOfFrame:NETEX_LIGNE_STRUCTURE:"/>
+          <members>
+            <LinkSequenceProjection id="RV:LinkSequenceProjection:rive:LOC" version="any">
+              <gml:LineString srsName="WGS84" gml:id="LS-rive">
+                <gml:pos>44.8400 -0.5700</gml:pos>
+                <gml:pos>44.8420 -0.5660</gml:pos>
+                <gml:pos>44.8450 -0.5600</gml:pos>
+                <gml:pos>44.8500 -0.5500</gml:pos>
+              </gml:LineString>
+            </LinkSequenceProjection>
+            <LinkSequenceProjection id="RV:LinkSequenceProjection:detour:LOC" version="any">
+              <gml:LineString srsName="WGS84" gml:id="LS-detour">
+                <gml:pos>44.8400 -0.5700</gml:pos>
+                <gml:pos>44.8380 -0.5600</gml:pos>
+                <gml:pos>44.8450 -0.5600</gml:pos>
+                <gml:pos>44.8500 -0.5500</gml:pos>
+              </gml:LineString>
+            </LinkSequenceProjection>
+            <LinkSequenceProjection id="RV:LinkSequenceProjection:sans-trace:LOC" version="any"/>
+          </members>
+        </GeneralFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

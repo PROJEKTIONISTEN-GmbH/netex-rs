@@ -1264,6 +1264,101 @@ fn shapes_follow_the_links_a_pattern_names_with_their_geometry_in_a_projection()
     assert_eq!(decision("shape-in-unknown-system"), None);
 }
 
+/// The elements of the report's "not carried", each with its count.
+fn not_carried(report: &Report) -> Vec<String> {
+    report
+        .not_carried
+        .iter()
+        .map(|entry| format!("{} {}", entry.element, entry.count))
+        .collect()
+}
+
+#[test]
+fn a_shape_is_the_projection_its_journey_names_among_a_general_frames_members() {
+    // Stop points alone, no stop place: no country to take a time zone from.
+    let paris = || Some("Europe/Paris".to_owned());
+    let (feed, report) = convert_to_directory(
+        &fixture("rive"),
+        &Options {
+            shapes: true,
+            time_zone: paris(),
+            ..Options::default()
+        },
+    );
+    // Two journeys name one projection and share its shape; the journey
+    // naming a projection without a geometry, and the one naming none, have
+    // no service link to follow either.
+    assert_eq!(
+        table(feed.path(), "trips.txt", &["trip_id", "shape_id"]),
+        [
+            "RV:ServiceJourney:0700:LOC|s0",
+            "RV:ServiceJourney:0800:LOC|s0",
+            "RV:ServiceJourney:0900:LOC|s1",
+            "RV:ServiceJourney:1000:LOC|",
+            "RV:ServiceJourney:1100:LOC|",
+        ]
+    );
+    // Written latitude first under a name that says longitude first: read
+    // in the order that starts where the journey does.
+    assert_eq!(
+        table(
+            feed.path(),
+            "shapes.txt",
+            &[
+                "shape_id",
+                "shape_pt_lat",
+                "shape_pt_lon",
+                "shape_pt_sequence"
+            ]
+        ),
+        [
+            "s0|44.8400000|-0.5700000|0",
+            "s0|44.8420000|-0.5660000|1",
+            "s0|44.8450000|-0.5600000|2",
+            "s0|44.8500000|-0.5500000|3",
+            "s1|44.8400000|-0.5700000|0",
+            "s1|44.8380000|-0.5600000|1",
+            "s1|44.8450000|-0.5600000|2",
+            "s1|44.8500000|-0.5500000|3",
+        ]
+    );
+    let decision = |code: &str| {
+        report
+            .decisions
+            .iter()
+            .find(|decision| decision.code == code)
+            .map(|decision| (decision.count, decision.example.clone().unwrap_or_default()))
+    };
+    assert_eq!(
+        decision("projection-without-geometry"),
+        Some((1, "RV:LinkSequenceProjection:sans-trace:LOC".to_owned()))
+    );
+    assert_eq!(
+        decision("shape-incomplete"),
+        Some((2, "RV:ServiceJourney:1000:LOC".to_owned()))
+    );
+    assert!(
+        !not_carried(&report)
+            .iter()
+            .any(|e| e.starts_with("LinkSequenceProjection")),
+        "the projections are carried: {:?}",
+        not_carried(&report)
+    );
+    // Without shapes, the projections are what the feed does not carry.
+    let (_, report) = convert_to_directory(
+        &fixture("rive"),
+        &Options {
+            time_zone: paris(),
+            ..Options::default()
+        },
+    );
+    assert!(
+        not_carried(&report).contains(&"LinkSequenceProjection 3".to_owned()),
+        "{:?}",
+        not_carried(&report)
+    );
+}
+
 #[test]
 fn shapes_asked_of_a_delivery_stating_no_geometry_are_each_said_to_be_missing() {
     let (feed, report) = convert_to_directory(
