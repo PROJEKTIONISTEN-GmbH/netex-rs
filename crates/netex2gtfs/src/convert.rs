@@ -2034,6 +2034,21 @@ mod tests {
         assert_eq!(ids.unique("b"), "b");
     }
 
+    #[test]
+    fn an_identifier_numbered_already_is_not_handed_out_twice() {
+        let mut ids = UniqueIds::default();
+        let handed_out: Vec<String> = ["a#2", "a", "a"].iter().map(|id| ids.unique(id)).collect();
+        let distinct: std::collections::BTreeSet<&String> = handed_out.iter().collect();
+        assert_eq!(distinct.len(), handed_out.len(), "{handed_out:?}");
+    }
+
+    #[test]
+    fn a_trolleybus_is_a_trolleybus() {
+        assert_eq!(route_type(Some("trolleyBus")), Some("11"));
+        assert_eq!(route_type(Some("bus")), Some("3"));
+        assert_eq!(route_type(Some("snowAndIce")), None);
+    }
+
     /// Every file of the feed `delivery` converts to, by name, with the report.
     fn feed(delivery: &Delivery) -> (BTreeMap<String, Vec<u8>>, Report) {
         let directory = tempfile::tempdir().expect("a directory");

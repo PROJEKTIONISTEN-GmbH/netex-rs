@@ -147,6 +147,10 @@ mod tests {
             ("Bolzano", (46.4983, 11.3548), "IT"),
             ("Vatican City", (41.9029, 12.4534), "VA"),
             ("Corte", (42.3061, 9.1497), "FR"),
+            ("Selfoss", (63.9331, -20.9971), "IS"),
+            ("Egilsstaðir", (65.2653, -14.3948), "IS"),
+            ("Strovolos", (35.1450, 33.3300), "CY"),
+            ("Kakopetria", (34.9879, 32.9020), "CY"),
         ] {
             assert_eq!(
                 country_of(position).map(|country| country.code),
@@ -168,18 +172,24 @@ mod tests {
     #[test]
     fn the_table_holds_each_country_once_with_its_zone() {
         let countries = countries();
-        assert_eq!(countries.len(), 34);
+        // The member states of the European Union and of EFTA, the United
+        // Kingdom and the small states among them.
+        assert_eq!(countries.len(), 36);
         assert!(countries.windows(2).all(|pair| pair[0].code < pair[1].code));
         for country in countries {
             assert!(
-                country.zone.starts_with("Europe/"),
+                ["Europe/", "Atlantic/", "Asia/"]
+                    .iter()
+                    .any(|area| country.zone.starts_with(area)),
                 "{}: {}",
                 country.code,
                 country.zone
             );
             assert!(!country.rings.is_empty(), "{}", country.code);
         }
-        let belgium = countries.iter().find(|c| c.code == "BE").expect("Belgium");
-        assert_eq!(belgium.zone, "Europe/Brussels");
+        let zone = |code: &str| countries.iter().find(|c| c.code == code).map(|c| c.zone);
+        assert_eq!(zone("BE"), Some("Europe/Brussels"));
+        assert_eq!(zone("IS"), Some("Atlantic/Reykjavik"));
+        assert_eq!(zone("CY"), Some("Asia/Nicosia"));
     }
 }

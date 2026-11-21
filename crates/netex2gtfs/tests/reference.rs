@@ -101,11 +101,11 @@ fn a_feed_is_alike_to_itself_and_each_change_has_its_cause() {
     );
     let tuesday = &same["20261013"];
     // Three journeys, one of them a template with a headway group in the
-    // morning and one in the evening: each group counts once, its runs not
-    // being stated.
+    // morning and one in the evening: each run counts, four in the morning
+    // and three in the evening.
     assert_eq!(
         (tuesday.ours, tuesday.reference, tuesday.matched),
-        (4, 4, 4)
+        (9, 9, 9)
     );
     assert!(tuesday.only_ours.is_empty() && tuesday.only_reference.is_empty());
     assert_eq!(same["20261017"].ours, 0, "a Saturday");
@@ -144,7 +144,7 @@ fn a_feed_is_alike_to_itself_and_each_change_has_its_cause() {
     let tuesday = &compared["20261013"];
     assert_eq!(
         (tuesday.ours, tuesday.reference, tuesday.matched),
-        (4, 2, 0)
+        (9, 2, 0)
     );
     assert_eq!(
         tuesday
@@ -155,12 +155,12 @@ fn a_feed_is_alike_to_itself_and_each_change_has_its_cause() {
         [
             (Cause::TimesWithinAMinute, 1),
             (Cause::CallsLeftOut, 1),
-            (Cause::OtherDays, 2)
+            (Cause::OtherDays, 7)
         ]
     );
     let saturday = &compared["20261017"];
-    assert_eq!((saturday.ours, saturday.reference), (0, 2));
-    assert_eq!(saturday.only_reference.get(&Cause::OtherDays), Some(&2));
+    assert_eq!((saturday.ours, saturday.reference), (0, 7));
+    assert_eq!(saturday.only_reference.get(&Cause::OtherDays), Some(&7));
     // Weide is served only by the call the reference leaves out.
     assert_eq!(tuesday.stations, (4, 3, 3));
 }
@@ -191,7 +191,7 @@ fn a_place_named_otherwise_in_the_reference_is_still_the_same_place() {
     );
     let tuesday = &compared["20261013"];
     // The inbound trip does not call at Bergdorf; the night trip and the
-    // two headway groups of the template do.
+    // seven runs of the template do.
     assert_eq!(tuesday.matched, 1);
     assert_eq!(
         tuesday
@@ -199,7 +199,7 @@ fn a_place_named_otherwise_in_the_reference_is_still_the_same_place() {
             .iter()
             .map(|(&c, &n)| (c, n))
             .collect::<Vec<_>>(),
-        [(Cause::StationsNamedOtherwise, 3)]
+        [(Cause::StationsNamedOtherwise, 8)]
     );
     assert_eq!(
         tuesday
@@ -207,8 +207,34 @@ fn a_place_named_otherwise_in_the_reference_is_still_the_same_place() {
             .iter()
             .map(|(&c, &n)| (c, n))
             .collect::<Vec<_>>(),
-        [(Cause::StationsNamedOtherwise, 3)]
+        [(Cause::StationsNamedOtherwise, 8)]
     );
+}
+
+#[test]
+fn a_frequency_that_ends_at_its_last_departure_is_a_run_short() {
+    // A frequency runs up to, not including, its end: one ending at 07:00
+    // leaves at 06:00, 06:20 and 06:40, not at 07:00.
+    let ours = seeweg_feed();
+    let reference = tempfile::tempdir().expect("a directory");
+    for entry in std::fs::read_dir(ours.path()).expect("the feed") {
+        let entry = entry.expect("a file");
+        std::fs::copy(entry.path(), reference.path().join(entry.file_name())).expect("copied");
+    }
+    edit(reference.path(), "frequencies.txt", |text| {
+        text.replace(",06:00:00,07:00:01,", ",06:00:00,07:00:00,")
+    });
+    let days = ["20261013"];
+    let compared = compare::compare(
+        &Feed::read(ours.path(), &days),
+        &Feed::read(reference.path(), &days),
+    );
+    let tuesday = &compared["20261013"];
+    assert_eq!(
+        (tuesday.ours, tuesday.reference, tuesday.matched),
+        (9, 8, 8)
+    );
+    assert_eq!(tuesday.only_ours.values().sum::<u64>(), 1);
 }
 
 fn environment(name: &str) -> Option<PathBuf> {
