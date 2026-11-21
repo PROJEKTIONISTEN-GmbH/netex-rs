@@ -5,9 +5,14 @@
 //! the crate gives a journey the same days. A day is a number of days since
 //! 1970-01-01 ([`Date::days_since_epoch`](crate::model::Date::days_since_epoch)).
 //!
+//! - A calendar holds the days of the years 1 to 9999 ([`FIRST_DAY`],
+//!   [`LAST_DAY`]); a delivery naming days before or after names none of
+//!   them.
 //! - An operating period gives the days its bits name, counted from its first
 //!   day, or every day from its first to its last where it states no bits
-//!   ([`period_days`]). Its first and last day are the dates of its bounds;
+//!   ([`period_days`]), as far as they are asked for: a period reaching the
+//!   year 9999 gives the days of the span a reader holds, not millions of
+//!   others. Its first and last day are the dates of its bounds;
 //!   a bound written as an instant with a zone from noon on — the midnight
 //!   beginning a local day, written in UTC as the Belgian deliveries write
 //!   it — names the next day ([`bound_day`]).
@@ -32,7 +37,18 @@
 //!   lists each day it runs on — runs on its assignments' days alone, its
 //!   properties describing them.
 
+use std::ops::RangeInclusive;
+
 use crate::model::{DateTime, Order, PropertyOfDay, ValidBetween};
+
+/// The first day a calendar holds, in days since 1970-01-01: 1 January of the
+/// year 1.
+pub const FIRST_DAY: i64 = -719_162;
+
+/// The last day a calendar holds, in days since 1970-01-01: 31 December 9999,
+/// the last day of a four-digit year, which deliveries write for "until
+/// further notice".
+pub const LAST_DAY: i64 = 2_932_896;
 
 /// The days a version of an entity is valid on, either end open where it
 /// states none.
@@ -151,17 +167,41 @@ pub enum PeriodIssue {
     },
 }
 
-/// The days of an operating period from `from` to `to`, with the bits of a
-/// UIC operating period where it states them: the days its bits name,
-/// counted from its first day, else every day from its first to its last — the
-/// first alone where it states no last.
-pub fn period_days(from: Option<i64>, to: Option<i64>, bits: Option<&str>) -> PeriodDays {
+/// The days of an operating period from `from` to `to` among the days
+/// `within`, with the bits of a UIC operating period where it states them:
+/// the days its bits name, counted from its first day, else every day from
+/// its first to its last — the first alone where it states no last.
+///
+/// Only the days `within` are given, so that what a period costs is the days
+/// asked for: one written to the year 9999 gives a reader holding a year of
+/// days that year's, not the 2.9 million to its end.
+pub fn period_days(
+    from: Option<i64>,
+    to: Option<i64>,
+    bits: Option<&str>,
+    within: RangeInclusive<i64>,
+) -> PeriodDays {
+    let mut days = Vec::new();
+    let issue = period_runs(from, to, bits, within, |first, last| {
+        days.extend(first..=last);
+    });
+    PeriodDays { days, issue }
+}
+
+/// The days of [`period_days`], as runs: `run` is called with the first and
+/// last day of each run of days one after the other, ascending; and what was
+/// off about the period.
+pub(crate) fn period_runs(
+    from: Option<i64>,
+    to: Option<i64>,
+    bits: Option<&str>,
+    within: RangeInclusive<i64>,
+    mut run: impl FnMut(i64, i64),
+) -> Option<PeriodIssue> {
     let Some(from) = from else {
-        return PeriodDays {
-            days: Vec::new(),
-            issue: Some(PeriodIssue::NoFirstDay),
-        };
+        return Some(PeriodIssue::NoFirstDay);
     };
+    let (lowest, highest) = within.into_inner();
     match bits {
         Some(bits) => {
             let issue = to.and_then(|to| {
@@ -171,18 +211,38 @@ pub fn period_days(from: Option<i64>, to: Option<i64>, bits: Option<&str>) -> Pe
                     days,
                 })
             });
-            let days = bits
-                .bytes()
-                .enumerate()
-                .filter(|(_, bit)| *bit == b'1')
-                .map(|(offset, _)| from + offset as i64)
-                .collect();
-            PeriodDays { days, issue }
+            let skipped = usize::try_from(lowest - from).unwrap_or(0);
+            let mut current: Option<(i64, i64)> = None;
+            for (offset, bit) in bits.bytes().enumerate().skip(skipped) {
+                let day = from + offset as i64;
+                if day > highest {
+                    break;
+                }
+                if bit != b'1' {
+                    continue;
+                }
+                current = match current {
+                    Some((first, last)) if last + 1 == day => Some((first, day)),
+                    Some((first, last)) => {
+                        run(first, last);
+                        Some((day, day))
+                    }
+                    None => Some((day, day)),
+                };
+            }
+            if let Some((first, last)) = current {
+                run(first, last);
+            }
+            issue
         }
-        None => PeriodDays {
-            days: (from..=to.unwrap_or(from).max(from)).collect(),
-            issue: None,
-        },
+        None => {
+            let last = to.unwrap_or(from).max(from).min(highest);
+            let first = from.max(lowest);
+            if first <= last {
+                run(first, last);
+            }
+            None
+        }
     }
 }
 
@@ -348,29 +408,59 @@ mod tests {
 
     #[test]
     fn a_period_gives_the_days_of_its_bits_or_of_its_span() {
+        let all = FIRST_DAY..=LAST_DAY;
         assert_eq!(
-            period_days(Some(10), Some(14), Some("10100")).days,
+            period_days(Some(10), Some(14), Some("10100"), all.clone()).days,
             [10, 12]
         );
-        assert_eq!(period_days(Some(10), Some(12), None).days, [10, 11, 12]);
         assert_eq!(
-            period_days(Some(10), None, None).days,
+            period_days(Some(10), Some(12), None, all.clone()).days,
+            [10, 11, 12]
+        );
+        assert_eq!(
+            period_days(Some(10), None, None, all.clone()).days,
             [10],
             "the first day alone without a last"
         );
-        let short = period_days(Some(10), Some(14), Some("11"));
+        let short = period_days(Some(10), Some(14), Some("11"), all.clone());
         assert_eq!(short.days, [10, 11]);
         assert_eq!(
             short.issue,
             Some(PeriodIssue::BitsOtherThanDays { bits: 2, days: 5 })
         );
         assert_eq!(
-            period_days(None, Some(14), Some("1")),
+            period_days(None, Some(14), Some("1"), all),
             PeriodDays {
                 days: Vec::new(),
                 issue: Some(PeriodIssue::NoFirstDay)
             }
         );
+    }
+
+    #[test]
+    fn a_period_gives_its_days_within_the_span_asked_for_in_runs() {
+        assert_eq!(
+            period_days(Some(10), Some(i64::MAX / 2), None, 12..=13).days,
+            [12, 13]
+        );
+        assert_eq!(
+            period_days(Some(10), Some(19), Some("1111011011"), 11..=17).days,
+            [11, 12, 13, 15, 16]
+        );
+        assert!(period_days(Some(10), Some(14), None, 20..=30)
+            .days
+            .is_empty());
+        let mut runs = Vec::new();
+        period_runs(Some(10), None, Some("0110111"), 0..=100, |first, last| {
+            runs.push((first, last));
+        });
+        assert_eq!(runs, [(11, 12), (14, 16)]);
+    }
+
+    #[test]
+    fn a_calendar_holds_the_years_1_to_9999() {
+        assert_eq!(Date::from("0001-01-01").days_since_epoch(), Some(FIRST_DAY));
+        assert_eq!(Date::from("9999-12-31").days_since_epoch(), Some(LAST_DAY));
     }
 
     fn bound(text: &str) -> Option<String> {

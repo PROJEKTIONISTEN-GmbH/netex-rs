@@ -145,6 +145,13 @@ pub enum Concern {
     /// finding of this kind. Read only where service links are read. Names
     /// the link.
     LinkBetweenOtherPoints,
+    /// An operating period, availability condition or operating day, a day
+    /// type's validity or the date of a day type assignment naming days
+    /// before the year 1 or after the year 9999 ([`crate::calendar::LAST_DAY`]),
+    /// which no calendar holds: the days within those years are read, the
+    /// others are none. A date of an assignment is a finding about the day
+    /// type it assigns.
+    DaysOutsideCalendar,
 }
 
 impl Concern {
@@ -175,6 +182,7 @@ impl Concern {
         Concern::LinkWithoutRunTime,
         Concern::PropertyOfDayWithoutDays,
         Concern::LinkBetweenOtherPoints,
+        Concern::DaysOutsideCalendar,
     ];
 
     /// The concern's name in reports and on command lines, in lower case with
@@ -206,6 +214,7 @@ impl Concern {
             Concern::LinkWithoutRunTime => "link-without-run-time",
             Concern::PropertyOfDayWithoutDays => "property-of-day-without-days",
             Concern::LinkBetweenOtherPoints => "link-between-other-points",
+            Concern::DaysOutsideCalendar => "days-outside-calendar",
         }
     }
 
@@ -268,6 +277,9 @@ impl Concern {
             }
             Concern::LinkBetweenOtherPoints => {
                 "service link a pattern names from or to a stop point not its own"
+            }
+            Concern::DaysOutsideCalendar => {
+                "days before the year 1 or after the year 9999, which no calendar holds"
             }
         }
     }

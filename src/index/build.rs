@@ -3,6 +3,7 @@
 
 use std::collections::hash_map::Entry;
 use std::hash::{Hash, Hasher};
+use std::ops::RangeInclusive;
 
 use rustc_hash::{FxHashMap, FxHasher};
 
@@ -12,7 +13,7 @@ use super::scope::Table;
 use super::strings::{Strings, Sym};
 use super::{CallUse, Index, PassingTime, StopId, StopKind, Unresolved};
 use crate::calendar::{
-    assignment_rank, bound_day, names_no_day, period_days, PeriodDays, Properties, Span,
+    assignment_rank, bound_day, names_no_day, period_runs, PeriodIssue, Properties, Span,
 };
 use crate::geometry::first_position;
 use crate::model::{
@@ -445,9 +446,14 @@ pub(crate) struct PeriodRecord {
 }
 
 impl PeriodRecord {
-    /// The days of the period, and what was off about it.
-    pub(crate) fn days(&self) -> PeriodDays {
-        period_days(self.from, self.to, self.bits.as_deref())
+    /// The days of the period `within` a span, as runs of days one after the
+    /// other ([`period_runs`]), and what was off about it.
+    pub(crate) fn runs(
+        &self,
+        within: RangeInclusive<i64>,
+        run: impl FnMut(i64, i64),
+    ) -> Option<PeriodIssue> {
+        period_runs(self.from, self.to, self.bits.as_deref(), within, run)
     }
 
     /// The first and last day the period spans, as far as its bits go where

@@ -28,7 +28,9 @@ use super::{
     CallUse, Headway, Index, IndexedJourney, IndexedPattern, Interchange, JourneyId, LineId,
     PassingTime, StopId, StopKind, StopPointId, Transfer, Unresolved,
 };
-use crate::calendar::{governed, DaysOfWeek, Governed, PeriodDays, PeriodIssue, Properties, Span};
+use crate::calendar::{
+    governed, DaysOfWeek, Governed, PeriodIssue, Properties, Span, FIRST_DAY, LAST_DAY,
+};
 use crate::geometry::{reading_order, AxisOrder};
 
 /// Builds the index; see [`IndexBuilder::finish`].
@@ -310,48 +312,6 @@ enum AssignmentDays {
     Period(u32),
 }
 
-/// The days of the calendar's span from `from` to `to`, both included.
-fn span_bits(first_day: i64, span: usize, from: i64, to: i64) -> DayBits {
-    let mut bits = DayBits::new(span);
-    let last = first_day + span as i64 - 1;
-    for day in from.max(first_day)..=to.min(last) {
-        bits.set((day - first_day) as usize, true);
-    }
-    bits
-}
-
-/// The days of the calendar's span falling on given days of the week, made
-/// once for each set of days of the week asked for.
-struct WeekBits {
-    first_day: i64,
-    span: usize,
-    made: FxHashMap<DaysOfWeek, DayBits>,
-}
-
-impl WeekBits {
-    fn new(first_day: i64, span: usize) -> Self {
-        WeekBits {
-            first_day,
-            span,
-            made: FxHashMap::default(),
-        }
-    }
-
-    /// The days of the span on `days`.
-    fn of(&mut self, days: DaysOfWeek) -> &DayBits {
-        let (first_day, span) = (self.first_day, self.span);
-        self.made.entry(days).or_insert_with(|| {
-            let mut bits = DayBits::new(span);
-            for offset in 0..span {
-                if days.contains(first_day + offset as i64) {
-                    bits.set(offset, true);
-                }
-            }
-            bits
-        })
-    }
-}
-
 /// The calendar of the dataset: one bit set per day type definition and per
 /// availability condition, by position, over the dataset's span of days, and
 /// the day the span starts.
@@ -360,6 +320,40 @@ struct Calendar {
     span: usize,
     day_types: Vec<DayBits>,
     conditions: Vec<DayBits>,
+}
+
+impl Calendar {
+    /// The offset of `day` from the first day, where the span holds the day.
+    fn offset(&self, day: i64) -> Option<usize> {
+        usize::try_from(day - self.first_day)
+            .ok()
+            .filter(|&offset| offset < self.span)
+    }
+
+    /// Sets the days of the span from `from` to `to`, both included.
+    fn set_days(&self, bits: &mut DayBits, from: i64, to: i64) {
+        let last = self.first_day + self.span as i64 - 1;
+        let (from, to) = (from.max(self.first_day), to.min(last));
+        if from <= to {
+            bits.set_range(
+                (from - self.first_day) as usize,
+                (to - self.first_day) as usize,
+            );
+        }
+    }
+
+    /// The days of the span from `from` to `to`, both included.
+    fn days_between(&self, from: i64, to: i64) -> DayBits {
+        let mut bits = DayBits::none();
+        self.set_days(&mut bits, from, to);
+        bits
+    }
+
+    /// Keeps the days of `bits` that fall on `days` of the week.
+    fn keep_days_of_week(&self, bits: &mut DayBits, days: DaysOfWeek) {
+        let first_day = self.first_day;
+        bits.retain(|offset| days.contains(first_day + offset as i64));
+    }
 }
 
 /// The calendars the journeys run on, found by what gives them — day types,
@@ -1213,9 +1207,14 @@ impl Finish {
         let by_properties = self.decided_by_properties(&assignments);
         let named_conditions = self.conditions_named_by_journeys(scopes);
         let (first_day, span) = self.span_of_days(&assignments, &by_properties, &named_conditions);
-        let periods = bits_of_periods(&self.b.periods, (first_day, span), &mut self.findings);
-        let conditions = bits_of_periods(&self.b.conditions, (first_day, span), &mut self.findings);
-        let mut week = WeekBits::new(first_day, span);
+        let mut calendar = Calendar {
+            first_day,
+            span,
+            day_types: Vec::new(),
+            conditions: Vec::new(),
+        };
+        let periods = bits_of_periods(&self.b.periods, &calendar, &mut self.findings);
+        calendar.conditions = bits_of_periods(&self.b.conditions, &calendar, &mut self.findings);
         let mut bits: Vec<DayBits> = self
             .b
             .day_types
@@ -1224,11 +1223,11 @@ impl Finish {
             .map(
                 |(record, &decided)| match (decided, record.properties, record.validity) {
                     (true, Properties::DaysOfWeek(days), Some((from, to))) => {
-                        let mut own = week.of(days).clone();
-                        own.intersect(&span_bits(first_day, span, from, to));
+                        let mut own = calendar.days_between(from, to);
+                        calendar.keep_days_of_week(&mut own, days);
                         own
                     }
-                    _ => DayBits::new(span),
+                    _ => DayBits::none(),
                 },
             )
             .collect();
@@ -1236,7 +1235,7 @@ impl Finish {
             let day_type = assignment.day_type as usize;
             let period = match assignment.days {
                 AssignmentDays::Day(day) => {
-                    if let Ok(offset) = usize::try_from(day - first_day) {
+                    if let Some(offset) = calendar.offset(day) {
                         bits[day_type].set(offset, assignment.available);
                     }
                     continue;
@@ -1254,7 +1253,7 @@ impl Finish {
             let days = match named {
                 Some(named) => {
                     let mut days = periods[period].clone();
-                    days.intersect(week.of(named));
+                    calendar.keep_days_of_week(&mut days, named);
                     Cow::Owned(days)
                 }
                 None => Cow::Borrowed(&periods[period]),
@@ -1274,28 +1273,38 @@ impl Finish {
         );
         for position in 0..self.b.operating_days.len() {
             let record = &self.b.operating_days[position];
+            let (id, origin, day) = (record.key.id, record.origin, record.day);
             let first = first_of(&scopes.operating_days.table, record.key);
-            if first != position && record.day != self.b.operating_days[first].day {
-                let (id, origin) = (record.key.id, record.origin);
+            if !held(day) {
+                self.found(
+                    Concern::DaysOutsideCalendar,
+                    "OperatingDay",
+                    (origin, id),
+                    None,
+                );
+            }
+            if first != position && day != self.b.operating_days[first].day {
                 let about = self.b.operating_days[first].origin;
                 self.redefined("OperatingDay", id, origin, about);
             }
         }
         for position in 0..self.b.day_types.len() {
             let record = &self.b.day_types[position];
+            let (id, origin) = (record.key.id, record.origin);
+            let outside = record
+                .validity
+                .is_some_and(|(from, to)| !held(from) || !held(to));
             let first = first_of(&scopes.day_types.table, record.key);
+            if outside {
+                self.found(Concern::DaysOutsideCalendar, "DayType", (origin, id), None);
+            }
             if first != position && bits[position] != bits[first] {
-                let (id, origin) = (record.key.id, record.origin);
                 let about = self.b.day_types[first].origin;
                 self.redefined("DayType", id, origin, about);
             }
         }
-        Calendar {
-            first_day,
-            span,
-            day_types: bits,
-            conditions,
-        }
+        calendar.day_types = bits;
+        calendar
     }
 
     /// The first and last day of each operating period naming them as
@@ -1328,7 +1337,14 @@ impl Finish {
                 continue;
             };
             let days = match &assignment.days {
-                AssignedDaysRecord::Date(day) => AssignmentDays::Day(*day),
+                AssignedDaysRecord::Date(day) => {
+                    if !held(*day) {
+                        let pending = &assignment.day_type;
+                        let at = (pending.origin, pending.key.id);
+                        self.found(Concern::DaysOutsideCalendar, "DayTypeAssignment", at, None);
+                    }
+                    AssignmentDays::Day(*day)
+                }
                 AssignedDaysRecord::OperatingDay(pending) => {
                     match self.resolve_in(&scopes.operating_days, pending) {
                         Some(index) => {
@@ -1450,8 +1466,11 @@ impl Finish {
         let mut first_day = i64::MAX;
         let mut last_day = i64::MIN;
         let mut extend = |first: i64, last: i64| {
-            first_day = first_day.min(first);
-            last_day = last_day.max(last);
+            let (first, last) = (first.max(FIRST_DAY), last.min(LAST_DAY));
+            if first <= last {
+                first_day = first_day.min(first);
+                last_day = last_day.max(last);
+            }
         };
         let conditions = named_conditions
             .iter()
@@ -1707,7 +1726,7 @@ impl Finish {
             return *known;
         }
         let (day_types, conditions, line, dated) = &parts;
-        let mut bits = DayBits::new(calendar.span);
+        let mut bits = DayBits::none();
         for &day_type in day_types {
             bits.union(&calendar.day_types[day_type as usize]);
         }
@@ -1715,7 +1734,7 @@ impl Finish {
             .iter()
             .partition(|&&condition| self.b.conditions[condition as usize].available);
         if !available.is_empty() {
-            let mut within = DayBits::new(calendar.span);
+            let mut within = DayBits::none();
             for &condition in &available {
                 within.union(&calendar.conditions[condition as usize]);
             }
@@ -1730,13 +1749,13 @@ impl Finish {
             // a journey so only to show the validity it no longer has, its day
             // types beside for information (TMI9 Dienstregeling 9.3.0, 9.1.2
             // and 9.2).
-            bits = DayBits::new(calendar.span);
+            bits = DayBits::none();
         }
         for &condition in &unavailable {
             bits.subtract(&calendar.conditions[condition as usize]);
         }
         for &day in dated {
-            if let Ok(offset) = usize::try_from(day - calendar.first_day) {
+            if let Some(offset) = calendar.offset(day) {
                 bits.set(offset, true);
             }
         }
@@ -1777,12 +1796,10 @@ impl Finish {
             .expect("a definition is among the versions of its line");
         match governed(&spans, position) {
             Governed::Every => None,
-            days => {
-                let mut mask = DayBits::new(calendar.span);
-                for offset in 0..calendar.span {
-                    if days.contains(calendar.first_day + offset as i64) {
-                        mask.set(offset, true);
-                    }
+            Governed::Spans(spans) => {
+                let mut mask = DayBits::none();
+                for (first, last) in spans {
+                    calendar.set_days(&mut mask, first, last);
                 }
                 Some(mask)
             }
@@ -2251,18 +2268,26 @@ impl Ranks {
 /// about one.
 fn bits_of_periods(
     records: &[PeriodRecord],
-    (first_day, span): (i64, usize),
+    calendar: &Calendar,
     findings: &mut Vec<FindingRecord>,
 ) -> Vec<DayBits> {
+    let within = calendar.first_day..=calendar.first_day + calendar.span as i64 - 1;
     records
         .iter()
         .map(|record| {
-            let PeriodDays { days, issue } = record.days();
-            let concern = issue.map(|issue| match issue {
+            let mut bits = DayBits::none();
+            let issue = record.runs(within.clone(), |first, last| {
+                calendar.set_days(&mut bits, first, last);
+            });
+            let issue = issue.map(|issue| match issue {
                 PeriodIssue::NoFirstDay => Concern::PeriodWithoutFirstDay,
                 PeriodIssue::BitsOtherThanDays { .. } => Concern::DayBitsLengthDiffers,
             });
-            if let Some(concern) = concern {
+            let beyond = record
+                .span()
+                .is_some_and(|(first, last)| !held(first) || !held(last))
+                .then_some(Concern::DaysOutsideCalendar);
+            for concern in issue.into_iter().chain(beyond) {
                 findings.push(FindingRecord {
                     concern,
                     element: record.element,
@@ -2271,17 +2296,14 @@ fn bits_of_periods(
                     about: None,
                 });
             }
-            let mut bits = DayBits::new(span);
-            for offset in days
-                .into_iter()
-                .filter_map(|day| usize::try_from(day - first_day).ok())
-                .filter(|&offset| offset < span)
-            {
-                bits.set(offset, true);
-            }
             bits
         })
         .collect()
+}
+
+/// Whether a calendar holds `day`: a day of the years 1 to 9999.
+fn held(day: i64) -> bool {
+    (FIRST_DAY..=LAST_DAY).contains(&day)
 }
 
 /// The findings of periods or conditions a document states otherwise than

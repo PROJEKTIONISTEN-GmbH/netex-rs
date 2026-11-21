@@ -98,6 +98,16 @@ pub enum Kind {
     },
     /// The document exceeds a limit set for reading it.
     Limit(Limit),
+    /// A document of a dataset whose name is not a path of plain parts within
+    /// its source ([`dataset::Entry::name`](crate::dataset::Entry::name)): a
+    /// name climbing out of it, rooted elsewhere, or holding what no file
+    /// name should. Its document is refused rather than read under it.
+    DocumentName {
+        /// The name, as the source states it.
+        name: String,
+        /// What makes it no document name.
+        reason: &'static str,
+    },
     /// The reader could not use the input.
     Io(String),
 }
@@ -114,6 +124,10 @@ pub enum Limit {
     Attributes(usize),
     /// A carried-through fragment larger than [`Limits::max_fragment`](crate::Limits::max_fragment) bytes.
     Fragment(usize),
+    /// A document of a dataset larger than its source's limit
+    /// ([`Source::with_max_document_bytes`](crate::dataset::Source::with_max_document_bytes)),
+    /// in bytes: as its archive states its size, or as it inflates.
+    Document(u64),
 }
 
 impl fmt::Display for Kind {
@@ -149,7 +163,11 @@ impl fmt::Display for Kind {
                 Limit::Text(n) => write!(f, "character data longer than {n} bytes"),
                 Limit::Attributes(n) => write!(f, "an element with more than {n} attributes"),
                 Limit::Fragment(n) => write!(f, "a carried-through fragment larger than {n} bytes"),
+                Limit::Document(n) => write!(f, "a document larger than {n} bytes"),
             },
+            Kind::DocumentName { name, reason } => {
+                write!(f, "{name:?} is not a document name: {reason}")
+            }
             Kind::Io(message) => write!(f, "cannot read the input: {message}"),
         }
     }
