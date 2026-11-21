@@ -553,3 +553,74 @@ fn the_merge_writes_each_delivery_under_its_rank_and_label() {
         serde_json::from_str(&std::fs::read_to_string(report).expect("the report")).expect("JSON");
     assert_eq!(report["deliveries"][1]["label"], "vor");
 }
+
+/// A report that cannot be written is work not done: the run exits with the
+/// status of a failure, not with the panic of a print.
+#[cfg(target_os = "linux")]
+#[test]
+fn a_report_written_to_a_full_device_exits_as_failed() {
+    let full = std::fs::File::create("/dev/full").expect("the full device opens");
+    let output = Command::new(env!("CARGO_BIN_EXE_netex"))
+        .args(["validate", defective().as_str()])
+        .stdout(full)
+        .output()
+        .expect("the command runs");
+    assert_eq!(output.status.code(), Some(2), "{}", stderr(&output));
+}
+
+/// Every file under `root`, as paths relative to it.
+fn files_under(root: &Path) -> Vec<PathBuf> {
+    let mut files = Vec::new();
+    let mut directories = vec![root.to_path_buf()];
+    while let Some(directory) = directories.pop() {
+        for entry in std::fs::read_dir(&directory).expect("the directory lists") {
+            let path = entry.expect("an entry").path();
+            if path.is_dir() {
+                directories.push(path);
+            } else {
+                files.push(path.strip_prefix(root).expect("under the root").to_owned());
+            }
+        }
+    }
+    files.sort();
+    files
+}
+
+#[test]
+fn an_extract_writes_no_document_outside_its_directory() {
+    let Some(at) = own_example("at") else {
+        return;
+    };
+    // An archive member's name is the publisher's text: one climbing out of
+    // the directory the part is written to is refused, not written there.
+    let root = tempfile::tempdir().expect("a directory");
+    let archive = root.path().join("delivery.zip");
+    let mut writer =
+        zip::ZipWriter::new(std::fs::File::create(&archive).expect("the archive is created"));
+    for entry in std::fs::read_dir(&at).expect("the example lists") {
+        let path = entry.expect("an entry").path();
+        let name = path.file_name().expect("a name").to_string_lossy();
+        let name = if name.contains("_LINE_") {
+            format!("../../{name}")
+        } else {
+            name.into_owned()
+        };
+        writer
+            .start_file(name, zip::write::SimpleFileOptions::default())
+            .expect("the member starts");
+        std::io::Write::write_all(&mut writer, &std::fs::read(&path).expect("a document"))
+            .expect("the member is written");
+    }
+    writer.finish().expect("the archive is finished");
+
+    let to = root.path().join("one/two/part");
+    let (archive_arg, to_arg) = (archive.display().to_string(), to.display().to_string());
+    let output = netex(&["extract", &archive_arg, "--to", &to_arg]);
+    assert_eq!(output.status.code(), Some(2), "{}", stderr(&output));
+    assert!(
+        stderr(&output).contains("is not a document name"),
+        "{}",
+        stderr(&output)
+    );
+    assert_eq!(files_under(root.path()), [PathBuf::from("delivery.zip")]);
+}

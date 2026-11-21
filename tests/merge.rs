@@ -3,6 +3,7 @@
 //! stated alike kept once, identifiers taken renamed into the delivery's
 //! codespace, journeys stated in two deliveries kept once.
 
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
 use netex_rs::dataset::Source;
@@ -447,4 +448,39 @@ fn a_dutch_stop_pairs_with_the_german_delivery_s_stop_of_its_register_code() {
     let read = index(to.path());
     assert_eq!(read.stop_count(), alone.stop_count());
     assert_eq!(journeys(&read), journeys(&alone));
+}
+
+#[test]
+fn a_member_named_outside_its_archive_is_written_nowhere_outside_the_merge() {
+    let Some(at) = austrian() else {
+        return;
+    };
+    // An archive member's name is the publisher's text, not a path: one
+    // climbing out of the directory it is written to must stay in the merge.
+    let root = tempfile::tempdir().expect("a directory");
+    let archive = root.path().join("delivery.zip");
+    let mut writer = zip::ZipWriter::new(std::fs::File::create(&archive).expect("an archive"));
+    let line =
+        std::fs::read(at.join("NX-PI_01_at_ex_LINE_ex_100_20261001.xml")).expect("a document");
+    writer
+        .start_file(
+            "../../escaped.xml",
+            zip::write::SimpleFileOptions::default(),
+        )
+        .expect("the member starts");
+    writer.write_all(&line).expect("the member is written");
+    writer.finish().expect("the archive is finished");
+
+    let to = root.path().join("merged");
+    let input =
+        Input::new("a", Source::open(&archive).expect("the archive opens")).expect("a label");
+    // Whether the merge refuses the member or writes it inside, it writes
+    // nothing beside the merge.
+    let _ = merge::merge(&[input], &to);
+    let beside: Vec<_> = std::fs::read_dir(root.path())
+        .expect("the directory")
+        .map(|entry| entry.expect("an entry").file_name())
+        .filter(|name| name != "delivery.zip" && name != "merged")
+        .collect();
+    assert!(beside.is_empty(), "written outside the merge: {beside:?}");
 }

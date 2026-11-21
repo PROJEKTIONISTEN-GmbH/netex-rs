@@ -10,6 +10,7 @@
 //! validator run about twenty seconds, so documents are validated in batches.
 #![allow(dead_code)]
 
+pub mod archive;
 pub mod delfi;
 pub mod fragments;
 pub mod render;

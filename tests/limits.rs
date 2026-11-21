@@ -309,3 +309,17 @@ fn an_attribute_value_is_normalised_where_a_reference_or_a_line_break_asks_for_i
         Some("1")
     );
 }
+
+#[test]
+fn a_value_quoted_in_single_quotes_reads_again_once_written_for_the_other_release() {
+    // An element the model carries through untyped keeps its attribute as
+    // written, in single quotes around a double one.
+    let xml = document(concat!(
+        r#"<SiteFrame id="s" version="1"><stopPlaces><StopPlace id="p" version="1">"#,
+        r#"<Foo note='say "hi"'/>"#,
+        "</StopPlace></stopPlaces></SiteFrame>"
+    ));
+    let read = netex_rs::read(&xml).expect("the document reads");
+    let written = read.write_for(netex_rs::Release::V2);
+    netex_rs::read(&written.xml).expect("the document written for 2.0 reads again");
+}
