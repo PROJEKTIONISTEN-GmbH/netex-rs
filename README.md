@@ -397,7 +397,10 @@ only; its tests: `NETEX_BIN=target/debug/netex python3 -m unittest discover -s t
 `tests/publish_hygiene.rs` keeps the repository free of anything that belongs
 to the place it was written rather than to the crate
 (`NETEX_COMMITS=HEAD cargo test --test publish_hygiene` searches the commit
-messages too).
+messages too). `python3 tools/ci_tests.py` runs the CI's job "build and test"
+as a runner does: in a shallow clone of `HEAD`, in an environment of its own;
+`--xmllint` names another validator where the runner's image brings another
+release of libxml2 than the local one.
 
 | Path | What |
 |---|---|
@@ -406,7 +409,7 @@ messages too).
 | `src/merge.rs`, `src/written/`, `src/findings.rs`, `src/check.rs`, `src/geometry.rs`, `src/crs/` | the merge of deliveries, documents as written, findings, duplicate identifiers, axis order, national reference systems |
 | `crates/netex2gtfs/`, `crates/netex-cli/` | NeTEx → GTFS; the `netex` command |
 | `examples/`, `benches/`, `fuzz/` | a delivery on one day, the profile of a dataset, the indexing measurement; criterion benchmarks; fuzz targets |
-| `tests/`, `tools/` | the suites and their fixtures (`tests/fixtures/README.md`); the schema walker, the package tests, the benchmark |
+| `tests/`, `tools/` | the suites and their fixtures (`tests/fixtures/README.md`); the schema walker, the package tests, the CI's test job in a shallow clone, the benchmark |
 
 ## Acknowledgements and sources
 

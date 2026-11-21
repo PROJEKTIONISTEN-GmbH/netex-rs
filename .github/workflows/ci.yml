@@ -1,6 +1,12 @@
 # The checks every change of netex-rs, netex2gtfs and netex-cli passes. They
 # need nothing from outside the repository; the whole German delivery is read
 # only where a runner is told where it is.
+#
+# The runner image is named, not `ubuntu-latest`: the schema tests read what
+# the image's xmllint writes, and libxml2 words its complaints otherwise from
+# one release to the next (2.9 on Ubuntu 24.04, 2.15 on 26.04). A new image is
+# a change of this file, tried like any other. `tools/ci_tests.py` runs the
+# job "build and test" as a runner does, in a shallow clone of HEAD.
 name: CI
 
 on:
@@ -15,13 +21,14 @@ env:
 jobs:
   test:
     name: build and test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       # The conformance tests validate against the official schemas with xmllint.
       - run: sudo apt-get update && sudo apt-get install --yes libxml2-utils
+      - run: xmllint --version
       - run: cargo build --locked --workspace --all-targets
       - run: cargo test --locked --workspace
       # The reference systems are a feature of the core; netex2gtfs and netex-cli turn it on.
@@ -29,18 +36,18 @@ jobs:
 
   msrv:
     name: minimum supported Rust (1.86)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.86
       - uses: Swatinem/rust-cache@v2
       - run: cargo +1.86 check --locked --workspace --all-targets
 
   windows:
     name: builds for Windows
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-gnu
@@ -50,9 +57,9 @@ jobs:
 
   lint:
     name: rustfmt, clippy, rustdoc
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -67,10 +74,10 @@ jobs:
 
   tables:
     name: release tables match the schemas
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: python3 tools/schema_table.py
@@ -78,12 +85,12 @@ jobs:
 
   bench:
     name: the benchmark tool
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       # The tool's tests measure, convert and compare two of the repository's
@@ -95,9 +102,9 @@ jobs:
 
   package:
     name: packages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       # The three are packaged and built as they will be published: in
@@ -125,9 +132,9 @@ jobs:
 
   hygiene:
     name: nothing internal, in files and commit messages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
@@ -138,12 +145,12 @@ jobs:
 
   corpus:
     name: the whole German delivery
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       # A repository variable naming the DELFI zip archive on the runner.
       NETEX_DELFI_ZIP: ${{ vars.NETEX_DELFI_ZIP }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: skipped where no delivery is named
         if: env.NETEX_DELFI_ZIP == ''
         run: echo "::notice title=DELFI corpus::skipped, NETEX_DELFI_ZIP is not set"
@@ -154,12 +161,12 @@ jobs:
 
   fuzz:
     name: fuzz, briefly
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       matrix:
         target: [read, rewrite, convert, outline]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
         with:
