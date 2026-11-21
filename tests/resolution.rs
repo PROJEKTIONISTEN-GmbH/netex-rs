@@ -280,3 +280,39 @@ fn a_day_offset_within_the_index_s_reach_counts_whole_days() {
         Some(2 * 86_400 + 8 * 3600)
     );
 }
+
+/// A stop place X in versions `2.0`, `10` and `9`, stated in this order in
+/// one document: the version a reference naming none resolves to.
+fn highest_of_three_versions(order: [&str; 3]) -> String {
+    let places: String = order
+        .iter()
+        .map(|version| {
+            format!(r#"<StopPlace id="X" version="{version}"><Name>X {version}</Name></StopPlace>"#)
+        })
+        .collect();
+    let frames =
+        format!(r#"<SiteFrame id="g" version="1"><stopPlaces>{places}</stopPlaces></SiteFrame>"#);
+    let index = serially(&[("a.xml".to_owned(), publication(&frames))]);
+    let place = index.stop_by_id("X").expect("the stop place is indexed");
+    index
+        .stop_version(place)
+        .expect("the stop place states a version")
+        .to_owned()
+}
+
+#[test]
+fn the_highest_of_versions_written_in_digits_and_otherwise_does_not_depend_on_their_order() {
+    // Digits alone by their number, below versions written otherwise:
+    // 9 < 10 < 2.0, in whatever order the document states them.
+    let orders = [
+        ["2.0", "10", "9"],
+        ["2.0", "9", "10"],
+        ["10", "2.0", "9"],
+        ["10", "9", "2.0"],
+        ["9", "2.0", "10"],
+        ["9", "10", "2.0"],
+    ];
+    for order in orders {
+        assert_eq!(highest_of_three_versions(order), "2.0", "{order:?}");
+    }
+}
