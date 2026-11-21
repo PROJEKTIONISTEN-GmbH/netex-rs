@@ -314,6 +314,26 @@ fn strip_line_number(line: &str) -> String {
     }
 }
 
+/// libxml2 2.9 (Debian 12, Ubuntu 24.04) names the element before a schema
+/// complaint, libxml2 2.15 (Ubuntu 26.04) does not; the complaint about a
+/// document reads alike from either, and alike once writing moved it to
+/// another line.
+#[test]
+fn a_complaint_reads_alike_from_either_libxml2_and_on_any_line() {
+    let message =
+        "Schemas validity error : Element '{http://www.netex.org.uk/netex}PassengerCapacity': \
+         The attribute 'id' is required but missing.";
+    let complaints = [
+        format!("104: element PassengerCapacity: {message}"),
+        format!("100: element PassengerCapacity: {message}"),
+        format!("104: {message}"),
+        format!("100: {message}"),
+    ];
+    let read: Vec<String> = complaints.iter().map(|c| strip_line_number(c)).collect();
+    assert!(read.iter().all(|r| *r == read[0]), "{read:#?}");
+    assert_eq!(read[0], message);
+}
+
 /// Writes every valid original of `from` for the release `to`: a same-release
 /// write must lose nothing, and a cross-release write must lose exactly what
 /// the other release does not know, and validate there once it has.
