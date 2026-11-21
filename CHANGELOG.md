@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.12.1 — unreleased
+
+The tests and the CI; the code is that of 0.12.0. The CI's job "build and
+test" failed since its runners moved from Ubuntu 24.04 to 26.04, and with
+them `xmllint` from libxml2 2.9 to 2.15: it passes again.
+
+- **tests**: the conformance test of the DELFI fixtures compares the schema
+  complaints about each fixture before and after writing by their message.
+  libxml2 2.9 names the element between the line number and the message,
+  libxml2 2.15 does not, and with that only 2.9's complaints lost their line
+  number before the comparison: under 2.15 the two complaints of each of two
+  fixtures, moved by four lines in writing, read as new defects. The same
+  two are found under both versions, before and after writing.
+- **CI**: the jobs run on the image they name, `ubuntu-26.04`, where they
+  ran on `ubuntu-latest`, so that a new image is a change of the workflow and
+  not of the day; the job "build and test" prints the version of `xmllint`.
+  `actions/checkout` and `actions/setup-python` are taken in the releases
+  that run on Node.js 24 (`v7`); GitHub deprecated the Node.js 20 their `v4`
+  and `v5` were written for.
+- **tools/ci_tests.py** runs the job "build and test" as a runner does: its
+  `cargo` commands, read from the workflow, in a shallow clone of `HEAD`
+  without tags, in an environment holding only what finds the toolchain;
+  `--xmllint` puts another validator first on `PATH`.
+
+### netex2gtfs 0.6.1
+
+Built on netex-rs 0.12.1; its code is that of 0.6.0.
+
+### netex-cli 0.7.1
+
+Built on netex-rs 0.12.1 and netex2gtfs 0.6.1; its code is that of 0.7.0.
+
 ## 0.12.0 — unreleased
 
 The index and the merge answer alike whatever order the documents come in
