@@ -135,7 +135,7 @@ holding one. Nothing is left out silently.
 | `route-without-agency` | a line naming no organisation the delivery defines: the feed's publisher (the one given, else the delivery's data source with a web address) is its agency; without one, the route names none |
 | `agency-without-url` | an organisation without a web address, or with an empty one: the feed's publisher's |
 | `agency-named-by-its-identifier` | an organisation without a name: named by its identifier |
-| `agency-time-zone-unified` | an organisation whose document names another time zone than the feed's: written in the feed's, its trips' times as stated |
+| `agency-time-zone-unified` | an organisation whose document names another time zone than the feed's: written in the feed's, its trips' times as stated — where the zones' offsets differ, at instants that far from the delivery's (Greenland's buses in Denmark's delivery: America/Nuuk, three hours) |
 | `trip-made-unique` | a journey identifier the index holds twice: `<id>#<n>` |
 | `trip-time-goes-back` | a journey whose passing times go back along its calls: left out |
 | `walk-stated-twice` | a walk between two stops stated again: one transfer, the longest |

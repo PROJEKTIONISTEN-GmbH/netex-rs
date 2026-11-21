@@ -860,7 +860,7 @@ impl<'d> Conversion<'d> {
                 if let Some(zone) = zone {
                     self.decisions.take(
                         "agency-time-zone-unified",
-                        "an organisation whose document names another time zone than the feed's: written in the feed's, as GTFS has one time zone for all agencies, its trips' times as stated",
+                        "an organisation whose document names another time zone than the feed's: written in the feed's, as GTFS has one time zone for all agencies, its trips' times as stated — where the two zones' offsets differ, the trips run at instants that far from the delivery's",
                         || format!("{}: {zone}", agency.id),
                     );
                 }
