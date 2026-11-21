@@ -1,6 +1,119 @@
 # Changelog
 
-## 0.10.0 — unreleased
+## 0.11.0 — unreleased
+
+A delivery is read as its publisher's claim: no member is written outside a
+merge or an extract, none ends the process by the size it claims, a period
+costs the index the days it gives and no more, and what is read and written
+is well-formed XML to the innermost attribute. Breaking, and so the next
+minor version: the enums that grow match with a wildcard arm, and the
+interfaces named below change.
+
+- **dataset**: a member's name is listed as written, and its document is
+  refused when loaded (`Kind::DocumentName`) where the name is no path of
+  plain parts within the source — rooted, naming `..`, an empty part or `.`,
+  holding a backslash or a control character, a file name not in UTF-8, or a
+  name the archive gives two members. `merge::merge` and `netex extract`
+  wrote such a member where its name led: `../../x.xml` two levels above the
+  directory written to, an absolute name at that path. Of two members of one
+  name the first was lost without a word; both are refused now.
+- **dataset**: a document is read no further than its source's limit,
+  `DEFAULT_MAX_DOCUMENT_BYTES` (4 GiB) unless set
+  (`Source::with_max_document_bytes`), and refused as `Limit::Document`
+  beyond: a member claiming more unread, one inflating to more when it does.
+  The room for a document is reserved fallibly; before, a member claiming
+  2^50 bytes ended the process (`memory allocation … failed`). The largest
+  documents of the national deliveries read so far: Belgium's railway
+  network 1 084 707 209 bytes, Switzerland's largest timetable 743 670 430,
+  Sweden's shared data 711 094 297.
+- **dataset**: a directory reached by several paths — a link into itself, a
+  link `current` beside the directory it names — is read once, under the
+  first path in the order of the names; before, a link to `.` listed every
+  document 41 times and two such links failed the listing. A file is
+  fingerprinted through a buffer rather than read whole. An entry loaded from
+  another source than the one listing it is refused rather than read as that
+  source's document at its position. Positions are read with `seek_read` on
+  Windows, where the crate did not build (`std::os::unix`); CI checks the
+  build for `x86_64-pc-windows-gnu`. `dataset::SharedFile`, public without a
+  way to make one, is not (breaking).
+- **dataset**: a manifest's text form writes a backslash, a tab, a line feed
+  and a carriage return in a name as `\\`, `\t`, `\n`, `\r`, so that every
+  name reads back as it was written; a backslash beginning no escape stands
+  for itself, as in a manifest written before. A name holding a backslash
+  and `t`, `n` or `r`, written by an earlier version, now reads as the
+  character escaped.
+- **calendar**: `period_days` takes the span of days asked for and gives the
+  period's days within it (breaking); a period to 9999 nothing names cost
+  23 MB and 2.9 million steps however few days the index held, one to the
+  year 2147483647 ended the process. A calendar holds the years 1 to 9999
+  (`FIRST_DAY`, `LAST_DAY`): an operating period, an availability condition,
+  an operating day, a day type's validity or an assignment's date reaching
+  beyond is read to the end of 9999 and is a finding, a new concern
+  (`Concern::DaysOutsideCalendar`, `days-outside-calendar`).
+- **index**: a calendar keeps the words of its own days alone, not a bit for
+  every day from the delivery's first day to its last: a period of 1900 to
+  9999 one day type is assigned gave every day type, period and condition a
+  field of 2.96 million days; it costs that day type's calendar now. The
+  journeys run on the same days. `IndexBuilder::merge_all` takes the day the
+  builders setting one are built for (`at`) — it kept the largest builder's,
+  set or not — and panics for builders built for different days.
+- **xml**, refusing what was read before: the reader refuses what is not
+  well-formed XML 1.0, in an element skipped or carried through untyped as in
+  one it reads — an attribute written twice, unquoted or without white space
+  before it, a `<` or a reference to an undefined entity in an attribute
+  value, a character XML 1.0 forbids (below U+0020 but tab, line feed and
+  carriage return; U+FFFE, U+FFFF) written or referenced anywhere, character
+  data or an end tag before the root, an XML declaration other than at the
+  start. Such a document was read, and its faults written back by `write`,
+  `merge` and `extract` for other parsers to refuse; it is an error of the
+  document now (`Kind::Xml`, `Kind::Entity`). README promised as much.
+- **xml**: the emitter writes a carriage return as `&#13;`, and in an
+  attribute a tab and a line feed as `&#9;` and `&#10;`, so that a value set
+  with them reads back as it was set rather than with spaces; a character
+  XML 1.0 forbids, which no document can hold, as U+FFFD.
+  `written::edit::attribute_value` writes values alike, and `>` as `&gt;`.
+  `Emitter::end` without a `start` panics saying so, where it overflowed.
+  `Emitter::declaring_netex`.
+- **lib**: `write_element` declares the NeTEx namespace on an element that
+  does not declare it itself — one taken from a delivery —, which
+  `read_element` refused to read again; `Document::write` likewise.
+  `Kind::NotNetex` names the element expected (`expected`, breaking).
+- **version**: `rewrite` keeps a value written between single quotes between
+  them — a value holding `"` made the document written for the other release
+  not well-formed —; reads each element's namespace where its declarations
+  state it, so that content of another namespace below the root is neither
+  evidence of a release nor left out; and from where a document stops being
+  well-formed copies it as it is and says so (`Report::malformed`,
+  `Detection::malformed`, `Malformed`; breaking), where it stopped there and
+  called the result lossless.
+- **geometry**: a number that is no finite coordinate (`NaN`, `inf`) makes no
+  position; `Geometry::positions` of fewer than two numbers to a position
+  gives none, where it panicked.
+- **The interface that grows** (breaking): `Release`, `index::StopKind`,
+  `geometry::AxisOrder`, `version::Item`, `findings::Error`,
+  `calendar::PeriodIssue`, `crs::Axes` and the entities of every container
+  (`StopPlaceItem`, `JourneyPatternItem`, …) are `#[non_exhaustive]`;
+  `xml::Child::start`, a quick-xml `BytesStart` read nowhere, is gone, so
+  that a minor release of quick-xml is none of the crate's. The structs stay
+  as 0.10.0 says. The methods taking an id say that an id of another index
+  panics.
+
+### netex2gtfs 0.5.0
+
+Built on netex-rs 0.11.0. `Profile` and `StopIds` are `#[non_exhaustive]`
+(breaking). The feeds are the same.
+
+### netex-cli 0.6.0
+
+Built on netex-rs 0.11.0 and netex2gtfs 0.5.0. A report that cannot be
+written — a full device — exits 2 rather than panicking with 101, and one
+whose reader stops reading (`netex validate --strict … | head`) exits with
+the verdict. `netex extract` and `netex merge` exit 2 for a delivery with a
+member named outside it, writing nothing outside their directory. The
+report's schema lists the class `days-outside-calendar` (layout version 1,
+unchanged).
+
+## 0.10.0 — 2026-11-04
 
 Switzerland converts in 7.5 GiB on sixteen threads, not 16.9 GiB; a pattern
 naming the link of other stop points is a finding; Bordeaux's courses are
