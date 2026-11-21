@@ -79,6 +79,27 @@ impl fmt::Display for Loss {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Report {
     losses: BTreeMap<Item, Loss>,
+    malformed: Option<Malformed>,
+}
+
+/// Where a document stops being well-formed XML, and why: what follows was
+/// not scanned for what a release knows.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Malformed {
+    /// The line it stops on.
+    pub line: u32,
+    /// What the tokenizer found.
+    pub message: String,
+}
+
+impl fmt::Display for Malformed {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "not well-formed XML from line {}: {}",
+            self.line, self.message
+        )
+    }
 }
 
 impl Report {
@@ -87,9 +108,20 @@ impl Report {
         Self::default()
     }
 
-    /// Whether everything the document held reached the written form.
+    /// Whether everything the document held reached the written form: nothing
+    /// left out, and the document well-formed to its end.
     pub fn is_lossless(&self) -> bool {
-        self.losses.is_empty()
+        self.losses.is_empty() && self.malformed.is_none()
+    }
+
+    /// Where the document stops being well-formed, if it does: from there on
+    /// it is written as it was, nothing left out of it for the release.
+    pub fn malformed(&self) -> Option<&Malformed> {
+        self.malformed.as_ref()
+    }
+
+    pub(crate) fn stop(&mut self, malformed: Malformed) {
+        self.malformed = Some(malformed);
     }
 
     /// Everything left out, in a stable order.

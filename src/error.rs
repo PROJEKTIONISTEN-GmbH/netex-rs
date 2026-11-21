@@ -50,10 +50,15 @@ pub enum Kind {
     /// The document is not well-formed XML.
     Xml(String),
     /// The document is well-formed but is not a NeTEx document: its root is not
-    /// `<PublicationDelivery>` in the NeTEx namespace.
+    /// the element expected — `<PublicationDelivery>`, or the element
+    /// [`read_element`](crate::read_element) is asked for — in the NeTEx
+    /// namespace.
     NotNetex {
         /// The root element found.
         root: String,
+        /// The element expected, where one is: none where any NeTEx element
+        /// is read ([`Fragment`](crate::Fragment)).
+        expected: Option<String>,
     },
     /// An element the crate types held character data where NeTEx has elements.
     UnexpectedText,
@@ -134,12 +139,16 @@ impl fmt::Display for Kind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Kind::Xml(message) => write!(f, "not well-formed XML: {message}"),
-            Kind::NotNetex { root } => {
-                write!(
+            Kind::NotNetex { root, expected } => match expected {
+                Some(expected) => write!(
                     f,
-                    "not a NeTEx document: the root element is <{root}>, not <PublicationDelivery>"
-                )
-            }
+                    "not a NeTEx document: the root element is <{root}>, not <{expected}> in the NeTEx namespace"
+                ),
+                None => write!(
+                    f,
+                    "not a NeTEx document: the root element is <{root}>, not an element in the NeTEx namespace"
+                ),
+            },
             Kind::UnexpectedText => f.write_str("character data where NeTEx has elements"),
             Kind::UnexpectedAttribute { name } => {
                 write!(f, "attribute {name} on an element that carries none")

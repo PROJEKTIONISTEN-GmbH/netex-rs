@@ -12,7 +12,7 @@ mod report;
 mod scan;
 pub mod table;
 
-pub use report::{Item, Loss, Report};
+pub use report::{Item, Loss, Malformed, Report};
 pub use scan::{detect, rewrite, Detection, Evidence};
 
 /// One of the two schema releases.

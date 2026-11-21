@@ -552,6 +552,7 @@ pub fn read_with<'i, S: Sink<'i>>(xml: &'i str, options: &ReadOptions, sink: &mu
         return Err(cursor.error_at(
             ErrorKind::NotNetex {
                 root: root.local.to_owned(),
+                expected: Some("PublicationDelivery".to_owned()),
             },
             root.offset,
         ));

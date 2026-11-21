@@ -1,5 +1,6 @@
 //! `netex`: check, count, convert, cut and merge NeTEx deliveries.
 
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -216,17 +217,36 @@ fn main() -> ExitCode {
             .num_threads(threads)
             .build_global()
         {
-            eprintln!("netex: {error}");
+            tell(&format!("netex: {error}\n"));
             return ExitCode::from(FAILED);
         }
     }
     match run(cli.command) {
         Ok(status) => ExitCode::from(status),
         Err(message) => {
-            eprintln!("netex: {message}");
+            tell(&format!("netex: {message}\n"));
             ExitCode::from(FAILED)
         }
     }
+}
+
+/// Writes a report to the standard output. A reader that stops reading —
+/// `netex validate … | head` — takes nothing from the run, which exits as it
+/// would have; an output that cannot be written to is work not done.
+fn print(report: &str) -> Result<(), String> {
+    let mut out = std::io::stdout().lock();
+    match out.write_all(report.as_bytes()).and_then(|()| out.flush()) {
+        Err(error) if error.kind() != std::io::ErrorKind::BrokenPipe => {
+            Err(format!("cannot write the report: {error}"))
+        }
+        _ => Ok(()),
+    }
+}
+
+/// Writes a note to the standard error, where nothing is done about a note
+/// that cannot be written.
+fn tell(note: &str) {
+    let _ = std::io::stderr().lock().write_all(note.as_bytes());
 }
 
 fn run(command: Command) -> Result<u8, String> {
@@ -250,8 +270,8 @@ fn run(command: Command) -> Result<u8, String> {
                 std::fs::write(&path, &json).map_err(|e| format!("{}: {e}", path.display()))?;
             }
             match format {
-                Format::Human => print!("{}", checked.human()),
-                Format::Json => println!("{json}"),
+                Format::Human => print(&checked.human())?,
+                Format::Json => print(&format!("{json}\n"))?,
             }
             Ok(if checked.refused { REFUSED } else { ACCEPTED })
         }
@@ -277,11 +297,11 @@ fn run(command: Command) -> Result<u8, String> {
                 period.as_ref().map(|(first, last)| (first, last)),
             );
             match format {
-                Format::Human => print!("{}", figures.human()),
-                Format::Json => println!(
-                    "{}",
+                Format::Human => print(&figures.human())?,
+                Format::Json => print(&format!(
+                    "{}\n",
                     serde_json::to_string_pretty(&figures).map_err(|e| e.to_string())?
-                ),
+                ))?,
             }
             Ok(ACCEPTED)
         }
@@ -329,16 +349,19 @@ fn run(command: Command) -> Result<u8, String> {
                 std::fs::write(&path, &json).map_err(|e| format!("{}: {e}", path.display()))?;
             }
             for (file, rows) in &converted.rows {
-                eprintln!("{file}: {rows} rows");
+                tell(&format!("{file}: {rows} rows\n"));
             }
             for decision in &converted.decisions {
-                eprintln!("{} × {}: {}", decision.count, decision.code, decision.what);
+                tell(&format!(
+                    "{} × {}: {}\n",
+                    decision.count, decision.code, decision.what
+                ));
             }
             for not_carried in &converted.not_carried {
-                eprintln!(
-                    "not carried: {} × {} (first in {})",
+                tell(&format!(
+                    "not carried: {} × {} (first in {})\n",
                     not_carried.count, not_carried.element, not_carried.first_document
-                );
+                ));
             }
             Ok(ACCEPTED)
         }
@@ -396,8 +419,8 @@ fn run(command: Command) -> Result<u8, String> {
                 std::fs::write(&path, &json).map_err(|e| format!("{}: {e}", path.display()))?;
             }
             match format {
-                Format::Human => print!("{}", part.human()),
-                Format::Json => println!("{json}"),
+                Format::Human => print(&part.human())?,
+                Format::Json => print(&format!("{json}\n"))?,
             }
             Ok(ACCEPTED)
         }
@@ -427,8 +450,8 @@ fn run(command: Command) -> Result<u8, String> {
                 std::fs::write(&path, &json).map_err(|e| format!("{}: {e}", path.display()))?;
             }
             match format {
-                Format::Human => print!("{}", merged.human()),
-                Format::Json => println!("{json}"),
+                Format::Human => print(&merged.human())?,
+                Format::Json => print(&format!("{json}\n"))?,
             }
             Ok(ACCEPTED)
         }

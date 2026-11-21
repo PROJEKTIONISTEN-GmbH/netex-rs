@@ -148,6 +148,9 @@ pub struct Cursor<'i> {
     /// For each element on the path, the scope to restore when it is left, if
     /// the element changed it.
     scopes: Vec<Option<Scope<'i>>>,
+    /// The names of the attributes of the tag being checked, kept from one
+    /// tag to the next so that checking one allocates nothing.
+    names: Vec<&'i str>,
 }
 
 impl std::fmt::Debug for Cursor<'_> {
@@ -178,6 +181,7 @@ impl<'i> Cursor<'i> {
             path: Vec::with_capacity(32),
             scope: Scope::default(),
             scopes: Vec::with_capacity(32),
+            names: Vec::new(),
         }
     }
 
@@ -226,13 +230,17 @@ impl<'i> Cursor<'i> {
 
     /// Reads past the prolog to the root element and returns it.
     ///
-    /// The XML declaration is checked for its encoding, a DTD is refused, and
-    /// the root's namespace declarations decide which elements are NeTEx
-    /// elements.
+    /// The document is checked for characters XML 1.0 forbids, the XML
+    /// declaration for its place and its encoding, a DTD is refused, and the
+    /// root's namespace declarations decide which elements are NeTEx elements.
     pub fn root(&mut self) -> Result<Child<'i>> {
+        if let Some((offset, character)) = forbidden_character(self.input) {
+            return Err(self.error_at(Kind::Xml(forbidden(character)), offset));
+        }
         loop {
             let (offset, event) = self.read_event()?;
             match event {
+                Event::Decl(_) if offset > 0 => return Err(self.misplaced_declaration(offset)),
                 Event::Decl(decl) => {
                     if let Some(Ok(encoding)) = decl.encoding() {
                         if !encoding.eq_ignore_ascii_case("utf-8") {
@@ -268,13 +276,68 @@ impl<'i> Cursor<'i> {
                     return Err(self.error_at(
                         Kind::NotNetex {
                             root: "(no element)".to_owned(),
+                            expected: None,
                         },
                         offset,
                     ));
                 }
-                Event::Comment(_) | Event::PI(_) | Event::CData(_) | Event::End(_) => {}
+                Event::CData(_) => {
+                    return Err(self.error_at(
+                        Kind::Xml("character data before the root element".to_owned()),
+                        offset,
+                    ))
+                }
+                Event::End(_) => {
+                    return Err(self.error_at(
+                        Kind::Xml("an end tag before the root element".to_owned()),
+                        offset,
+                    ))
+                }
+                Event::Comment(_) | Event::PI(_) => {}
             }
         }
+    }
+
+    /// The error of an attribute written right after the one before.
+    fn unspaced(&self, key: &str, offset: usize) -> Error {
+        self.error_at(
+            Kind::Xml(format!("no white space before the attribute {key}")),
+            offset,
+        )
+    }
+
+    /// The error of an XML declaration anywhere but at the start.
+    fn misplaced_declaration(&self, offset: usize) -> Error {
+        self.error_at(
+            Kind::Xml("an XML declaration other than at the start of the document".to_owned()),
+            offset,
+        )
+    }
+
+    /// Checks the attributes of a tag the cursor skips as it checks those of
+    /// a child it reads: written as XML has them, none twice, every reference
+    /// in a value one the cursor resolves.
+    fn check_tag(&mut self, start: &BytesStart<'i>, offset: usize) -> Result<()> {
+        self.names.clear();
+        let mut parsed = start.attributes();
+        parsed.with_checks(false);
+        for attribute in parsed {
+            let attribute =
+                attribute.map_err(|e| self.error_at(Kind::Xml(e.to_string()), offset))?;
+            let key = self.reborrow(attribute.key.as_ref());
+            if !spaced(start, key) {
+                return Err(self.unspaced(key, offset));
+            }
+            if self.names.contains(&key) {
+                return Err(self.error_at(
+                    Kind::Xml(format!("the attribute {key} occurs twice")),
+                    offset,
+                ));
+            }
+            self.names.push(key);
+            check_value(&attribute.value).map_err(|kind| self.error_at(kind, offset))?;
+        }
+        Ok(())
     }
 
     fn child(&mut self, start: BytesStart<'i>, empty: bool, offset: usize) -> Result<Child<'i>> {
@@ -299,6 +362,9 @@ impl<'i> Cursor<'i> {
             let attribute =
                 attribute.map_err(|e| self.error_at(Kind::Xml(e.to_string()), offset))?;
             let key = self.reborrow(attribute.key.as_ref());
+            if !spaced(&start, key) {
+                return Err(self.unspaced(key, offset));
+            }
             if let Some((earlier, _)) = attributes.iter().find(|(earlier, _)| *earlier == key) {
                 let tag = start.as_ref().as_ptr() as usize;
                 let at = |name: &str| name.as_ptr() as usize - tag;
@@ -311,6 +377,7 @@ impl<'i> Cursor<'i> {
                     offset,
                 ));
             }
+            check_value(&attribute.value).map_err(|kind| self.error_at(kind, offset))?;
             // A value taken from the tag borrows the input, like a name.
             let raw_value: Cow<'i, str> = match attribute.value {
                 Cow::Borrowed(value) => Cow::Borrowed(self.reborrow(value)),
@@ -422,7 +489,8 @@ impl<'i> Cursor<'i> {
                         self.error_at(Kind::Xml("unexpected end of document".to_owned()), offset)
                     )
                 }
-                Event::Comment(_) | Event::PI(_) | Event::Decl(_) => {}
+                Event::Decl(_) => return Err(self.misplaced_declaration(offset)),
+                Event::Comment(_) | Event::PI(_) => {}
                 Event::DocType(doctype) => {
                     let name = doctype.split_whitespace().next().unwrap_or("").to_owned();
                     return Err(self.error_at(Kind::Entity { name }, offset));
@@ -468,7 +536,8 @@ impl<'i> Cursor<'i> {
                     ))
                 }
                 Event::Comment(_) | Event::PI(_) => {}
-                Event::Decl(_) | Event::DocType(_) | Event::Eof => {
+                Event::Decl(_) => return Err(self.misplaced_declaration(offset)),
+                Event::DocType(_) | Event::Eof => {
                     return Err(
                         self.error_at(Kind::Xml("unexpected end of document".to_owned()), offset)
                     )
@@ -533,7 +602,8 @@ impl<'i> Cursor<'i> {
                     self.gather(&mut gathered, piece, offset)?;
                 }
                 Event::Comment(_) | Event::PI(_) => {}
-                Event::Decl(_) | Event::DocType(_) | Event::Eof => {
+                Event::Decl(_) => return Err(self.misplaced_declaration(offset)),
+                Event::DocType(_) | Event::Eof => {
                     return Err(
                         self.error_at(Kind::Xml("unexpected end of document".to_owned()), offset)
                     )
@@ -549,7 +619,11 @@ impl<'i> Cursor<'i> {
         offset: usize,
     ) -> Result<char> {
         if let Ok(Some(character)) = reference.resolve_char_ref() {
-            return Ok(character);
+            return if is_xml_char(character) {
+                Ok(character)
+            } else {
+                Err(self.error_at(Kind::Xml(forbidden(character)), offset))
+            };
         }
         match reference.as_ref() {
             "amp" => Ok('&'),
@@ -625,14 +699,16 @@ impl<'i> Cursor<'i> {
         loop {
             let (offset, event) = self.read_event()?;
             match event {
-                Event::Start(_) => {
+                Event::Start(start) => {
                     depth += 1;
                     if base + depth > self.limits.max_depth {
                         return Err(
                             self.error_at(Kind::Limit(Limit::Depth(self.limits.max_depth)), offset)
                         );
                     }
+                    self.check_tag(&start, offset)?;
                 }
+                Event::Empty(start) => self.check_tag(&start, offset)?,
                 Event::End(_) => {
                     depth -= 1;
                     if depth == 0 {
@@ -640,16 +716,7 @@ impl<'i> Cursor<'i> {
                     }
                 }
                 Event::GeneralRef(reference) => {
-                    let known = reference.resolve_char_ref().is_ok_and(|c| c.is_some())
-                        || matches!(reference.as_ref(), "amp" | "lt" | "gt" | "quot" | "apos");
-                    if !known {
-                        return Err(self.error_at(
-                            Kind::Entity {
-                                name: reference.as_ref().to_owned(),
-                            },
-                            offset,
-                        ));
-                    }
+                    self.resolve_reference(&reference, offset)?;
                 }
                 Event::Eof => {
                     return Err(self.error_at(
@@ -661,12 +728,8 @@ impl<'i> Cursor<'i> {
                     let name = doctype.split_whitespace().next().unwrap_or("").to_owned();
                     return Err(self.error_at(Kind::Entity { name }, offset));
                 }
-                Event::Empty(_)
-                | Event::Text(_)
-                | Event::CData(_)
-                | Event::Comment(_)
-                | Event::PI(_)
-                | Event::Decl(_) => {}
+                Event::Decl(_) => return Err(self.misplaced_declaration(offset)),
+                Event::Text(_) | Event::CData(_) | Event::Comment(_) | Event::PI(_) => {}
             }
         }
     }
@@ -705,4 +768,110 @@ impl<'i> Cursor<'i> {
         }
         Ok(extra)
     }
+}
+
+/// Whether XML 1.0 allows `character` in a document: tab, line feed, carriage
+/// return, and every character from the space on but U+FFFE and U+FFFF.
+pub(crate) fn is_xml_char(character: char) -> bool {
+    matches!(character, '\t' | '\n' | '\r')
+        || (character >= ' ' && !matches!(character, '\u{fffe}' | '\u{ffff}'))
+}
+
+/// The first character of `text` XML 1.0 forbids, and where it stands.
+///
+/// Every byte of a document is looked at once, in blocks a vector unit takes
+/// whole; only a block holding a byte below the space or the lead byte of
+/// U+FFFE and U+FFFF is looked into.
+fn forbidden_character(text: &str) -> Option<(usize, char)> {
+    const BLOCK: usize = 64;
+    let bytes = text.as_bytes();
+    let suspect = |block: &[u8]| {
+        block
+            .iter()
+            .fold(false, |any, &byte| any | (byte < 0x20) | (byte == 0xef))
+    };
+    for (number, block) in bytes.chunks(BLOCK).enumerate() {
+        if !suspect(block) {
+            continue;
+        }
+        // A character may begin in the block before; start at a boundary.
+        let mut start = number * BLOCK;
+        while !text.is_char_boundary(start) {
+            start -= 1;
+        }
+        let end = ((number + 1) * BLOCK).min(bytes.len());
+        if let Some((at, character)) = text[start..]
+            .char_indices()
+            .take_while(|(at, _)| start + at < end)
+            .find(|&(_, character)| !is_xml_char(character))
+        {
+            return Some((start + at, character));
+        }
+    }
+    None
+}
+
+/// The message of a character XML 1.0 forbids.
+fn forbidden(character: char) -> String {
+    format!(
+        "U+{:04X} is a character XML 1.0 forbids",
+        u32::from(character)
+    )
+}
+
+/// Checks an attribute's value as written: no `<`, and every reference one of
+/// the five entities XML predefines or a character reference to a character
+/// XML allows.
+fn check_value(raw: &str) -> std::result::Result<(), Kind> {
+    if raw.contains('<') {
+        return Err(Kind::Xml("a `<` in an attribute value".to_owned()));
+    }
+    let mut rest = raw;
+    while let Some(at) = rest.find('&') {
+        let after = &rest[at + 1..];
+        let Some(end) = after.find(';') else {
+            return Err(Kind::Xml(
+                "a `&` in an attribute value that begins no reference".to_owned(),
+            ));
+        };
+        let name = &after[..end];
+        let character = match name.strip_prefix('#') {
+            Some(number) => {
+                let code = match number.strip_prefix('x') {
+                    Some(hex) => u32::from_str_radix(hex, 16).ok(),
+                    None => number.parse().ok(),
+                };
+                let Some(character) = code.and_then(char::from_u32) else {
+                    return Err(Kind::Xml(format!("&{name}; is no character reference")));
+                };
+                Some(character)
+            }
+            None => None,
+        };
+        match character {
+            Some(character) if !is_xml_char(character) => {
+                return Err(Kind::Xml(forbidden(character)))
+            }
+            Some(_) => {}
+            None if matches!(name, "amp" | "lt" | "gt" | "quot" | "apos") => {}
+            None => {
+                return Err(Kind::Entity {
+                    name: name.to_owned(),
+                })
+            }
+        }
+        rest = &after[end + 1..];
+    }
+    Ok(())
+}
+
+/// Whether white space stands before the attribute named `key` in `start`,
+/// as XML has it between a tag's name and attributes: `key` a slice of the
+/// tag.
+fn spaced(start: &BytesStart<'_>, key: &str) -> bool {
+    let tag = start.as_ref().as_bytes();
+    (key.as_ptr() as usize)
+        .checked_sub(tag.as_ptr() as usize + 1)
+        .and_then(|before| tag.get(before))
+        .is_some_and(u8::is_ascii_whitespace)
 }

@@ -29,7 +29,9 @@ pub struct Fingerprint {
 /// name without its date. The text form
 /// ([`to_text`](Self::to_text), [`parse`](Self::parse)) is one line per
 /// document — CRC in hexadecimal, size, name, tab-separated — so that a
-/// manifest can be kept beside the index it was built for.
+/// manifest can be kept beside the index it was built for; a backslash, a
+/// tab, a line feed or a carriage return in a name is written `\\`, `\t`,
+/// `\n`, `\r`, so that every name reads back as it was.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Manifest {
     /// The fingerprints, in the delivery's order.
@@ -112,16 +114,22 @@ impl Manifest {
     }
 
     /// The manifest as text: one line per document, `crc32<TAB>size<TAB>name`,
-    /// the CRC as eight hexadecimal digits.
+    /// the CRC as eight hexadecimal digits, the name escaped.
     pub fn to_text(&self) -> String {
         let mut text = String::new();
         for fingerprint in &self.entries {
-            writeln!(
-                text,
-                "{:08x}\t{}\t{}",
-                fingerprint.crc32, fingerprint.size, fingerprint.name
-            )
-            .expect("writing to a string cannot fail");
+            write!(text, "{:08x}\t{}\t", fingerprint.crc32, fingerprint.size)
+                .expect("writing to a string cannot fail");
+            for character in fingerprint.name.chars() {
+                match character {
+                    '\\' => text.push_str("\\\\"),
+                    '\t' => text.push_str("\\t"),
+                    '\n' => text.push_str("\\n"),
+                    '\r' => text.push_str("\\r"),
+                    _ => text.push(character),
+                }
+            }
+            text.push('\n');
         }
         text
     }
@@ -148,13 +156,35 @@ impl Manifest {
             let name = fields
                 .next()
                 .filter(|name| !name.is_empty())
+                .map(unescaped)
                 .ok_or_else(malformed)?;
-            entries.push(Fingerprint {
-                name: name.to_owned(),
-                size,
-                crc32,
-            });
+            entries.push(Fingerprint { name, size, crc32 });
         }
         Ok(Manifest { entries })
     }
+}
+
+/// A name as [`Manifest::to_text`] escapes it, unescaped. A backslash
+/// beginning no escape stands for itself, as in a manifest written before
+/// names were escaped.
+fn unescaped(name: &str) -> String {
+    let mut unescaped = String::with_capacity(name.len());
+    let mut characters = name.chars().peekable();
+    while let Some(character) = characters.next() {
+        let escaped = match (character, characters.peek()) {
+            ('\\', Some('\\')) => Some('\\'),
+            ('\\', Some('t')) => Some('\t'),
+            ('\\', Some('n')) => Some('\n'),
+            ('\\', Some('r')) => Some('\r'),
+            _ => None,
+        };
+        match escaped {
+            Some(escaped) => {
+                characters.next();
+                unescaped.push(escaped);
+            }
+            None => unescaped.push(character),
+        }
+    }
+    unescaped
 }

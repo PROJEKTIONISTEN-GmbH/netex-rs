@@ -59,6 +59,12 @@ pub fn metres_between(a: (f64, f64), b: (f64, f64)) -> f64 {
     2.0 * EARTH_RADIUS_METRES * h.sqrt().min(1.0).asin()
 }
 
+/// A coordinate as written: a number, and a finite one — `NaN` and `INF`,
+/// which a number may be written as, are no position.
+fn coordinate(text: &str) -> Option<f64> {
+    text.parse::<f64>().ok().filter(|number| number.is_finite())
+}
+
 /// The first position of a GML geometry as written — the first two numbers
 /// of its first `posList` or `pos` —, if it states one.
 pub fn first_position(geometry: &str) -> Option<(f64, f64)> {
@@ -71,9 +77,9 @@ pub fn first_position(geometry: &str) -> Option<(f64, f64)> {
             }
             Event::Text(text) if in_positions => {
                 let text = text.xml10_content();
-                let mut numbers = text.split_ascii_whitespace().map(str::parse::<f64>);
+                let mut numbers = text.split_ascii_whitespace().map(coordinate);
                 return match (numbers.next(), numbers.next()) {
-                    (Some(Ok(a)), Some(Ok(b))) => Some((a, b)),
+                    (Some(Some(a)), Some(Some(b))) => Some((a, b)),
                     _ => None,
                 };
             }
@@ -98,17 +104,23 @@ pub struct Geometry {
 }
 
 impl Geometry {
-    /// The first two numbers of each position, as written.
+    /// The first two numbers of each position, as written; none where a
+    /// position is of fewer than two numbers.
     pub fn positions(&self) -> impl Iterator<Item = (f64, f64)> + '_ {
-        self.numbers
-            .chunks_exact(self.dimension)
+        let numbers: &[f64] = if self.dimension >= 2 {
+            &self.numbers
+        } else {
+            &[]
+        };
+        numbers
+            .chunks_exact(self.dimension.max(2))
             .map(|position| (position[0], position[1]))
     }
 }
 
 /// A GML geometry — a `LineString` with a `posList` or `pos` elements, or a
 /// `pos` alone — as written, if it states a position and every number of it
-/// is one.
+/// is a finite one.
 pub fn geometry(xml: &str) -> Option<Geometry> {
     let mut reader = Reader::from_str(xml);
     let mut geometry = Geometry {
@@ -134,7 +146,7 @@ pub fn geometry(xml: &str) -> Option<Geometry> {
             }
             Event::Text(text) if in_positions => {
                 for number in text.xml10_content().split_ascii_whitespace() {
-                    geometry.numbers.push(number.parse().ok()?);
+                    geometry.numbers.push(coordinate(number)?);
                 }
             }
             Event::End(_) => in_positions = false,

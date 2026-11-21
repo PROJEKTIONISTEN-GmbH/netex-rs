@@ -148,6 +148,7 @@ pub fn read_with(xml: &str, limits: &Limits) -> Result<Document> {
         return Err(cursor.error_at(
             Kind::NotNetex {
                 root: root.local.to_owned(),
+                expected: Some("PublicationDelivery".to_owned()),
             },
             root.offset,
         ));
@@ -166,6 +167,7 @@ pub fn read_element<T: Element>(xml: &str, name: &str, limits: &Limits) -> Resul
         return Err(cursor.error_at(
             Kind::NotNetex {
                 root: root.local.to_owned(),
+                expected: Some(name.to_owned()),
             },
             root.offset,
         ));
@@ -175,9 +177,12 @@ pub fn read_element<T: Element>(xml: &str, name: &str, limits: &Limits) -> Resul
     Ok(element)
 }
 
-/// Writes a typed element as a document of its own, under `name`.
+/// Writes a typed element as a document of its own, under `name`, in the
+/// NeTEx namespace: declared on it where it does not declare it itself — as an
+/// element taken from a delivery does not, the namespace being its
+/// publication's —, so that [`read_element`] reads it again.
 pub fn write_element<T: Element>(element: &T, name: &str) -> String {
-    let mut out = Emitter::new();
+    let mut out = Emitter::new().declaring_netex();
     element.write(name, &mut out);
     out.finish()
 }
@@ -204,9 +209,10 @@ impl Document {
     }
 
     /// Writes the document as it is: whatever release it was read in, with
-    /// everything it carried.
+    /// everything it carried, in the NeTEx namespace, declared on the
+    /// publication where it does not declare it itself.
     pub fn write(&self) -> String {
-        let mut out = Emitter::with_capacity(64 * 1024);
+        let mut out = Emitter::with_capacity(64 * 1024).declaring_netex();
         self.delivery.write("PublicationDelivery", &mut out);
         out.finish()
     }
@@ -249,6 +255,7 @@ impl Fragment {
             return Err(cursor.error_at(
                 Kind::NotNetex {
                     root: root.local.to_owned(),
+                    expected: None,
                 },
                 root.offset,
             ));

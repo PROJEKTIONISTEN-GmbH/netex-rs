@@ -214,14 +214,16 @@ fn not_well_formed_xml_is_an_error_with_a_place() {
     assert_eq!(
         error.kind,
         Kind::NotNetex {
-            root: "Siri".to_owned()
+            root: "Siri".to_owned(),
+            expected: Some("PublicationDelivery".to_owned())
         }
     );
     let error = Fragment::read("<Thing/>").expect_err("a fragment outside the namespace");
     assert_eq!(
         error.kind,
         Kind::NotNetex {
-            root: "Thing".to_owned()
+            root: "Thing".to_owned(),
+            expected: None
         }
     );
 }

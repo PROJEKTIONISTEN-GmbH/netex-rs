@@ -59,19 +59,12 @@ impl Edits {
     }
 }
 
-/// `text` as an attribute value: the characters XML gives a meaning there
-/// written as references.
+/// `text` as an attribute value, as the [`Emitter`](crate::xml::Emitter)
+/// writes one: the characters XML gives a meaning there, and a tab or a line
+/// break, which a parser reads as a space, written as references.
 pub fn attribute_value(text: &str) -> String {
     let mut escaped = String::with_capacity(text.len());
-    for c in text.chars() {
-        match c {
-            '&' => escaped.push_str("&amp;"),
-            '<' => escaped.push_str("&lt;"),
-            '"' => escaped.push_str("&quot;"),
-            '\'' => escaped.push_str("&apos;"),
-            _ => escaped.push(c),
-        }
-    }
+    crate::xml::escape_attribute(&mut escaped, text);
     escaped
 }
 

@@ -10,6 +10,7 @@ mod cursor;
 mod emitter;
 
 pub use cursor::{Child, Content, Cursor, NETEX_NAMESPACE};
+pub(crate) use emitter::escape_attribute;
 pub use emitter::Emitter;
 
 /// The document without its leading byte-order marks.

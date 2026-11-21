@@ -7,7 +7,7 @@ use std::sync::OnceLock;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 
-use super::report::{Item, Report};
+use super::report::{Item, Malformed, Report};
 use super::{table, Release, Written};
 use crate::xml::NETEX_NAMESPACE;
 
@@ -49,6 +49,9 @@ pub struct Detection {
     pub evidence: Vec<Evidence>,
     /// How many pieces of evidence were found, per release.
     pub evidence_count: [usize; 2],
+    /// Where the document stops being well-formed, if it does: the scan ends
+    /// there, and what follows proves nothing.
+    pub malformed: Option<Malformed>,
 }
 
 impl Detection {
@@ -144,29 +147,34 @@ fn is_token_element(local: &str) -> bool {
     token_elements().binary_search(&local).is_ok()
 }
 
-/// Which elements are NeTEx elements, by the root's namespace declarations.
+/// Which elements are NeTEx elements where the scan is: what the default
+/// namespace and the prefix bound to NeTEx are, as the elements from the
+/// root down declare them.
+#[derive(Debug, Clone, Copy, Default)]
 struct Namespaces<'i> {
     default_is_netex: bool,
     netex_prefix: Option<&'i str>,
 }
 
 impl<'i> Namespaces<'i> {
-    fn of_root(input: &'i str, root: &BytesStart<'_>) -> Self {
-        let mut namespaces = Namespaces {
-            default_is_netex: false,
-            netex_prefix: None,
-        };
-        for attribute in root.attributes().flatten() {
+    /// The bindings inside `start`: these, as its namespace declarations
+    /// change them.
+    fn within(mut self, input: &'i str, start: &BytesStart<'_>) -> Self {
+        for attribute in start.attributes().flatten() {
             let key = attribute.key.as_ref();
+            let netex = attribute.value.as_ref() == NETEX_NAMESPACE;
             if key == "xmlns" {
-                namespaces.default_is_netex = attribute.value.as_ref() == NETEX_NAMESPACE;
+                self.default_is_netex = netex;
             } else if let Some(prefix) = key.strip_prefix("xmlns:") {
-                if attribute.value.as_ref() == NETEX_NAMESPACE {
-                    namespaces.netex_prefix = Some(reborrow(input, prefix));
+                let prefix = reborrow(input, prefix);
+                if netex {
+                    self.netex_prefix = Some(prefix);
+                } else if self.netex_prefix == Some(prefix) {
+                    self.netex_prefix = None;
                 }
             }
         }
-        namespaces
+        self
     }
 
     /// The local name of a NeTEx element, or `None` for an element in another namespace.
@@ -226,22 +234,21 @@ impl<'i> Lines<'i> {
 /// Tells which release a document is in.
 ///
 /// The document's tokens are scanned for what one release alone knows; a
-/// document that is not well-formed is scanned as far as it goes. Any root
-/// element is accepted, so a fragment document can be told apart too.
+/// document that is not well-formed is scanned as far as it goes, and says
+/// where it stops ([`Detection::malformed`]). Any root element is accepted,
+/// so a fragment document can be told apart too.
 pub fn detect(xml: &str) -> Detection {
     let xml = crate::xml::without_bom(xml);
     let mut reader = Reader::from_str(xml);
     let mut stack: Vec<&str> = Vec::with_capacity(32);
-    let mut namespaces = Namespaces {
-        default_is_netex: false,
-        netex_prefix: None,
-    };
+    let mut scopes: Vec<Namespaces> = Vec::with_capacity(32);
     let mut detection = Detection {
         declared_version: None,
         declared: None,
         structural: None,
         evidence: Vec::new(),
         evidence_count: [0, 0],
+        malformed: None,
     };
     let mut token_text: Option<(&str, String)> = None;
     let mut lines = Lines::new(xml);
@@ -263,14 +270,25 @@ pub fn detect(xml: &str) -> Detection {
 
     loop {
         let offset = usize::try_from(reader.buffer_position()).unwrap_or(usize::MAX);
-        let Ok(event) = reader.read_event() else {
-            break;
+        let event = match reader.read_event() {
+            Ok(event) => event,
+            Err(error) => {
+                detection.malformed = Some(Malformed {
+                    line: lines.at(offset),
+                    message: error.to_string(),
+                });
+                break;
+            }
         };
         match event {
             Event::Start(ref start) | Event::Empty(ref start) => {
                 let empty = matches!(event, Event::Empty(_));
+                let namespaces = scopes
+                    .last()
+                    .copied()
+                    .unwrap_or_default()
+                    .within(xml, start);
                 if stack.is_empty() {
-                    namespaces = Namespaces::of_root(xml, start);
                     if let Some(version) = start
                         .attributes()
                         .flatten()
@@ -320,9 +338,11 @@ pub fn detect(xml: &str) -> Detection {
                     }
                     if !empty {
                         stack.push(local);
+                        scopes.push(namespaces);
                     }
                 } else if !empty {
                     stack.push("");
+                    scopes.push(namespaces);
                 }
             }
             Event::Text(text) => {
@@ -349,6 +369,7 @@ pub fn detect(xml: &str) -> Detection {
                     }
                 }
                 stack.pop();
+                scopes.pop();
             }
             Event::Eof => break,
             _ => {}
@@ -370,6 +391,9 @@ pub fn detect(xml: &str) -> Detection {
 /// The publication's `version` attribute is set to the release's. Elements in
 /// other namespaces, prefixed attributes and namespace declarations are left
 /// as they are. Nothing else changes: the document is copied token by token.
+/// From where a document stops being well-formed, it is copied as it is, and
+/// the report says where ([`Report::malformed`]), so that what could not be
+/// scanned is neither lost nor taken for written for the release.
 pub fn rewrite(xml: &str, release: Release) -> Written {
     let xml = crate::xml::without_bom(xml);
     let unknown = only(release.other());
@@ -377,10 +401,7 @@ pub fn rewrite(xml: &str, release: Release) -> Written {
     let mut out = String::with_capacity(xml.len());
     let mut report = Report::new();
     let mut stack: Vec<&str> = Vec::with_capacity(32);
-    let mut namespaces = Namespaces {
-        default_is_netex: false,
-        netex_prefix: None,
-    };
+    let mut scopes: Vec<Namespaces> = Vec::with_capacity(32);
     // Depth of the stack at which an element being left out started.
     let mut dropping: Option<usize> = None;
     // An enumerated element being held back until its token is known: the
@@ -391,8 +412,20 @@ pub fn rewrite(xml: &str, release: Release) -> Written {
 
     loop {
         let offset = usize::try_from(reader.buffer_position()).unwrap_or(usize::MAX);
-        let Ok(event) = reader.read_event() else {
-            break;
+        let event = match reader.read_event() {
+            Ok(event) => event,
+            Err(error) => {
+                if let Some((_, tag, text)) = held.take() {
+                    out.push_str(&tag);
+                    out.push_str(&text);
+                }
+                out.push_str(&xml[offset.min(xml.len())..]);
+                report.stop(Malformed {
+                    line: lines.at(offset),
+                    message: error.to_string(),
+                });
+                break;
+            }
         };
         let end = usize::try_from(reader.buffer_position()).unwrap_or(usize::MAX);
         let source = &xml[offset.min(xml.len())..end.min(xml.len())];
@@ -400,8 +433,13 @@ pub fn rewrite(xml: &str, release: Release) -> Written {
         match event {
             Event::Start(ref start) | Event::Empty(ref start) => {
                 let empty = matches!(event, Event::Empty(_));
-                if is_root {
-                    namespaces = Namespaces::of_root(xml, start);
+                let namespaces = scopes
+                    .last()
+                    .copied()
+                    .unwrap_or_default()
+                    .within(xml, start);
+                if !empty {
+                    scopes.push(namespaces);
                 }
                 if dropping.is_some() {
                     if !empty {
@@ -456,7 +494,8 @@ pub fn rewrite(xml: &str, release: Release) -> Written {
                 is_root = false;
             }
             Event::End(_) => {
-                let local = stack.pop().unwrap_or("");
+                stack.pop();
+                scopes.pop();
                 if let Some(depth) = dropping {
                     if stack.len() == depth {
                         dropping = None;
@@ -479,7 +518,6 @@ pub fn rewrite(xml: &str, release: Release) -> Written {
                     out.push_str(&tag);
                     out.push_str(&text);
                 }
-                let _ = local;
                 out.push_str(source);
             }
             Event::Text(ref text) => {
@@ -547,11 +585,16 @@ fn start_tag(
             );
             continue;
         }
+        // The value as written, raw: between the quotes it was written
+        // between, which a raw value holding a double quote shows were single.
+        let value = attribute.value.as_ref();
+        let quote = if value.contains('"') { '\'' } else { '"' };
         tag.push(' ');
         tag.push_str(key);
-        tag.push_str("=\"");
-        tag.push_str(attribute.value.as_ref());
-        tag.push('"');
+        tag.push('=');
+        tag.push(quote);
+        tag.push_str(value);
+        tag.push(quote);
     }
     if is_publication && !version_written {
         tag.push_str(" version=\"");
