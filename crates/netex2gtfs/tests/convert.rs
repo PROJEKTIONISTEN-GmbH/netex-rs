@@ -220,9 +220,10 @@ fn trips_show_where_they_go_and_call_with_their_times_past_midnight() {
 #[test]
 fn a_template_journey_runs_at_its_headway_from_its_first_to_its_last_departure() {
     // A headway group states an interval, not departures — "every 20
-    // minutes" —, as GTFS frequencies without exact times do; the group
-    // whose last departure is not a whole number of intervals after its
-    // first is written as stated too.
+    // minutes" —, as GTFS frequencies without exact times do; GTFS runs a
+    // frequency up to, not including, its end, which lies a second after
+    // the group's last departure. The group whose last departure is not a
+    // whole number of intervals after its first is written as stated too.
     let (feed, report) = seeweg();
     assert_eq!(
         table(
@@ -237,14 +238,36 @@ fn a_template_journey_runs_at_its_headway_from_its_first_to_its_last_departure()
             ]
         ),
         [
-            "sw:ServiceJourney:7-takt|06:00:00|07:00:00|1200|0",
-            "sw:ServiceJourney:7-takt|18:00:00|18:50:00|1200|0",
+            "sw:ServiceJourney:7-takt|06:00:00|07:00:01|1200|0",
+            "sw:ServiceJourney:7-takt|18:00:00|18:50:01|1200|0",
         ]
     );
     assert!(!report
         .decisions
         .iter()
         .any(|decision| decision.code == "headway-written-as-runs"));
+}
+
+#[test]
+fn a_headway_group_s_last_departure_is_a_departure_of_the_frequency() {
+    // GTFS runs a frequency from its start time up to, not including, its end
+    // time: the end lies after the last departure, by less than an interval.
+    // The group runs at 06:00, 06:20, 06:40 and 07:00.
+    let (feed, _) = seeweg();
+    let frequencies = table(
+        feed.path(),
+        "frequencies.txt",
+        &["trip_id", "start_time", "end_time", "headway_secs"],
+    );
+    let first = frequencies
+        .iter()
+        .find(|row| row.contains("|06:00:00|"))
+        .expect("the morning group");
+    let end = first.split('|').nth(2).expect("an end time");
+    assert!(
+        ("07:00:01"..="07:20:00").contains(&end),
+        "the 07:00 departure is no departure of {first}"
+    );
 }
 
 #[test]
@@ -1377,5 +1400,529 @@ fn shapes_asked_of_a_delivery_stating_no_geometry_are_each_said_to_be_missing() 
     assert_eq!(
         (missing.count, missing.example.as_deref()),
         (2, Some("uw:ServiceJourney:N-0800"))
+    );
+}
+
+/// The Seeweg delivery, each of its documents as `edit` makes it of its name
+/// and text, with the documents `more` beside them, in a directory of its own.
+fn seeweg_edited(edit: impl Fn(&str, &str) -> String, more: &[(&str, &str)]) -> tempfile::TempDir {
+    let delivery = tempfile::tempdir().expect("a directory");
+    for name in ["seeweg-line-7.xml", "seeweg-other.xml"] {
+        let xml = std::fs::read_to_string(fixture("seeweg").join(name)).expect("the fixture");
+        std::fs::write(delivery.path().join(name), edit(name, &xml)).expect("written");
+    }
+    for (name, xml) in more {
+        std::fs::write(delivery.path().join(name), xml).expect("written");
+    }
+    delivery
+}
+
+/// The value of `column` of each row of `file`.
+fn column(feed: &Path, file: &str, column: &str) -> Vec<String> {
+    rows(feed, file)
+        .into_iter()
+        .map(|mut row| row.remove(column).unwrap_or_default())
+        .collect()
+}
+
+/// A line defined again under the identifier of Seeweg's line 7, otherwise,
+/// and a line whose identifier is the one a second route of line 7 would
+/// be numbered, each with a journey.
+const EXPRESS: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.10">
+  <PublicationTimestamp>2026-10-10T06:00:00</PublicationTimestamp>
+  <ParticipantRef>SEEWEG</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="sw:CompositeFrame:express" version="1">
+      <frames>
+        <ServiceFrame id="sw:ServiceFrame:express" version="1">
+          <lines>
+            <Line id="sw:Line:7" version="2">
+              <Name>Seeweg Express</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>7E</PublicCode>
+              <OperatorRef ref="sw:Operator:SWB" version="1"/>
+            </Line>
+            <Line id="sw:Line:7#2" version="1">
+              <Name>Seeweg Nacht</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>N7</PublicCode>
+              <OperatorRef ref="sw:Operator:SWB" version="1"/>
+            </Line>
+          </lines>
+        </ServiceFrame>
+        <TimetableFrame id="sw:TimetableFrame:express" version="1">
+          <vehicleJourneys>
+            <ServiceJourney id="sw:ServiceJourney:express" version="1">
+              <dayTypes><DayTypeRef ref="sw:DayType:weekdays" version="1"/></dayTypes>
+              <ServiceJourneyPatternRef ref="sw:ServiceJourneyPattern:7-out" version="1"/>
+              <LineRef ref="sw:Line:7" version="2"/>
+              <passingTimes>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:express-1" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-out-1" version="1"/>
+                  <DepartureTime>08:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:express-3" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-out-3" version="1"/>
+                  <ArrivalTime>08:12:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="sw:ServiceJourney:nacht" version="1">
+              <dayTypes><DayTypeRef ref="sw:DayType:weekdays" version="1"/></dayTypes>
+              <ServiceJourneyPatternRef ref="sw:ServiceJourneyPattern:7-out" version="1"/>
+              <LineRef ref="sw:Line:7#2" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:nacht-1" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-out-1" version="1"/>
+                  <DepartureTime>01:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="sw:TimetabledPassingTime:nacht-3" version="1">
+                  <StopPointInJourneyPatternRef ref="sw:StopPointInJourneyPattern:7-out-3" version="1"/>
+                  <ArrivalTime>01:15:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>
+"#;
+
+#[test]
+fn a_route_numbered_apart_takes_no_identifier_another_route_has() {
+    let delivery = seeweg_edited(|_, xml| xml.to_owned(), &[("seeweg-express.xml", EXPRESS)]);
+    let (feed, report) = convert_to_directory(delivery.path(), &Options::default());
+    let routes = table(feed.path(), "routes.txt", &["route_id", "route_short_name"]);
+    let ids: std::collections::BTreeSet<&str> = routes
+        .iter()
+        .map(|route| route.split('|').next().expect("an identifier"))
+        .collect();
+    assert_eq!((ids.len(), routes.len()), (3, 3), "{routes:?}");
+    let short_name: BTreeMap<&str, &str> = routes
+        .iter()
+        .map(|route| route.split_once('|').expect("two columns"))
+        .collect();
+    let trips: Vec<String> = table(feed.path(), "trips.txt", &["trip_id", "route_id"])
+        .into_iter()
+        .filter(|trip| !trip.starts_with("sw:ServiceJourney:7-"))
+        .map(|trip| {
+            let (trip, route) = trip.split_once('|').expect("two columns");
+            format!("{trip} {}", short_name[route])
+        })
+        .collect();
+    assert_eq!(
+        trips,
+        ["sw:ServiceJourney:express 7E", "sw:ServiceJourney:nacht N7"]
+    );
+    assert!(decision(&report, "route-made-unique").is_some());
+}
+
+#[test]
+fn a_time_zone_written_as_an_abbreviation_is_no_time_zone() {
+    // As the examples of the standard write it, an offset rather than a zone.
+    let delivery = seeweg_edited(
+        |_, xml| {
+            xml.replace(
+                "<TimeZone>Europe/Zurich</TimeZone>",
+                "<TimeZone>CEST</TimeZone>",
+            )
+        },
+        &[],
+    );
+    let (feed, report) = convert_to_directory(delivery.path(), &Options::default());
+    assert_eq!(
+        column(feed.path(), "agency.txt", "agency_timezone"),
+        ["Europe/Zurich"]
+    );
+    assert_eq!(
+        decision(&report, "time-zone-not-a-name"),
+        Some((1, "seeweg-line-7.xml: CEST".to_owned()))
+    );
+    assert!(decision(&report, "time-zone-of-stops").is_some());
+}
+
+#[test]
+fn every_agency_of_a_feed_is_in_the_one_time_zone_of_the_feed() {
+    // GTFS has one time zone for all agencies of a feed.
+    let delivery = tempfile::tempdir().expect("a directory");
+    for name in ["uferweg-nord.xml", "uferweg-sued.xml"] {
+        let xml = std::fs::read_to_string(fixture("uferweg").join(name)).expect("the fixture");
+        let xml = if name == "uferweg-sued.xml" {
+            xml.replace(
+                "<TimeZone>Europe/Zurich</TimeZone>",
+                "<TimeZone>Europe/Berlin</TimeZone>",
+            )
+        } else {
+            xml
+        };
+        std::fs::write(delivery.path().join(name), xml).expect("written");
+    }
+    let (feed, report) = convert_to_directory(delivery.path(), &Options::default());
+    assert_eq!(
+        table(feed.path(), "agency.txt", &["agency_id", "agency_timezone"]),
+        [
+            "uw:Operator:nord|Europe/Zurich",
+            "uw:Operator:sued|Europe/Zurich"
+        ]
+    );
+    assert_eq!(
+        decision(&report, "agency-time-zone-unified"),
+        Some((1, "uw:Operator:sued: Europe/Berlin".to_owned()))
+    );
+}
+
+/// The Seeweg delivery whose outbound pattern begins at the stop point
+/// placed nowhere, as `edit` makes it beyond that.
+fn seeweg_from_nowhere(edit: impl Fn(&str) -> String) -> tempfile::TempDir {
+    seeweg_edited(
+        |_, xml| {
+            edit(&xml.replacen(
+                "<StopPointInJourneyPattern id=\"sw:StopPointInJourneyPattern:7-out-1\" version=\"1\" order=\"1\">\n                  <ScheduledStopPointRef ref=\"sw:ScheduledStopPoint:seehof\"",
+                "<StopPointInJourneyPattern id=\"sw:StopPointInJourneyPattern:7-out-1\" version=\"1\" order=\"1\">\n                  <ScheduledStopPointRef ref=\"sw:ScheduledStopPoint:nirgends\"",
+                1,
+            ))
+        },
+        &[],
+    )
+}
+
+#[test]
+fn the_first_and_the_last_call_of_every_trip_have_a_time() {
+    // The template journey's first call is at a stop point placed nowhere and
+    // left out; its next, at Bergdorf, has no time: GTFS requires one at a
+    // trip's first and last stop. Cut there, one call is left.
+    let delivery = seeweg_from_nowhere(str::to_owned);
+    let (feed, report) = convert_to_directory(delivery.path(), &Options::default());
+    let mut trips: BTreeMap<String, Vec<(String, String)>> = BTreeMap::new();
+    for row in rows(feed.path(), "stop_times.txt") {
+        trips
+            .entry(row["trip_id"].clone())
+            .or_default()
+            .push((row["arrival_time"].clone(), row["departure_time"].clone()));
+    }
+    for (trip, times) in &trips {
+        let (first, last) = (&times[0], &times[times.len() - 1]);
+        assert!(
+            !first.1.is_empty() && !last.0.is_empty(),
+            "{trip}: {times:?}"
+        );
+    }
+    let written: Vec<String> = column(feed.path(), "trips.txt", "trip_id");
+    assert!(column(feed.path(), "frequencies.txt", "trip_id")
+        .iter()
+        .all(|trip| written.contains(trip)));
+    assert_eq!(
+        decision(&report, "trip-untimed-end-cut"),
+        Some((1, "sw:ServiceJourney:7-takt".to_owned()))
+    );
+}
+
+#[test]
+fn a_template_journey_without_its_first_call_runs_its_headway_from_its_first_call_written() {
+    // With a time at Bergdorf, eight minutes after its first call, the
+    // template journey's first call written: each run leaves Bergdorf eight
+    // minutes after the run leaves the stop point placed nowhere.
+    let delivery = seeweg_from_nowhere(|xml| {
+        xml.replace(
+            "<TimetabledPassingTime id=\"sw:TimetabledPassingTime:takt-3\" version=\"1\">",
+            "<TimetabledPassingTime id=\"sw:TimetabledPassingTime:takt-2\" version=\"1\">
+                  <StopPointInJourneyPatternRef ref=\"sw:StopPointInJourneyPattern:7-out-2\" version=\"1\"/>
+                  <ArrivalTime>06:08:00</ArrivalTime>
+                  <DepartureTime>06:08:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id=\"sw:TimetabledPassingTime:takt-3\" version=\"1\">",
+        )
+    });
+    let (feed, _) = convert_to_directory(delivery.path(), &Options::default());
+    assert_eq!(
+        table(
+            feed.path(),
+            "frequencies.txt",
+            &["trip_id", "start_time", "end_time", "headway_secs"]
+        ),
+        [
+            "sw:ServiceJourney:7-takt|06:08:00|07:08:01|1200",
+            "sw:ServiceJourney:7-takt|18:08:00|18:58:01|1200",
+        ]
+    );
+    assert_eq!(
+        table(
+            feed.path(),
+            "stop_times.txt",
+            &["trip_id", "stop_id", "arrival_time", "departure_time"]
+        )
+        .into_iter()
+        .filter(|row| row.starts_with("sw:ServiceJourney:7-takt|"))
+        .collect::<Vec<_>>(),
+        [
+            "sw:ServiceJourney:7-takt|sw:StopPlace:bergdorf|06:08:00|06:08:00",
+            "sw:ServiceJourney:7-takt|sw:Quay:talwil-1|06:15:00|06:15:00",
+        ]
+    );
+}
+
+#[test]
+fn a_trip_names_no_shape_without_two_positions() {
+    // Every link stated in a reference system the crate does not know.
+    let delivery = seeweg_edited(
+        |_, xml| xml.replace("srsName=\"EPSG:2056\"", "srsName=\"EPSG:99999\""),
+        &[],
+    );
+    let (feed, report) = convert_to_directory(
+        delivery.path(),
+        &Options {
+            shapes: true,
+            ..Options::default()
+        },
+    );
+    let points = column(feed.path(), "shapes.txt", "shape_id");
+    for shape in column(feed.path(), "trips.txt", "shape_id") {
+        assert!(
+            shape.is_empty() || points.iter().filter(|&id| *id == shape).count() >= 2,
+            "{shape} has fewer than two positions"
+        );
+    }
+    assert_eq!(
+        decision(&report, "shape-without-two-positions"),
+        Some((2, "sw:ServiceJourney:7-2310".to_owned()))
+    );
+}
+
+#[test]
+fn an_agency_without_a_web_address_takes_the_feed_publisher_s() {
+    // No publisher given: the delivery's data source publishes the feed, and
+    // its web address is the agency's.
+    let delivery = seeweg_edited(
+        |_, xml| xml.replace("<Url>https://bahnen.seeweg.example</Url>", ""),
+        &[],
+    );
+    let (feed, report) = convert_to_directory(delivery.path(), &Options::default());
+    assert_eq!(
+        table(feed.path(), "agency.txt", &["agency_id", "agency_url"]),
+        ["sw:Operator:SWB|https://seeweg.example"]
+    );
+    assert_eq!(
+        column(feed.path(), "feed_info.txt", "feed_publisher_url"),
+        ["https://seeweg.example"]
+    );
+    assert!(decision(&report, "agency-without-url").is_some());
+}
+
+#[test]
+fn an_agency_a_route_and_a_stop_without_a_name_are_named_by_their_identifier() {
+    // GTFS requires a name of each; the identifier is the only one stated.
+    let delivery = seeweg_edited(
+        |_, xml| {
+            xml.replace("<Name>Seeweg Bahnen</Name>", "")
+                .replace("<Name>Seeweg</Name>", "")
+                .replace("<PublicCode>7</PublicCode>", "")
+                .replace("<Name>Weide</Name>", "")
+        },
+        &[],
+    );
+    let (feed, report) = convert_to_directory(delivery.path(), &Options::default());
+    assert_eq!(
+        table(feed.path(), "agency.txt", &["agency_id", "agency_name"]),
+        ["sw:Operator:SWB|sw:Operator:SWB"]
+    );
+    assert_eq!(
+        table(
+            feed.path(),
+            "routes.txt",
+            &["route_id", "route_short_name", "route_long_name"]
+        ),
+        ["sw:Line:7||sw:Line:7"]
+    );
+    assert!(table(feed.path(), "stops.txt", &["stop_id", "stop_name"])
+        .contains(&"sw:ScheduledStopPoint:weide|sw:ScheduledStopPoint:weide".to_owned()));
+    for code in [
+        "agency-named-by-its-identifier",
+        "route-named-by-its-identifier",
+        "stop-named-by-its-identifier",
+    ] {
+        assert!(decision(&report, code).is_some(), "{code}");
+    }
+}
+
+#[test]
+fn a_feed_written_again_into_its_directory_holds_only_the_files_of_this_conversion() {
+    let feed = tempfile::tempdir().expect("a directory");
+    let convert_into = |delivery: &Path, options: &Options| {
+        let delivery = Delivery::read(
+            &Source::open(delivery).expect("the delivery opens"),
+            Reading {
+                geometry: options.shapes,
+                ..Reading::default()
+            },
+        )
+        .expect("the delivery reads");
+        convert(
+            &delivery,
+            options,
+            output::at(feed.path()).expect("an output"),
+        )
+        .expect("converts")
+    };
+    let publisher = Publisher {
+        name: "Earlier".to_owned(),
+        url: "https://earlier.example".to_owned(),
+        language: None,
+    };
+    convert_into(
+        &fixture("seeweg"),
+        &Options {
+            shapes: true,
+            publisher: Some(publisher),
+            ..Options::default()
+        },
+    );
+    // A file of a GTFS feed another program wrote, and one of no feed.
+    std::fs::write(feed.path().join("fare_attributes.txt"), "fare_id,price\n").expect("written");
+    std::fs::write(feed.path().join("notes.txt"), "kept\n").expect("written");
+    // Without a data source with a web address: no feed_info.txt, nor shapes.
+    let delivery = seeweg_edited(
+        |_, xml| xml.replace("<Url>https://seeweg.example</Url>", ""),
+        &[],
+    );
+    let report = convert_into(delivery.path(), &Options::default());
+    let mut files: Vec<String> = std::fs::read_dir(feed.path())
+        .expect("the feed")
+        .map(|entry| {
+            entry
+                .expect("a file")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect();
+    files.sort_unstable();
+    let mut expected: Vec<String> = report.rows.keys().cloned().collect();
+    expected.push("notes.txt".to_owned());
+    expected.sort_unstable();
+    assert_eq!(files, expected);
+}
+
+#[test]
+fn a_destination_display_holds_across_a_call_its_pattern_does_not_name() {
+    // A journey stating its calls, Weide among them, on the outbound pattern,
+    // whose display changes at Bergdorf.
+    let journey = r#"<ServiceJourney id="sw:ServiceJourney:7-calls" version="1">
+              <dayTypes><DayTypeRef ref="sw:DayType:weekdays" version="1"/></dayTypes>
+              <ServiceJourneyPatternRef ref="sw:ServiceJourneyPattern:7-out" version="1"/>
+              <LineRef ref="sw:Line:7" version="1"/>
+              <calls>
+                <Call id="sw:Call:c1" version="1" order="1"><ScheduledStopPointRef ref="sw:ScheduledStopPoint:seehof" version="1"/><Departure><Time>09:00:00</Time></Departure></Call>
+                <Call id="sw:Call:c2" version="1" order="2"><ScheduledStopPointRef ref="sw:ScheduledStopPoint:weide" version="1"/><Arrival><Time>09:03:00</Time></Arrival><Departure><Time>09:03:00</Time></Departure></Call>
+                <Call id="sw:Call:c3" version="1" order="3"><ScheduledStopPointRef ref="sw:ScheduledStopPoint:bergdorf" version="1"/><Arrival><Time>09:06:00</Time></Arrival><Departure><Time>09:06:00</Time></Departure></Call>
+                <Call id="sw:Call:c4" version="1" order="4"><ScheduledStopPointRef ref="sw:ScheduledStopPoint:talwil" version="1"/><Arrival><Time>09:10:00</Time></Arrival></Call>
+              </calls>
+            </ServiceJourney>
+            <TemplateServiceJourney "#;
+    let delivery = seeweg_edited(
+        |_, xml| xml.replacen("<TemplateServiceJourney ", journey, 1),
+        &[],
+    );
+    let (feed, _) = convert_to_directory(delivery.path(), &Options::default());
+    assert_eq!(
+        table(feed.path(), "trips.txt", &["trip_id", "trip_headsign"])
+            .into_iter()
+            .filter(|trip| trip.starts_with("sw:ServiceJourney:7-calls|"))
+            .collect::<Vec<_>>(),
+        ["sw:ServiceJourney:7-calls|Bergdorf"]
+    );
+    assert_eq!(
+        table(
+            feed.path(),
+            "stop_times.txt",
+            &["trip_id", "stop_id", "stop_headsign"]
+        )
+        .into_iter()
+        .filter(|row| row.starts_with("sw:ServiceJourney:7-calls|"))
+        .collect::<Vec<_>>(),
+        [
+            "sw:ServiceJourney:7-calls|sw:Quay:seehof-1|",
+            "sw:ServiceJourney:7-calls|sw:ScheduledStopPoint:weide|",
+            "sw:ServiceJourney:7-calls|sw:StopPlace:bergdorf|Talwil Mitte",
+            "sw:ServiceJourney:7-calls|sw:Quay:talwil-1|Talwil Mitte",
+        ]
+    );
+}
+
+#[test]
+fn a_parent_site_without_a_position_is_no_station_and_said() {
+    let delivery = seeweg_edited(
+        |_, xml| {
+            xml.replace(
+                "<Name>Bergdorf Ort</Name>\n              <Centroid><Location><Longitude>8.3202</Longitude><Latitude>47.0601</Latitude></Location></Centroid>",
+                "<Name>Bergdorf Ort</Name>",
+            )
+        },
+        &[],
+    );
+    let (feed, report) = convert_to_directory(delivery.path(), &Options::default());
+    let stops = table(feed.path(), "stops.txt", &["stop_id", "parent_station"]);
+    assert!(!stops
+        .iter()
+        .any(|stop| stop.starts_with("sw:StopPlace:bergdorf-ort|")));
+    assert!(
+        stops.contains(&"sw:StopPlace:bergdorf|".to_owned()),
+        "{stops:?}"
+    );
+    assert_eq!(
+        decision(&report, "parent-site-without-position"),
+        Some((1, "sw:StopPlace:bergdorf-ort".to_owned()))
+    );
+}
+
+#[test]
+fn a_colour_is_read_in_whatever_prefix_its_namespace_is_written() {
+    let delivery = seeweg_edited(
+        |_, xml| {
+            xml.replace(
+                "<Colour>1F6FB2</Colour>",
+                "<n:Colour xmlns:n=\"http://www.netex.org.uk/netex\">1F6FB2</n:Colour>",
+            )
+            .replace(
+                "<TextColour>FFFFFF</TextColour>",
+                "<n:TextColour xmlns:n=\"http://www.netex.org.uk/netex\">FFFFFF</n:TextColour>",
+            )
+        },
+        &[],
+    );
+    let (feed, _) = convert_to_directory(delivery.path(), &Options::default());
+    assert_eq!(
+        table(
+            feed.path(),
+            "routes.txt",
+            &["route_color", "route_text_color"]
+        ),
+        ["1F6FB2|FFFFFF"]
+    );
+}
+
+#[test]
+fn the_feed_s_version_is_the_latest_publication_in_time() {
+    // 06:00 at UTC+2 is 04:00 UTC, an hour before the other document's.
+    let delivery = seeweg_edited(
+        |name, xml| {
+            let published = if name == "seeweg-line-7.xml" {
+                "2026-10-10T06:00:00+02:00"
+            } else {
+                "2026-10-10T05:00:00Z"
+            };
+            xml.replace(
+                "<PublicationTimestamp>2026-10-10T06:00:00</PublicationTimestamp>",
+                &format!("<PublicationTimestamp>{published}</PublicationTimestamp>"),
+            )
+        },
+        &[],
+    );
+    let (feed, _) = convert_to_directory(delivery.path(), &Options::default());
+    assert_eq!(
+        column(feed.path(), "feed_info.txt", "feed_version"),
+        ["2026-10-10T05:00:00Z"]
     );
 }

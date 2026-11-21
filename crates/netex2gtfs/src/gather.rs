@@ -1036,21 +1036,41 @@ fn stop_point_ref(reference: Option<&StopPointRef>) -> Option<&str> {
 /// A line's colour and text colour from its `Presentation`, which the model
 /// carries through untyped: six hexadecimal digits each.
 fn presentation(line: &model::Line) -> (Option<String>, Option<String>) {
-    let Some(fragment) = line
-        .unprocessed
+    line.unprocessed
         .iter()
         .find(|fragment| &*fragment.name == "Presentation")
-    else {
-        return (None, None);
-    };
-    let colour = |element: &str| {
-        let start = fragment.xml.find(&format!("<{element}>"))? + element.len() + 2;
-        let end = start + fragment.xml[start..].find('<')?;
-        let value = fragment.xml[start..end].trim().trim_start_matches('#');
-        (value.len() == 6 && value.bytes().all(|b| b.is_ascii_hexdigit()))
-            .then(|| value.to_ascii_uppercase())
-    };
-    (colour("Colour"), colour("TextColour"))
+        .and_then(|fragment| colours(&fragment.xml).ok())
+        .unwrap_or_default()
+}
+
+/// The first `Colour` and `TextColour` a `Presentation` states, each known
+/// by its local name — in the default namespace or under a prefix —, where
+/// it is six hexadecimal digits. The fragment was read once already, with
+/// its document: it reads again.
+fn colours(presentation: &str) -> netex_rs::Result<(Option<String>, Option<String>)> {
+    let mut cursor = Cursor::new(presentation, netex_rs::Limits::default());
+    let root = cursor.root()?;
+    let (mut colour, mut text_colour) = (None, None);
+    if root.empty {
+        return Ok((colour, text_colour));
+    }
+    cursor.enter(&root)?;
+    while let Some(child) = cursor.next_child()? {
+        let found = match child.local {
+            "Colour" => &mut colour,
+            "TextColour" => &mut text_colour,
+            _ => {
+                cursor.skip_over(&child)?;
+                continue;
+            }
+        };
+        let value = cursor.text(&child)?;
+        let value = value.trim().trim_start_matches('#');
+        if found.is_none() && value.len() == 6 && value.bytes().all(|b| b.is_ascii_hexdigit()) {
+            *found = Some(value.to_ascii_uppercase());
+        }
+    }
+    Ok((colour, text_colour))
 }
 
 fn position_of(position: usize) -> u32 {

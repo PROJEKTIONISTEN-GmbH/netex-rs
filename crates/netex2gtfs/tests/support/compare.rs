@@ -119,33 +119,24 @@ impl Feed {
                 trip_days.insert(trip, active.clone());
             }
         }
-        // A trip run at a frequency with exact times runs once per departure;
-        // one without exact times states no runs, and counts once per group,
-        // at its start.
+        // A trip run at a frequency runs once per headway from its start up
+        // to, not including, its end — as a consumer runs it, with exact
+        // times or without.
         let mut runs: FxHashMap<String, Vec<u32>> = FxHashMap::default();
         if path.join("frequencies.txt").exists() {
-            for [trip, start, end, step, exact] in rows(
+            for [trip, start, end, step] in rows(
                 path,
                 "frequencies.txt",
-                &[
-                    "trip_id",
-                    "start_time",
-                    "end_time",
-                    "headway_secs",
-                    "exact_times",
-                ],
+                &["trip_id", "start_time", "end_time", "headway_secs"],
             ) {
                 let (start, end) = (
                     seconds(&start).expect("a start"),
                     seconds(&end).expect("an end"),
                 );
                 let step: u32 = step.parse().expect("a headway");
-                let departures = runs.entry(trip).or_default();
-                if exact == "1" {
-                    departures.extend((start..end).step_by(step as usize));
-                } else {
-                    departures.push(start);
-                }
+                runs.entry(trip)
+                    .or_default()
+                    .extend((start..end).step_by(step as usize));
             }
         }
         let mut stations = Stations::default();

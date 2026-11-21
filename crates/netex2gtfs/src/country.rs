@@ -1,7 +1,8 @@
 //! The countries a stop can lie in, each with its time zone: the member
 //! states of the European Union and of EFTA, the United Kingdom and the small
 //! states among them, their borders Natural Earth's (public domain), cut to
-//! Europe and simplified to 0.005° — some 500 m — by `tools/countries.py`.
+//! Europe — Iceland and Cyprus to their own — and simplified to 0.005° — some
+//! 500 m — by `tools/countries.py`.
 
 use std::sync::OnceLock;
 
@@ -16,7 +17,8 @@ const QUANTUM: f64 = 1e-4;
 pub(crate) struct Country {
     /// Its ISO 3166 code.
     pub(crate) code: &'static str,
-    /// The time zone of its European part.
+    /// The time zone of its part the table holds: of its European part, or
+    /// Iceland's and Cyprus's own.
     pub(crate) zone: &'static str,
     rings: Vec<Ring>,
 }
@@ -147,6 +149,10 @@ mod tests {
             ("Bolzano", (46.4983, 11.3548), "IT"),
             ("Vatican City", (41.9029, 12.4534), "VA"),
             ("Corte", (42.3061, 9.1497), "FR"),
+            ("Selfoss", (63.9331, -20.9971), "IS"),
+            ("Egilsstaðir", (65.2653, -14.3948), "IS"),
+            ("Limassol", (34.7071, 33.0226), "CY"),
+            ("Kakopetria", (34.9879, 32.9020), "CY"),
         ] {
             assert_eq!(
                 country_of(position).map(|country| country.code),
@@ -168,18 +174,24 @@ mod tests {
     #[test]
     fn the_table_holds_each_country_once_with_its_zone() {
         let countries = countries();
-        assert_eq!(countries.len(), 34);
+        // The member states of the European Union and of EFTA, the United
+        // Kingdom and the small states among them.
+        assert_eq!(countries.len(), 36);
         assert!(countries.windows(2).all(|pair| pair[0].code < pair[1].code));
         for country in countries {
             assert!(
-                country.zone.starts_with("Europe/"),
+                ["Europe/", "Atlantic/", "Asia/"]
+                    .iter()
+                    .any(|area| country.zone.starts_with(area)),
                 "{}: {}",
                 country.code,
                 country.zone
             );
             assert!(!country.rings.is_empty(), "{}", country.code);
         }
-        let belgium = countries.iter().find(|c| c.code == "BE").expect("Belgium");
-        assert_eq!(belgium.zone, "Europe/Brussels");
+        let zone = |code: &str| countries.iter().find(|c| c.code == code).map(|c| c.zone);
+        assert_eq!(zone("BE"), Some("Europe/Brussels"));
+        assert_eq!(zone("IS"), Some("Atlantic/Reykjavik"));
+        assert_eq!(zone("CY"), Some("Asia/Nicosia"));
     }
 }
