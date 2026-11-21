@@ -1,5 +1,79 @@
 # Changelog
 
+## 0.12.1 — unreleased
+
+netex2gtfs writes valid GTFS where it did not: the last run of every headway
+group, no identifier twice, one time zone for all agencies, times at every
+trip's ends, no shape without positions, no required name or web address
+left empty where the delivery states one. netex-rs's code is that of 0.12.0.
+
+Of the 21 national deliveries at hand, converted before and after, the files
+of 18 feeds are the same bytes (the archive holds `stop_times.txt` before
+`trips.txt` now); Switzerland's `frequencies.txt` ends each of its 582 groups
+a second after its last departure, so that its last run runs;
+Denmark's writes the agency of Greenland's buses in the feed's zone, where
+its own (America/Nuuk) made a feed of two zones; Sweden's names an operator
+stated without a name by its identifier.
+
+### netex2gtfs 0.7.0
+
+Built on netex-rs 0.12.1. A new minor version, as a feed written into a
+directory now removes what an earlier one left there, and the feed's agencies
+share one time zone.
+
+- `frequencies.txt` ends a second after a headway group's last departure:
+  GTFS runs a frequency up to, not including, its end, so that the last run
+  of every group was lost — Seeweg's 06:00 to 07:00 every 20 minutes ran at
+  06:00, 06:20 and 06:40. Where the feed leaves out a template journey's
+  first call, its groups start as much later as its first call written is.
+- Identifiers made unique (`stop-made-unique`, `trip-made-unique`,
+  `route-made-unique`) take the next number no identifier has taken: `a#2`,
+  `a`, `a` gave `a#2` twice; a route numbered `L#2` took the identifier of a
+  line `L#2`. Routes are found by their definition in one table, not by a
+  search of all routes for each line.
+- One time zone for all agencies, as GTFS requires: the first a document
+  names by its name in the time zone database, in the order of the
+  documents' names. An organisation whose document names another is
+  written in the feed's (`agency-time-zone-unified`); a document naming an
+  abbreviation of an offset
+  (`CET`, `CEST`, `BST`, as the standard's examples write it) names none
+  (`time-zone-not-a-name`), where it was written as the agencies' zone.
+  The trips of an agency written in the feed's zone keep their times as
+  stated: where the zones' offsets differ — America/Nuuk beside
+  Europe/Copenhagen, three hours — they run at other instants than the
+  delivery's, which the report says.
+- A trip begins and ends at a call with a time: a call left out at an end
+  (`call-without-place`, `stop-without-position`) left one without
+  (`trip-untimed-end-cut`). A trip's course of fewer than two positions gives
+  no shape (`shape-without-two-positions`), where `shape_id` named an empty
+  one.
+- An organisation without a web address takes the feed publisher's — the
+  one given, else the delivery's data source with one, as `feed_info.txt`
+  names it —, and a line naming no organisation takes that publisher as its
+  agency; an organisation, line or stop without a name is named by its
+  identifier (`agency-named-by-its-identifier`,
+  `route-named-by-its-identifier`, `stop-named-by-its-identifier`).
+- `output::Directory`: the files of the GTFS reference a conversion does not
+  write are removed when it finishes; a `shapes.txt` or `feed_info.txt` of an
+  earlier run stayed beside the new feed.
+- A destination display holds across a call its pattern does not name; it
+  jumped to the pattern's last. A parent site without a position is no
+  station (`parent-site-without-position`); it was left out without a word.
+  Colours are read by their local name, in whatever prefix. The feed's
+  version is the latest publication timestamp in time, not as text. A
+  trolleybus is route type 11. Iceland and Cyprus are in the table of
+  countries, as the README promised. Once a document does not read, no
+  thread reads another — the source still loads each —, and of the
+  documents found failing the one named first is the error.
+- `stop_times.txt` is written before `trips.txt`, so that each trip's calls
+  and displays are found once.
+
+### netex-cli 0.8.0
+
+Built on netex-rs 0.12.1 and netex2gtfs 0.7.0: `netex convert` writes the
+feed as netex2gtfs 0.7.0 does; into a directory, it removes what a feed
+written there before left. `--time-zone` names the feed's one zone.
+
 ## 0.12.0 — unreleased
 
 The index and the merge answer alike whatever order the documents come in
