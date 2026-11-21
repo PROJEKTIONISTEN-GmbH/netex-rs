@@ -316,6 +316,13 @@ impl<'i> Cursor<'i> {
     /// a child it reads: written as XML has them, none twice, every reference
     /// in a value one the cursor resolves.
     fn check_tag(&mut self, start: &BytesStart<'i>, offset: usize) -> Result<()> {
+        if start
+            .attributes_raw()
+            .bytes()
+            .all(|byte| byte.is_ascii_whitespace())
+        {
+            return Ok(());
+        }
         self.names.clear();
         let mut parsed = start.attributes();
         parsed.with_checks(false);
@@ -335,6 +342,8 @@ impl<'i> Cursor<'i> {
             self.names.push(key);
             check_value(&attribute.value).map_err(|kind| self.error_at(kind, offset))?;
         }
+        // Left empty, the list costs a copy of the cursor nothing.
+        self.names.clear();
         Ok(())
     }
 
@@ -777,17 +786,17 @@ pub(crate) fn is_xml_char(character: char) -> bool {
 /// The first character of `text` XML 1.0 forbids, and where it stands.
 ///
 /// Every byte of a document is looked at once, in blocks a vector unit takes
-/// whole; only a block holding a byte below the space or the lead byte of
-/// U+FFFE and U+FFFF is looked into.
+/// whole; only a block holding a control byte other than tab, line feed and
+/// carriage return, or the lead byte of U+FFFE and U+FFFF, is looked into.
 fn forbidden_character(text: &str) -> Option<(usize, char)> {
     const BLOCK: usize = 64;
-    let bytes = text.as_bytes();
     let suspect = |block: &[u8]| {
-        block
-            .iter()
-            .fold(false, |any, &byte| any | (byte < 0x20) | (byte == 0xef))
+        block.iter().fold(false, |any, &byte| {
+            let control = byte < 0x20 && byte != b'\t' && byte != b'\n' && byte != b'\r';
+            any | control | (byte == 0xef)
+        })
     };
-    for (number, block) in bytes.chunks(BLOCK).enumerate() {
+    for (number, block) in text.as_bytes().chunks(BLOCK).enumerate() {
         if !suspect(block) {
             continue;
         }
@@ -796,7 +805,7 @@ fn forbidden_character(text: &str) -> Option<(usize, char)> {
         while !text.is_char_boundary(start) {
             start -= 1;
         }
-        let end = ((number + 1) * BLOCK).min(bytes.len());
+        let end = number * BLOCK + block.len();
         if let Some((at, character)) = text[start..]
             .char_indices()
             .take_while(|(at, _)| start + at < end)
@@ -820,6 +829,9 @@ fn forbidden(character: char) -> String {
 /// the five entities XML predefines or a character reference to a character
 /// XML allows.
 fn check_value(raw: &str) -> std::result::Result<(), Kind> {
+    if memchr::memchr2(b'<', b'&', raw.as_bytes()).is_none() {
+        return Ok(());
+    }
     if raw.contains('<') {
         return Err(Kind::Xml("a `<` in an attribute value".to_owned()));
     }
@@ -871,4 +883,28 @@ fn spaced(start: &BytesStart<'_>, key: &str) -> bool {
         .checked_sub(tag.as_ptr() as usize + 1)
         .and_then(|before| tag.get(before))
         .is_some_and(u8::is_ascii_whitespace)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::forbidden_character;
+
+    #[test]
+    fn a_forbidden_character_is_found_wherever_it_stands_among_the_blocks() {
+        for at in [0, 1, 62, 63, 64, 65, 127, 128, 200] {
+            let mut text = "a\n\t\r".repeat(60);
+            text.insert(at, '\u{1}');
+            assert_eq!(forbidden_character(&text), Some((at, '\u{1}')), "at {at}");
+        }
+        for before in [61, 62, 63, 64] {
+            let text = format!("{}\u{fffe}x", "x".repeat(before));
+            assert_eq!(
+                forbidden_character(&text),
+                Some((before, '\u{fffe}')),
+                "after {before}"
+            );
+        }
+        let allowed = "\u{feff}ü\t\n\r€\u{fffd}\u{ffef}".repeat(100);
+        assert_eq!(forbidden_character(&allowed), None);
+    }
 }
