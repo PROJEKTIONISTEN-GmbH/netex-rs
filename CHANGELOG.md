@@ -67,6 +67,11 @@ interfaces named below change.
   start. Such a document was read, and its faults written back by `write`,
   `merge` and `extract` for other parsers to refuse; it is an error of the
   document now (`Kind::Xml`, `Kind::Entity`). README promised as much.
+  Every national delivery at hand — 21, of ten countries — reads as
+  before, to the same statistics. The checks cost the lean reader about 5 %
+  on one thread (Austria's VOR, documents in memory); `netex stats` of
+  Austria's VOR, Switzerland and Germany on sixteen threads took as long as
+  before within the spread of a shared host.
 - **xml**: the emitter writes a carriage return as `&#13;`, and in an
   attribute a tab and a line feed as `&#9;` and `&#10;`, so that a value set
   with them reads back as it was set rather than with spaces; a character
@@ -101,7 +106,8 @@ interfaces named below change.
 ### netex2gtfs 0.5.0
 
 Built on netex-rs 0.11.0. `Profile` and `StopIds` are `#[non_exhaustive]`
-(breaking). The feeds are the same.
+(breaking). The feeds are the same: Austria's VOR, Norway and Belgium's
+railways convert to the same bytes as with 0.4.0.
 
 ### netex-cli 0.6.0
 
