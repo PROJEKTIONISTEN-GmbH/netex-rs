@@ -37,6 +37,30 @@ fn transcribed() -> Vec<(&'static str, &'static [&'static str])> {
     ]
 }
 
+/// Tokens an enumeration holds beyond the type it transcribes: those of the
+/// types the elements carrying it have where that type is another.
+fn beyond_the_type(xsd_type: &str) -> &'static [&'static str] {
+    if xsd_type == VehicleMode::XSD_TYPE {
+        // `AllPublicTransportModesEnumeration` (2.0) and
+        // `AllVehicleModesOfTransportEnumeration` (1.x) add `other`.
+        &["other"]
+    } else {
+        &[]
+    }
+}
+
+/// The tokens of `xsd_type` as the schema lists them, with those the crate
+/// holds beyond it.
+fn expected_tokens(schema: &[String], xsd_type: &str) -> Vec<String> {
+    let mut tokens = schema.to_vec();
+    tokens.extend(
+        beyond_the_type(xsd_type)
+            .iter()
+            .map(|token| (*token).to_owned()),
+    );
+    tokens
+}
+
 /// Every named enumerated `simpleType` of a schema set: name → tokens in order.
 fn schema_enumerations(release: Release) -> BTreeMap<String, Vec<String>> {
     let mut out = BTreeMap::new();
@@ -124,6 +148,7 @@ fn every_transcribed_enumeration_matches_the_20_schemas_token_for_token() {
             ));
             continue;
         };
+        let expected = expected_tokens(expected, xsd_type);
         if expected != tokens {
             failures.push(format!(
                 "{xsd_type}:\n  schema: {expected:?}\n  crate:  {tokens:?}"
@@ -162,6 +187,7 @@ fn every_transcribed_enumeration_matches_the_1x_schemas_up_to_the_table() {
             .copied()
             .filter(|t| !only_20.contains(t) || expected.iter().any(|e| e == t))
             .collect();
+        let expected = expected_tokens(expected, xsd_type);
         if expected.iter().map(String::as_str).collect::<Vec<_>>() != without_20 {
             failures.push(format!("{xsd_type}:\n  1.x schema: {expected:?}\n  crate minus 2.0-only tokens: {without_20:?}"));
         }
@@ -170,5 +196,74 @@ fn every_transcribed_enumeration_matches_the_1x_schemas_up_to_the_table() {
         failures.is_empty(),
         "{}",
         support::report("enumerations differ from the 1.x schemas", &failures)
+    );
+}
+
+/// The types the schemas give the elements of `name`, each with its tokens.
+fn types_of_element(
+    release: Release,
+    name: &str,
+    enumerations: &BTreeMap<String, Vec<String>>,
+) -> BTreeMap<String, Vec<String>> {
+    fn collect_types(dir: &Path, name: &str, out: &mut Vec<String>) {
+        for entry in std::fs::read_dir(dir).expect("schema directory is readable") {
+            let path = entry.expect("readable entry").path();
+            if path.is_dir() {
+                collect_types(&path, name, out);
+            } else if path.extension().is_some_and(|e| e == "xsd") {
+                let xml = std::fs::read_to_string(&path).expect("schema is readable");
+                let declaration = format!(r#"<xsd:element name="{name}" type=""#);
+                for (at, _) in xml.match_indices(&declaration) {
+                    let rest = &xml[at + declaration.len()..];
+                    out.push(rest[..rest.find('"').expect("a closing quote")].to_owned());
+                }
+            }
+        }
+    }
+    let mut types = Vec::new();
+    collect_types(&release.dir().join("xsd"), name, &mut types);
+    types
+        .into_iter()
+        .filter_map(|xsd_type| {
+            let tokens = enumerations.get(&xsd_type)?.clone();
+            Some((xsd_type, tokens))
+        })
+        .collect()
+}
+
+/// `TransportMode` and `VehicleMode` are typed with one enumeration of modes
+/// or another, element by element; the crate reads them all as
+/// [`VehicleMode`], which must hold every token of each.
+#[test]
+fn every_mode_an_element_of_a_mode_may_hold_is_a_token_of_vehicle_mode() {
+    let mut failures = Vec::new();
+    for release in [Release::V2, Release::V1] {
+        if !support::official_fixtures(release) {
+            continue;
+        }
+        let enumerations = schema_enumerations(release);
+        for element in ["TransportMode", "VehicleMode"] {
+            let types = types_of_element(release, element, &enumerations);
+            assert!(!types.is_empty(), "{release}: no type of <{element}>");
+            for (xsd_type, tokens) in types {
+                for token in tokens {
+                    if !VehicleMode::TOKENS.contains(&token.as_str()) {
+                        failures.push(format!("{release} <{element}> {xsd_type}: `{token}`"));
+                    }
+                }
+            }
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "{}",
+        support::report("modes the crate reads as unrecognised", &failures)
+    );
+    assert!(
+        !matches!(
+            VehicleMode::from_token("other"),
+            VehicleMode::Unrecognised(_)
+        ),
+        "`other` is a token of the schemas"
     );
 }

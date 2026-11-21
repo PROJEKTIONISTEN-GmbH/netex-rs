@@ -95,6 +95,32 @@ fn a_quay_of_the_dutch_register_lands_where_rdnaptrans2018_puts_it() {
     }
 }
 
+/// LV03 is LV95 moved 2 000 000 m to the west and 1 000 000 m to the south,
+/// on the older network its correction mends. Where the stops of the Swiss
+/// register stand, the two land within the correction's few decimetres;
+/// beyond, the correction fitted at those stops is not extrapolated — it ran
+/// some hundred metres off in Stuttgart —, and the translation alone puts a
+/// position within two metres.
+#[cfg(feature = "crs")]
+#[test]
+fn a_position_beyond_the_stops_a_correction_is_fitted_at_is_not_corrected() {
+    let lv95 = ReferenceSystem::from_srs_name("EPSG:2056").expect("LV95");
+    let lv03 = ReferenceSystem::from_srs_name("EPSG:21781").expect("LV03");
+    for (place, east, north, within) in [
+        ("Bern", 2_600_104.09, 1_199_879.64, 0.5),
+        ("Konstanz", 2_730_052.27, 1_280_252.08, 2.0),
+        ("Stuttgart", 2_728_039.86, 1_404_809.61, 2.0),
+        ("München", 2_906_653.04, 1_340_254.09, 2.0),
+        ("Lyon", 2_397_045.87, 1_070_970.10, 2.0),
+    ] {
+        let metres = metres_between(
+            lv95.to_wgs84(east, north),
+            lv03.to_wgs84(east - 2_000_000.0, north - 1_000_000.0),
+        );
+        assert!(metres < within, "{place}: {metres:.1} m apart");
+    }
+}
+
 #[cfg(feature = "crs")]
 #[test]
 fn an_srs_name_names_its_system_in_any_of_the_usual_forms() {

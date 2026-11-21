@@ -620,3 +620,27 @@ pub fn location_in_wgs84(
     )?;
     Ok(Some(system.to_wgs84(first, second)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::corrections;
+
+    #[test]
+    fn a_correction_mends_the_network_of_its_country_and_nothing_beyond() {
+        // Vienna and Bern lie among the stops each correction is fitted at;
+        // Venice, Budapest, Stuttgart and Lyon do not.
+        let moved = |(latitude, longitude): (f64, f64), at: (f64, f64)| {
+            (latitude - at.0).abs() + (longitude - at.1).abs() > 0.0
+        };
+        let vienna = (48.2, 16.37);
+        assert!(moved(corrections::MGI.apply(vienna.0, vienna.1), vienna));
+        let bern = (46.95, 7.44);
+        assert!(moved(corrections::CH1903.apply(bern.0, bern.1), bern));
+        for beyond in [(45.44, 12.32), (47.5, 19.04)] {
+            assert_eq!(corrections::MGI.apply(beyond.0, beyond.1), beyond);
+        }
+        for beyond in [(48.78, 9.18), (45.76, 4.83)] {
+            assert_eq!(corrections::CH1903.apply(beyond.0, beyond.1), beyond);
+        }
+    }
+}

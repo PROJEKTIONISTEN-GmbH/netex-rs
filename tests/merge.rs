@@ -575,3 +575,108 @@ fn a_journey_kept_once_is_reported_beside_the_journey_as_written() {
         ["at:ex:ServiceJourney:100-K (c) = b:at:ex:ServiceJourney:100-v1 (b)"]
     );
 }
+
+#[test]
+fn ten_deliveries_and_more_are_written_in_their_rank_s_order_of_names() {
+    let Some(at) = austrian() else {
+        return;
+    };
+    // Each delivery's journey 100-v1 arrives a minute later than the one
+    // before, so that every delivery keeps something to write.
+    let copies: Vec<tempfile::TempDir> = (0..11)
+        .map(|minute| {
+            altered(&at, |name, text| {
+                if name.contains("_100_") {
+                    text.replace(
+                        "<ArrivalTime>08:12:00</ArrivalTime>",
+                        &format!("<ArrivalTime>08:{:02}:00</ArrivalTime>", 13 + minute),
+                    )
+                } else {
+                    text
+                }
+            })
+        })
+        .collect();
+    let labels: Vec<String> = (0..copies.len()).map(|n| format!("d{n}")).collect();
+    let deliveries: Vec<(&str, &Path)> = labels
+        .iter()
+        .map(String::as_str)
+        .zip(copies.iter().map(tempfile::TempDir::path))
+        .collect();
+    let (to, report) = merged(&deliveries);
+    assert!(report
+        .deliveries
+        .iter()
+        .all(|delivery| delivery.documents_written > 0));
+    let mut written: Vec<String> = std::fs::read_dir(to.path())
+        .expect("the merge")
+        .map(|entry| {
+            entry
+                .expect("an entry")
+                .file_name()
+                .into_string()
+                .expect("UTF-8")
+        })
+        .collect();
+    written.sort();
+    let in_rank: Vec<String> = written
+        .iter()
+        .map(|name| name.split_once('-').expect("rank and label").1.to_owned())
+        .collect();
+    assert_eq!(in_rank, labels, "{written:?}");
+}
+
+#[test]
+fn an_object_renamed_takes_the_identifiers_within_it_an_earlier_delivery_holds_with_it() {
+    let Some(at) = austrian() else {
+        return;
+    };
+    // The second delivery's journey 100-v1 is another one, renamed; its
+    // passing times are identified as the first delivery's are.
+    let later = altered(&at, |name, text| {
+        if name.contains("_100_") {
+            text.replace(
+                "<ArrivalTime>08:12:00</ArrivalTime>",
+                "<ArrivalTime>08:15:00</ArrivalTime>",
+            )
+        } else {
+            text
+        }
+    });
+    let (to, _) = merged(&[("a", &at), ("b", later.path())]);
+    let defining = |id: &str| -> Vec<String> {
+        let mut found = Vec::new();
+        for delivery in std::fs::read_dir(to.path()).expect("the merge") {
+            let delivery = delivery.expect("a delivery").path();
+            for document in std::fs::read_dir(&delivery).expect("its documents") {
+                let text =
+                    std::fs::read_to_string(document.expect("a document").path()).expect("a text");
+                if text.contains(&format!(r#" id="{id}""#)) {
+                    found.push(
+                        delivery
+                            .file_name()
+                            .expect("a name")
+                            .to_string_lossy()
+                            .into_owned(),
+                    );
+                }
+            }
+        }
+        found.sort();
+        found
+    };
+    assert_eq!(
+        defining("at:ex:TimetabledPassingTime:100-v1-1"),
+        ["1-a"],
+        "an identifier defined in two deliveries"
+    );
+    assert_eq!(defining("b:at:ex:TimetabledPassingTime:100-v1-1"), ["2-b"]);
+    let read = index(to.path());
+    let renamed = read
+        .journey_by_id("b:at:ex:ServiceJourney:100-v1")
+        .expect("the renamed journey");
+    assert_eq!(
+        read.journey(renamed).passing_times[1].arrival,
+        Some(8 * 3600 + 15 * 60)
+    );
+}

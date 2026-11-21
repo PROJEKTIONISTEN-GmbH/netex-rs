@@ -197,7 +197,7 @@ fn the_rule_of_line_versions_as_a_function() {
         from: None,
         to: None,
     };
-    assert_eq!(governed(&[open], 0), Governed::Every);
+    assert_eq!(governed(&[vec![open]], 0), Governed::Every);
     assert!(Governed::Every.contains(i64::MIN));
     let span = |from, to| Span {
         from: Some(from),
@@ -206,18 +206,40 @@ fn the_rule_of_line_versions_as_a_function() {
     // An earlier-beginning version takes nothing from a later one, and one
     // without a beginning takes nothing from any.
     let versions = [
-        span(15, Some(40)),
-        span(5, Some(17)),
-        Span {
+        vec![span(15, Some(40))],
+        vec![span(5, Some(17))],
+        vec![Span {
             from: None,
             to: Some(50),
-        },
+        }],
     ];
     assert_eq!(governed(&versions, 0), Governed::Spans(vec![(15, 40)]));
     assert_eq!(governed(&versions, 1), Governed::Spans(vec![(5, 14)]));
     assert_eq!(
         governed(&versions, 2),
         Governed::Spans(vec![(i64::MIN, 4), (41, 50)])
+    );
+}
+
+#[test]
+fn the_rule_of_line_versions_counts_each_validity_of_a_version() {
+    let span = |from, to| Span {
+        from: Some(from),
+        to: Some(to),
+    };
+    // Version 0 is valid on 1 to 10 and 30 to 40, version 1 from 5 to 35:
+    // each validity of version 0 loses what version 1, beginning later than
+    // it, is valid on; its second, beginning later, loses nothing.
+    let versions = [vec![span(1, 10), span(30, 40)], vec![span(5, 35)]];
+    assert_eq!(
+        governed(&versions, 0),
+        Governed::Spans(vec![(1, 4), (30, 40)])
+    );
+    assert_eq!(governed(&versions, 1), Governed::Spans(vec![(5, 29)]));
+    assert_eq!(
+        Span::all_of(&[]),
+        [Span::OPEN],
+        "an entity stating no validity is valid on every day"
     );
 }
 

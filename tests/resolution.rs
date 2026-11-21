@@ -316,3 +316,115 @@ fn the_highest_of_versions_written_in_digits_and_otherwise_does_not_depend_on_th
         assert_eq!(highest_of_three_versions(order), "2.0", "{order:?}");
     }
 }
+
+#[test]
+fn a_name_stated_as_text_beside_its_translations_is_read_and_written_so() {
+    // NeTEx 2.0's `MultilingualString` is mixed content: a text in the
+    // default language may stand beside the translations.
+    let xml = r#"<StopPlace xmlns="http://www.netex.org.uk/netex" id="X" version="1"><Name>Hannover<Text lang="en">Hanover</Text></Name></StopPlace>"#;
+    let limits = netex_rs::Limits::default();
+    let place: netex_rs::model::StopPlace =
+        netex_rs::read_element(xml, "StopPlace", &limits).expect("the stop place reads");
+    let name = place.name.as_ref().expect("a name");
+    assert_eq!(name.as_str(), "Hannover");
+    assert_eq!(name.default_text(), "Hannover");
+    assert_eq!(name.translations.len(), 1);
+    assert_eq!(name.translations[0].as_str(), "Hanover");
+    let written = netex_rs::write_element(&place, "StopPlace");
+    let again: netex_rs::model::StopPlace =
+        netex_rs::read_element(&written, "StopPlace", &limits).expect("what is written reads");
+    assert_eq!(again, place, "{written}");
+
+    let frames = format!(
+        r#"<SiteFrame id="g" version="1"><stopPlaces>{}</stopPlaces></SiteFrame>"#,
+        xml.replace(r#" xmlns="http://www.netex.org.uk/netex""#, "")
+    );
+    let index = serially(&[("a.xml".to_owned(), publication(&frames))]);
+    let stop = index.stop_by_id("X").expect("the stop place is indexed");
+    assert_eq!(index.stop(stop).name, "Hannover");
+}
+
+#[test]
+fn a_level_named_but_not_stated_is_a_reference_to_nothing() {
+    let frames = concat!(
+        r#"<SiteFrame id="g" version="1"><stopPlaces>"#,
+        r#"<StopPlace id="SPL" version="1"><Name>Platz</Name>"#,
+        r#"<levels><Level id="L0" version="1"><Name>Erdgeschoss</Name></Level></levels>"#,
+        r#"<quays><Quay id="Q1" version="1"><Name>1</Name><LevelRef ref="L-missing" version="1"/></Quay>"#,
+        r#"<Quay id="Q2" version="1"><Name>2</Name><LevelRef ref="L0" version="any"/></Quay></quays>"#,
+        "</StopPlace></stopPlaces></SiteFrame>"
+    );
+    let index = serially(&[("a.xml".to_owned(), publication(frames))]);
+    let unresolved: Vec<String> = index.unresolved().iter().map(ToString::to_string).collect();
+    assert_eq!(
+        unresolved,
+        ["a.xml: <LevelRef> in Quay Q1 refers to L-missing, version 1"]
+    );
+    let level = |quay: &str| index.stop(index.stop_by_id(quay).expect("the quay")).level;
+    assert_eq!(level("Q1"), None);
+    assert_eq!(level("Q2"), Some("Erdgeschoss"));
+}
+
+/// A stop place X of the DHID de:01:1, named `name`.
+fn place_of_the_dhid(name: &str) -> String {
+    publication(&format!(
+        concat!(
+            r#"<SiteFrame id="g" version="1"><stopPlaces><StopPlace id="X" version="1">"#,
+            "<keyList><KeyValue><Key>GlobalID</Key><Value>de:01:1</Value></KeyValue></keyList>",
+            "<Name>{}</Name></StopPlace></stopPlaces></SiteFrame>"
+        ),
+        name
+    ))
+}
+
+#[test]
+fn a_dhid_two_documents_name_otherwise_finds_the_stop_its_identifier_does_whatever_their_order() {
+    let documents = [
+        ("a.xml".to_owned(), place_of_the_dhid("Alpha")),
+        ("b.xml".to_owned(), place_of_the_dhid("Beta")),
+    ];
+    for order in [
+        documents.to_vec(),
+        documents.iter().rev().cloned().collect(),
+    ] {
+        let index = serially(&order);
+        let by_dhid = index.stop_by_dhid("de:01:1").expect("the DHID is indexed");
+        assert_eq!(Some(by_dhid), index.stop_by_id("X"));
+        assert_eq!(index.stop(by_dhid).name, "Alpha");
+    }
+}
+
+/// A document of stop places X and Y and a walk between them of two
+/// minutes, both ways or not.
+fn walk_document(id: &str, both_ways: bool) -> String {
+    publication(&format!(
+        concat!(
+            r#"<SiteFrame id="g" version="1"><stopPlaces>"#,
+            r#"<StopPlace id="X" version="1"><Name>X</Name></StopPlace><StopPlace id="Y" version="1"><Name>Y</Name></StopPlace>"#,
+            "</stopPlaces></SiteFrame>",
+            r#"<ServiceFrame id="s" version="1"><connections><SiteConnection id="{id}" version="1">"#,
+            "<WalkTransferDuration><DefaultDuration>PT2M</DefaultDuration></WalkTransferDuration>",
+            r#"<From><StopPlaceRef ref="X" version="1"/></From><To><StopPlaceRef ref="Y" version="1"/></To>"#,
+            "<BothWays>{both_ways}</BothWays></SiteConnection></connections></ServiceFrame>"
+        ),
+        id = id,
+        both_ways = both_ways,
+    ))
+}
+
+#[test]
+fn walks_alike_but_for_their_direction_are_listed_in_one_order_whatever_order_they_come_in() {
+    let documents = [
+        ("a.xml".to_owned(), walk_document("C1", false)),
+        ("b.xml".to_owned(), walk_document("C2", true)),
+    ];
+    let walks = |documents: &[(String, String)]| {
+        let index = serially(documents);
+        let x = index.stop_by_id("X").expect("X");
+        index.transfers_from(x).to_vec()
+    };
+    let in_order = walks(&documents);
+    let reversed: Vec<(String, String)> = documents.iter().rev().cloned().collect();
+    assert_eq!(in_order.len(), 2, "{in_order:?}");
+    assert_eq!(walks(&reversed), in_order);
+}

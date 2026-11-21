@@ -276,6 +276,44 @@ fn the_objects_of_a_journey_and_a_stop_are_those_the_index_holds() {
 }
 
 #[test]
+fn each_object_tells_the_journey_and_the_line_it_is_without_a_search() {
+    let index = with_referrers(&own("ch"));
+    let referrers = index.referrers().expect("the references were kept");
+    let mut journeys = 0;
+    let mut lines = 0;
+    for object in referrers.objects() {
+        if let Some(journey) = referrers.journey_of(object) {
+            journeys += 1;
+            assert!(referrers.journey(journey).any(|of| of == object));
+        }
+        if let Some(line) = referrers.line_of(object) {
+            lines += 1;
+            assert!(referrers.line(line).any(|of| of == object));
+        }
+    }
+    let kept_journeys: usize = (0..index.journey_count() as u32)
+        .map(|journey| {
+            referrers
+                .journey(netex_rs::index::JourneyId(journey))
+                .count()
+        })
+        .sum();
+    let kept_lines: usize = (0..index.line_count() as u32)
+        .map(|line| referrers.line(netex_rs::index::LineId(line)).count())
+        .sum();
+    assert_eq!((journeys, lines), (kept_journeys, kept_lines));
+    assert!(journeys > 0 && lines > 0);
+    let point = index
+        .stop_point_by_id("ch:ex:ScheduledStopPoint:D")
+        .expect("the stop point");
+    let object = referrers.stop_point(point);
+    assert_eq!(
+        (referrers.journey_of(object), referrers.line_of(object)),
+        (None, None)
+    );
+}
+
+#[test]
 fn what_nothing_refers_to_is_listed_but_a_stop_place_whose_quay_is_used() {
     // A stop place nothing places a stop point at, a stop point no pattern
     // calls at, a day type no journey and no assignment names; and a stop
