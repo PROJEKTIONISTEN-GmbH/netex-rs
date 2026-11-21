@@ -36,6 +36,18 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo +1.86 check --locked --workspace --all-targets
 
+  windows:
+    name: builds for Windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+      - uses: Swatinem/rust-cache@v2
+      # The archives are read by position: `read_at` on Unix, `seek_read` on Windows.
+      - run: cargo check --locked --workspace --all-targets --all-features --target x86_64-pc-windows-gnu
+
   lint:
     name: rustfmt, clippy, rustdoc
     runs-on: ubuntu-latest

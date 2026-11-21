@@ -48,7 +48,8 @@ cargo add netex-rs         # the library
 cargo add netex2gtfs       # NeTEx → GTFS as a library
 ```
 
-Licence MIT OR Apache-2.0 · MSRV Rust 1.86 · no `unsafe`. The repository holds
+Licence MIT OR Apache-2.0 · MSRV Rust 1.86 · no `unsafe` · Unix and Windows.
+The repository holds
 three packages: **netex-rs**, the library; [netex2gtfs](crates/netex2gtfs/README.md),
 a delivery as a GTFS feed; [netex-cli](crates/netex-cli/README.md), the `netex`
 command.
@@ -353,6 +354,17 @@ invent identifiers or tokens to satisfy the other release's validator.
   text length, attribute count and fragment size are bounded (`Limits`). Fuzz
   targets under `fuzz/` run the reader, the release rewrite, the conversion
   and the document outline.
+- **A delivery is the publisher's claim.** A document is read up to its
+  source's limit — 4 GiB unless set (`Source::with_max_document_bytes`), above
+  the largest document of the national deliveries, Belgium's railway network
+  at 1.08 GB —, whatever size the archive states for it. A member named other
+  than as a path of plain parts within the source — climbing out of it,
+  rooted, two members of one name — is listed and refused when loaded, so
+  that a merge or an extract writes nothing outside its directory. A
+  directory reached through a link is read once. The calendar holds the
+  years 1 to 9999.
+- **Unix and Windows.** The archives are read by position, through the
+  positioned reads of the two; other targets are not built.
 
 ## Development
 

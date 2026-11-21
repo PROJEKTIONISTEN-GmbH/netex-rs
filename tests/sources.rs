@@ -98,6 +98,7 @@ fn a_source_named_as_one_read_along_already_is_refused() {
 }
 
 /// The names of the documents of a source, and whether each loads.
+#[cfg(unix)]
 fn names_loading(source: &Source) -> Vec<(String, bool)> {
     source
         .entries()
