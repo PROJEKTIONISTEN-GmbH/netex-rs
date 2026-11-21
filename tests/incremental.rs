@@ -280,3 +280,11 @@ fn a_manifest_reads_back_the_names_it_was_written_with_whatever_they_hold() {
     assert_eq!(Manifest::parse(&text).expect("the text parses"), manifest);
     assert!(text.contains(r"back\\slash\\n.xml"), "{text}");
 }
+
+#[test]
+#[should_panic(expected = "builders built for different days")]
+fn builders_built_for_different_days_are_not_merged() {
+    let october = IndexBuilder::new().at(&netex_rs::model::Date::from("2026-10-01"));
+    let november = IndexBuilder::new().at(&netex_rs::model::Date::from("2026-11-01"));
+    IndexBuilder::merge_all(vec![october, november, IndexBuilder::new()]);
+}
