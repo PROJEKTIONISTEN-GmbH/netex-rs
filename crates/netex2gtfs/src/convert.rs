@@ -361,11 +361,8 @@ impl<'d> Conversion<'d> {
                 placed.push(position);
             }
             if placed.len() < 2 {
-                self.decisions.take(
-                    "trip-without-two-calls",
-                    "a journey left with fewer than two calls at a place: left out",
-                    || record.id.to_owned(),
-                );
+                let (code, what) = TRIP_WITHOUT_TWO_CALLS;
+                self.decisions.take(code, what, || record.id.to_owned());
                 continue;
             }
             if goes_back(record.passing_times, placed.iter().copied()) {
@@ -400,11 +397,8 @@ impl<'d> Conversion<'d> {
                 );
             }
             if calls.len() < 2 {
-                self.decisions.take(
-                    "trip-without-two-calls",
-                    "a journey left with fewer than two calls at a place: left out",
-                    || record.id.to_owned(),
-                );
+                let (code, what) = TRIP_WITHOUT_TWO_CALLS;
+                self.decisions.take(code, what, || record.id.to_owned());
                 continue;
             }
             let route = self.route_of(line, journey);
@@ -1952,6 +1946,14 @@ fn data_sources(delivery: &Delivery) -> Vec<(&str, Option<&str>)> {
     sources.dedup();
     sources
 }
+
+/// A journey left with fewer than two calls: before the stops are placed,
+/// with calls at a place; after, with calls at a placed stop from the first
+/// with a time to the last.
+const TRIP_WITHOUT_TWO_CALLS: (&str, &str) = (
+    "trip-without-two-calls",
+    "a journey left with fewer than two calls at a place: left out",
+);
 
 /// A stop named by its identifier, as GTFS requires a name.
 const STOP_NAMED_BY_ITS_IDENTIFIER: (&str, &str) = (
