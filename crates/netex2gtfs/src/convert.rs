@@ -23,6 +23,7 @@ use crate::report::{Decisions, NotCarried, Profile, Report};
 
 /// Which identifiers a feed's stops get.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[non_exhaustive]
 pub enum StopIds {
     /// The NeTEx identifier of the stop place, quay or stop point.
     #[default]
@@ -498,6 +499,8 @@ impl<'d> Conversion<'d> {
                 Some(self.parent_site_of(place).unwrap_or(place))
             }
             StopKind::StopPlace => self.parent_site_of(stop),
+            // A kind of stop a later index tells apart stands under none.
+            _ => None,
         }
     }
 
@@ -567,6 +570,8 @@ impl<'d> Conversion<'d> {
                 );
                 Some((latitude / f64::from(count), longitude / f64::from(count)))
             }
+            // A kind of stop a later index tells apart takes no other's position.
+            _ => None,
         })?;
         let parent_station = parent.map(|row| self.stop_rows[row as usize].id.clone());
         let name = if record.name.is_empty() {

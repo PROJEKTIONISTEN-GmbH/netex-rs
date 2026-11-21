@@ -39,6 +39,7 @@ mod corrections;
 
 /// The order a position's two numbers are written in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum Axes {
     /// Latitude, then longitude.
     LatitudeLongitude,

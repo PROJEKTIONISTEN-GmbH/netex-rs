@@ -492,13 +492,27 @@ impl IndexBuilder {
     /// others one by one holds the builders and, at most, one copy of the
     /// smaller one. Which definition of an entity is kept does
     /// not depend on the merge order (see [`IndexBuilder`]), so neither does
-    /// the index; only the numbering of its entities does.
+    /// the index; only the numbering of its entities does. The day the
+    /// index is built for ([`at`](Self::at)) is the one the builders setting
+    /// a day are built for.
+    ///
+    /// # Panics
+    ///
+    /// If two builders are built for different days.
     pub fn merge_all(mut builders: Vec<IndexBuilder>) -> IndexBuilder {
+        let at = builders.iter().find_map(|builder| builder.at);
+        assert!(
+            builders
+                .iter()
+                .all(|builder| builder.at.is_none() || builder.at == at),
+            "builders built for different days are merged"
+        );
         builders.sort_by_key(|builder| std::cmp::Reverse(builder.raw_times.len()));
         let mut builders = builders.into_iter();
         let Some(mut merged) = builders.next() else {
             return IndexBuilder::new();
         };
+        merged.at = at;
         // Growing the interner's table rehashes every string in it; room for
         // every string the others hold, made once, keeps that to one growth
         // rather than one per doubling — more than the merged builder will

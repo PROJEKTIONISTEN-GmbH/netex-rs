@@ -441,10 +441,7 @@ fn writing_20_examples_for_1x_reports_every_loss() {
 /// A document the schemas of its release accept never carries structural
 /// evidence for the other release.
 fn detection_contradictions(release: Release) -> Vec<String> {
-    let other = match release {
-        Release::V1 => Release::V2,
-        Release::V2 => Release::V1,
-    };
+    let other = release.other();
     let (valid, _) = valid_originals(release);
     let mut failures = Vec::new();
     let mut declared = BTreeMap::new();

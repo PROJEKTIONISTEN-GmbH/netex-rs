@@ -225,6 +225,7 @@ fn every_own_example_is_valid_for_both_releases_but_for_references_into_another_
         let (elements, release_name): (&[&str], _) = match release {
             Release::V1 => (&["ServiceJourneyRef", "DatedServiceJourneyRef"], "1.x"),
             Release::V2 => (&["DatedServiceJourneyRef"], "2.0"),
+            release => panic!("no expectation of NeTEx {release}"),
         };
         for name in [
             "nordic/EX_EX-Line-R1_R1_Eksempelby-Fjellstua.xml".to_owned(),
@@ -1708,7 +1709,7 @@ fn the_lean_stream_yields_the_dutch_time_demand_types_and_content_conditions() {
                         netex_rs::model::JourneyRunTimeItem::JourneyRunTime(run) => {
                             run.run_time.as_ref().map(|time| time.to_string())
                         }
-                        netex_rs::model::JourneyRunTimeItem::Unprocessed(_) => None,
+                        _ => None,
                     })
                     .collect();
                 let waits = demand.wait_times.iter().flat_map(|w| &w.items).count();

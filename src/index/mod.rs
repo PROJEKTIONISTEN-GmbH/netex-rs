@@ -57,6 +57,7 @@ pub struct CalendarId(pub u32);
 
 /// What kind of stop an index entry is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum StopKind {
     /// A stop place.
     StopPlace,
@@ -431,6 +432,10 @@ impl Index {
     }
 
     /// The stop.
+    ///
+    /// # Panics
+    ///
+    /// If `stop` is no stop of this index: an id of another.
     pub fn stop(&self, stop: StopId) -> Stop<'_> {
         let record = &self.stops[stop.0 as usize];
         Stop {
@@ -448,6 +453,10 @@ impl Index {
     /// The version a stop is stated in, if it names one. A stop place or
     /// quay stated in two versions is two stops of the index; its identifier,
     /// version and name tell every stop apart.
+    ///
+    /// # Panics
+    ///
+    /// If `stop` is no stop of this index: an id of another.
     pub fn stop_version(&self, stop: StopId) -> Option<&str> {
         self.stops[stop.0 as usize]
             .key
@@ -475,6 +484,10 @@ impl Index {
     }
 
     /// The stop point.
+    ///
+    /// # Panics
+    ///
+    /// If `stop_point` is no stop point of this index: an id of another.
     pub fn stop_point(&self, stop_point: StopPointId) -> StopPoint<'_> {
         let record = &self.stop_points[stop_point.0 as usize];
         StopPoint {
@@ -488,6 +501,10 @@ impl Index {
 
     /// The version a stop point is stated in, if it names one; its
     /// identifier, version and name tell every stop point apart.
+    ///
+    /// # Panics
+    ///
+    /// If `stop_point` is no stop point of this index: an id of another.
     pub fn stop_point_version(&self, stop_point: StopPointId) -> Option<&str> {
         self.stop_points[stop_point.0 as usize]
             .key
@@ -514,6 +531,10 @@ impl Index {
     }
 
     /// The line.
+    ///
+    /// # Panics
+    ///
+    /// If `line` is no line of this index: an id of another.
     pub fn line(&self, line: LineId) -> Line<'_> {
         let record = &self.lines[line.0 as usize];
         Line {
@@ -530,6 +551,10 @@ impl Index {
     }
 
     /// The journeys of a line.
+    ///
+    /// # Panics
+    ///
+    /// If `line` is no line of this index: an id of another.
     pub fn journeys_of_line(&self, line: LineId) -> &[JourneyId] {
         let start = self.line_journeys_offsets[line.0 as usize] as usize;
         let end = self.line_journeys_offsets[line.0 as usize + 1] as usize;
@@ -564,6 +589,10 @@ impl Index {
     }
 
     /// The journey.
+    ///
+    /// # Panics
+    ///
+    /// If `journey` is no journey of this index: an id of another.
     pub fn journey(&self, journey: JourneyId) -> Journey<'_> {
         let record = &self.journeys[journey.0 as usize];
         let calls = record.calls.0 as usize..record.calls.1 as usize;
@@ -582,6 +611,10 @@ impl Index {
     }
 
     /// Whether a journey runs on a day.
+    ///
+    /// # Panics
+    ///
+    /// If `journey` is no journey of this index: an id of another.
     pub fn runs_on(&self, journey: JourneyId, day: &Date) -> bool {
         let Some(day) = day.days_since_epoch() else {
             return false;
@@ -595,18 +628,30 @@ impl Index {
 
     /// The days a journey runs on, as days since 1970-01-01
     /// ([`Date::days_since_epoch`]), ascending.
+    ///
+    /// # Panics
+    ///
+    /// If `journey` is no journey of this index: an id of another.
     pub fn days_of(&self, journey: JourneyId) -> impl Iterator<Item = i64> + '_ {
         self.calendar_days(self.calendar_of(journey))
     }
 
     /// The calendar a journey runs on: the same as every journey's of the
     /// same days.
+    ///
+    /// # Panics
+    ///
+    /// If `journey` is no journey of this index: an id of another.
     pub fn calendar_of(&self, journey: JourneyId) -> CalendarId {
         CalendarId(self.journeys[journey.0 as usize].calendar)
     }
 
     /// The days of a calendar, as days since 1970-01-01
     /// ([`Date::days_since_epoch`]), ascending.
+    ///
+    /// # Panics
+    ///
+    /// If `calendar` is no calendar of this index: an id of another.
     pub fn calendar_days(&self, calendar: CalendarId) -> impl Iterator<Item = i64> + '_ {
         let first = self.first_day;
         self.calendars[calendar.0 as usize]
@@ -615,6 +660,10 @@ impl Index {
     }
 
     /// The journeys of a line that run on a day.
+    ///
+    /// # Panics
+    ///
+    /// If `line` is no line of this index: an id of another.
     pub fn journeys_of_line_on<'a>(
         &'a self,
         line: LineId,
@@ -650,6 +699,10 @@ impl Index {
     }
 
     /// The walks starting at a stop.
+    ///
+    /// # Panics
+    ///
+    /// If `stop` is no stop of this index: an id of another.
     pub fn transfers_from(&self, stop: StopId) -> &[Transfer] {
         let start = self.transfer_offsets[stop.0 as usize] as usize;
         let end = self.transfer_offsets[stop.0 as usize + 1] as usize;
@@ -664,6 +717,10 @@ impl Index {
     /// The interchanges at a stop point, by where the feeder arrives: in the
     /// order of the names of the documents stating them, each document's in
     /// its order — whatever order the documents were read in.
+    ///
+    /// # Panics
+    ///
+    /// If `stop_point` is no stop point of this index: an id of another.
     pub fn interchanges_at(&self, stop_point: StopPointId) -> &[Interchange] {
         let start = self.interchange_offsets[stop_point.0 as usize] as usize;
         let end = self.interchange_offsets[stop_point.0 as usize + 1] as usize;

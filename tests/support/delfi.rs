@@ -409,7 +409,7 @@ pub fn extract(document: &Document) -> Extract {
                     let pattern = match item {
                         netex_rs::model::JourneyPatternItem::ServiceJourneyPattern(p)
                         | netex_rs::model::JourneyPatternItem::JourneyPattern(p) => p,
-                        netex_rs::model::JourneyPatternItem::Unprocessed(_) => continue,
+                        _ => continue,
                     };
                     for item in pattern.points_in_sequence.iter().flat_map(|p| &p.items) {
                         let PointInSequenceItem::StopPointInJourneyPattern(point) = item else {

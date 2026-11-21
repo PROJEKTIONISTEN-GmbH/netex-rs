@@ -154,6 +154,7 @@ pub struct PeriodDays {
 
 /// What a period states that its days are read past.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum PeriodIssue {
     /// No first day: the period gives no days.
     NoFirstDay,

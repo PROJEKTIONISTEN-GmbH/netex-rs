@@ -21,8 +21,6 @@ pub struct Child<'i> {
     /// Whether the element is a NeTEx element: unprefixed under the default
     /// NeTEx namespace, or prefixed with the prefix bound to it.
     pub netex: bool,
-    /// The start tag.
-    pub start: BytesStart<'i>,
     /// Whether the start tag was an empty-element tag.
     pub empty: bool,
     /// Byte offset of the start tag's `<`.
@@ -411,7 +409,6 @@ impl<'i> Cursor<'i> {
             local,
             prefix,
             netex,
-            start,
             empty,
             offset,
             attributes,

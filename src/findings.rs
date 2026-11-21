@@ -92,6 +92,7 @@ pub fn human(findings: &[Finding]) -> String {
 
 /// Why a part or a merge could not be written.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum Error {
     /// A delivery could not be read.
     Read(crate::Error),

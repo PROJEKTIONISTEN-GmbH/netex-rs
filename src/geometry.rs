@@ -17,6 +17,7 @@ pub const NEAR_THE_START_METRES: f64 = 150.0;
 
 /// The order a geometry's positions are written in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum AxisOrder {
     /// Latitude first, as WGS 84 has it.
     LatitudeFirst,

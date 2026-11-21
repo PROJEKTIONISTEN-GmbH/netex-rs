@@ -91,6 +91,7 @@ fn the_links_of_a_pattern_are_typed_in_their_order() {
                     .map(|id| id.as_str()),
             ),
             LinkInSequenceItem::Unprocessed(fragment) => (None, Some(&*fragment.name)),
+            other => panic!("a link of a kind the test does not know: {other:?}"),
         })
         .collect();
     assert_eq!(links, [(Some(2), Some("B-C")), (Some(1), Some("A-B"))]);

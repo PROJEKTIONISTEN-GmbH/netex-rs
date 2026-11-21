@@ -48,6 +48,7 @@ impl ReleaseFixtures for Release {
             // versioned `1.1` and which the DELFI delivery declares as `ntx:1.1`.
             Release::V1 => "netex-1.3",
             Release::V2 => "netex-2.0",
+            release => panic!("no official fixtures of NeTEx {release}"),
         })
     }
 
@@ -59,6 +60,7 @@ impl ReleaseFixtures for Release {
         match self {
             Release::V1 => "1.3",
             Release::V2 => "2.0",
+            release => panic!("no official fixtures of NeTEx {release}"),
         }
     }
 }

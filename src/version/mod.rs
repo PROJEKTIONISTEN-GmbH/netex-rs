@@ -17,6 +17,7 @@ pub use scan::{detect, rewrite, Detection, Evidence};
 
 /// One of the two schema releases.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[non_exhaustive]
 pub enum Release {
     /// The 1.x line: releases 1.0 to 1.3, whose publication schema is versioned
     /// `1.1`, and which the German national delivery declares as `ntx:1.1`.

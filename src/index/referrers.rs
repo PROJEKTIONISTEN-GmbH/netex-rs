@@ -363,6 +363,10 @@ impl<'a> Referrers<'a> {
     }
 
     /// The object.
+    ///
+    /// # Panics
+    ///
+    /// If `object` is no object of this graph: an id of another.
     pub fn object(&self, object: ObjectId) -> Object<'a> {
         let node = self.graph.nodes[object.0 as usize];
         let strings = self.strings();
@@ -413,11 +417,19 @@ impl<'a> Referrers<'a> {
     }
 
     /// What refers to the object, each reference once.
+    ///
+    /// # Panics
+    ///
+    /// If `object` is no object of this graph: an id of another.
     pub fn of(&self, object: ObjectId) -> impl Iterator<Item = Reference> + 'a {
         references(&self.graph.inverse, object)
     }
 
     /// What the object refers to, each reference once.
+    ///
+    /// # Panics
+    ///
+    /// If `object` is no object of this graph: an id of another.
     pub fn from(&self, object: ObjectId) -> impl Iterator<Item = Reference> + 'a {
         references(&self.graph.forward, object)
     }

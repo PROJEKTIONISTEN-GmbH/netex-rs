@@ -252,8 +252,11 @@ macro_rules! netex_container {
             pub extra_attributes: Vec<$crate::xml::Attribute>,
         }
 
-        /// One entity of the container.
+        /// One entity of the container. The model types more entities as it
+        /// grows, each carried through untyped before, so that a match outside
+        /// the crate has a wildcard arm.
         #[derive(Debug, Clone, PartialEq)]
+        #[non_exhaustive]
         pub enum $item {
             $(
                 $(#[$variant_meta])*

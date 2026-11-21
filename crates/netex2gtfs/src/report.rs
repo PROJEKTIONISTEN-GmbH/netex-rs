@@ -9,6 +9,7 @@ use serde::Serialize;
 /// NeTEx its identifiers and frames show.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum Profile {
     /// The German national delivery (DELFI): identifiers `DE::…`.
     Delfi,

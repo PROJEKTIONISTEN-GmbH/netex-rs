@@ -7,6 +7,7 @@ use super::Release;
 
 /// One thing a release does not know.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[non_exhaustive]
 pub enum Item {
     /// A child element under a parent.
     Element {
