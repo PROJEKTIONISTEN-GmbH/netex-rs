@@ -253,3 +253,30 @@ fn a_manifest_round_trips_through_its_text_form() {
     assert!(Manifest::parse("not a manifest").is_err());
     assert!(Manifest::parse("zz\t1\tname.xml").is_err());
 }
+
+#[test]
+fn a_manifest_reads_back_the_names_it_was_written_with_whatever_they_hold() {
+    let names = [
+        "plain.xml",
+        "with\ttab.xml",
+        "with\nline.xml",
+        "ending in a return\r",
+        r"back\slash\n.xml",
+        r"\\",
+    ];
+    let manifest = Manifest {
+        entries: names
+            .iter()
+            .enumerate()
+            .map(|(number, name)| Fingerprint {
+                name: (*name).to_owned(),
+                size: number as u64,
+                crc32: 0xdead_beef,
+            })
+            .collect(),
+    };
+    let text = manifest.to_text();
+    assert_eq!(text.lines().count(), names.len(), "{text}");
+    assert_eq!(Manifest::parse(&text).expect("the text parses"), manifest);
+    assert!(text.contains(r"back\\slash\\n.xml"), "{text}");
+}

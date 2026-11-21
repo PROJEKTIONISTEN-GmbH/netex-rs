@@ -96,3 +96,92 @@ fn a_source_named_as_one_read_along_already_is_refused() {
         "{error}"
     );
 }
+
+/// The names of the documents of a source, and whether each loads.
+fn names_loading(source: &Source) -> Vec<(String, bool)> {
+    source
+        .entries()
+        .expect("the source lists its documents")
+        .iter()
+        .map(|entry| (entry.name.clone(), source.load(entry).xml.is_ok()))
+        .collect()
+}
+
+#[cfg(unix)]
+#[test]
+fn a_directory_linked_into_itself_is_read_once() {
+    let dir = support::scratch_dir("sources-linked-into-itself");
+    std::fs::write(dir.join("x.xml"), "<PublicationDelivery/>").expect("written");
+    std::os::unix::fs::symlink(".", dir.join("a")).expect("a link to the directory");
+    std::os::unix::fs::symlink(".", dir.join("b")).expect("another link to it");
+    let source = Source::open(&dir).expect("the directory opens");
+    assert_eq!(names_loading(&source), [("x.xml".to_owned(), true)]);
+}
+
+#[cfg(unix)]
+#[test]
+fn a_directory_reached_by_a_link_beside_its_own_name_is_read_once_under_the_first() {
+    let dir = support::scratch_dir("sources-linked-beside");
+    std::fs::create_dir(dir.join("2026-11-20")).expect("a directory");
+    std::fs::write(dir.join("2026-11-20/x.xml"), "<PublicationDelivery/>").expect("written");
+    std::os::unix::fs::symlink("2026-11-20", dir.join("current")).expect("a link");
+    let source = Source::open(&dir).expect("the directory opens");
+    assert_eq!(
+        names_loading(&source),
+        [("2026-11-20/x.xml".to_owned(), true)]
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn a_file_named_other_than_in_utf_8_is_listed_and_refused_for_its_name() {
+    use std::os::unix::ffi::OsStrExt;
+    let dir = support::scratch_dir("sources-latin-1");
+    let name = std::ffi::OsStr::from_bytes(b"caf\xe9.xml");
+    std::fs::write(dir.join(name), "<PublicationDelivery/>").expect("written");
+    std::fs::write(dir.join("plain.xml"), "<PublicationDelivery/>").expect("written");
+    let source = Source::open(&dir).expect("the directory opens");
+    let entries = source.entries().expect("the directory lists its documents");
+    assert_eq!(entries.len(), 2);
+    let error = source
+        .load(&entries[0])
+        .xml
+        .expect_err("a name no text can hold");
+    let netex_rs::error::Kind::DocumentName { name, reason } = error.kind else {
+        panic!("refused for another reason: {error}");
+    };
+    assert_eq!(name, "caf\u{fffd}.xml");
+    assert!(reason.contains("UTF-8"), "{reason}");
+    assert!(source.load(&entries[1]).xml.is_ok());
+}
+
+#[test]
+fn an_entry_of_another_source_is_refused_rather_than_read_as_another_document() {
+    let dir = support::scratch_dir("sources-foreign-entry");
+    let fixtures = support::own_fixtures("nordic-stops");
+    let one = Source::open(support::zip_of(&dir, "one.zip", &fixtures)).expect("opens");
+    let mut renamed: Vec<support::Fixture> = support::own_fixtures("nordic-stops");
+    for fixture in &mut renamed {
+        fixture.name = format!("other-{}", fixture.name);
+    }
+    let other = Source::open(support::zip_of(&dir, "other.zip", &renamed)).expect("opens");
+    let entry = &one.entries().expect("the archive lists its documents")[0];
+    let error = other
+        .load(entry)
+        .xml
+        .expect_err("the other archive holds no document of that name");
+    assert!(
+        error.to_string().contains("not a document of this source"),
+        "{error}"
+    );
+    let combined = delivery_and_register(&dir.join("combined"));
+    let register = combined
+        .entries()
+        .expect("the sources list their documents")
+        .pop()
+        .expect("the register's document");
+    assert!(
+        one.load(&register).xml.is_err(),
+        "an entry of a part this source does not have"
+    );
+}

@@ -624,3 +624,19 @@ fn an_extract_writes_no_document_outside_its_directory() {
     );
     assert_eq!(files_under(root.path()), [PathBuf::from("delivery.zip")]);
 }
+
+/// A reader that stops reading — `netex validate … | head` — takes nothing
+/// from the verdict: the run exits with it.
+#[cfg(unix)]
+#[test]
+fn a_report_whose_reader_stops_reading_exits_with_the_verdict() {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_netex"))
+        .args(["validate", "--strict", defective().as_str()])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("the command runs");
+    drop(child.stdout.take());
+    let output = child.wait_with_output().expect("the command ends");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+}

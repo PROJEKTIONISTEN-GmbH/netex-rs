@@ -76,3 +76,22 @@ fn a_name_with_a_control_character_is_refused_when_loaded() {
         ]
     );
 }
+
+#[test]
+fn two_members_of_one_name_are_both_refused_rather_than_one_read_as_the_only_one() {
+    let outcomes = loaded(&[
+        Member::new("same.xml", TEXT),
+        Member::new("other.xml", TEXT),
+        Member::new(
+            "same.xml",
+            b"<PublicationDelivery><!-- the second --></PublicationDelivery>",
+        ),
+    ]);
+    assert_eq!(
+        outcomes,
+        [
+            ("same.xml".to_owned(), Err("same.xml".to_owned())),
+            ("other.xml".to_owned(), Ok(())),
+        ]
+    );
+}
