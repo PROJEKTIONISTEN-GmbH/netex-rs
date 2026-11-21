@@ -6,7 +6,7 @@
 
 mod support;
 
-use netex_rs::calendar::{bound_day, period_days, FIRST_DAY, LAST_DAY};
+use netex_rs::calendar::{bound_day, period_days, PeriodIssue, FIRST_DAY, LAST_DAY};
 use netex_rs::index::Index;
 use netex_rs::model::{Date, DateTime, Duration};
 use support::fragments::publication;
@@ -261,4 +261,24 @@ fn a_walk_of_a_duration_that_is_none_is_no_walk_and_a_finding() {
             ["walk stating no duration, no transfer: SiteConnection C in A.xml"]
         );
     }
+}
+
+#[test]
+fn a_day_of_a_period_without_a_bit_is_available_and_a_bit_past_its_last_day_no_day() {
+    // "If bit is missing, assume available": the schema's `ValidDayBits`.
+    let all = FIRST_DAY..=LAST_DAY;
+    let short = period_days(Some(100), Some(104), Some("10"), all.clone());
+    assert_eq!(short.days, [100, 102, 103, 104]);
+    assert_eq!(
+        short.issue,
+        Some(PeriodIssue::BitsOtherThanDays { bits: 2, days: 5 })
+    );
+    let long = period_days(Some(100), Some(102), Some("10111"), all.clone());
+    assert_eq!(long.days, [100, 102], "the period ends on its last day");
+    let unbounded = period_days(Some(100), None, Some("1011"), all);
+    assert_eq!(
+        unbounded.days,
+        [100, 102, 103],
+        "without a last day, its bits"
+    );
 }

@@ -501,7 +501,7 @@ mod tests {
             "the first day alone without a last"
         );
         let short = period_days(Some(10), Some(14), Some("11"), all.clone());
-        assert_eq!(short.days, [10, 11]);
+        assert_eq!(short.days, [10, 11, 12, 13, 14]);
         assert_eq!(
             short.issue,
             Some(PeriodIssue::BitsOtherThanDays { bits: 2, days: 5 })

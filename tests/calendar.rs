@@ -157,7 +157,7 @@ fn a_period_without_a_first_day_or_with_other_bits_than_days_is_a_finding() {
     let document = line_frame(Timetable::new().line("L", "1", None))
         .day_type("DT")
         .period("PLAIN", None, "2026-10-18")
-        .uic_period("SHORT", "2026-10-12", "2026-10-18", "111")
+        .uic_period("SHORT", "2026-10-12", "2026-10-18", "101")
         .assignment("DTA-1", 1, "PLAIN", "DT", true)
         .assignment("DTA-2", 2, "SHORT", "DT", true)
         .journey("J", ("L", "1"), "P", &["DT"], &TIMES)
@@ -165,8 +165,8 @@ fn a_period_without_a_first_day_or_with_other_bits_than_days_is_a_finding() {
     let index = serially(&[("A.xml".to_owned(), document)]);
     assert_eq!(
         october_days(&index, "J"),
-        [12, 13, 14],
-        "the bits are read from the first day as far as they go"
+        [12, 14, 15, 16, 17, 18],
+        "a day of the period without a bit is available, as the schema says"
     );
     assert_eq!(
         findings(&index, Concern::PeriodWithoutFirstDay),
@@ -174,7 +174,7 @@ fn a_period_without_a_first_day_or_with_other_bits_than_days_is_a_finding() {
     );
     assert_eq!(
         findings(&index, Concern::DayBitsLengthDiffers),
-        ["day bits other than the period's days, read from its first day: UicOperatingPeriod SHORT in A.xml"]
+        ["day bits other in number than the period's days, a day without one available: UicOperatingPeriod SHORT in A.xml"]
     );
 }
 
