@@ -25,15 +25,59 @@ pub trait Output {
 pub struct Directory {
     path: PathBuf,
     file: Option<BufWriter<File>>,
+    /// The names of the files written.
+    written: Vec<String>,
 }
 
+/// The files the GTFS reference defines: a consumer reads each it finds in
+/// a feed's directory.
+const FILES_OF_A_FEED: [&str; 32] = [
+    "agency.txt",
+    "stops.txt",
+    "routes.txt",
+    "trips.txt",
+    "stop_times.txt",
+    "calendar.txt",
+    "calendar_dates.txt",
+    "fare_attributes.txt",
+    "fare_rules.txt",
+    "timeframes.txt",
+    "rider_categories.txt",
+    "fare_media.txt",
+    "fare_products.txt",
+    "fare_leg_rules.txt",
+    "fare_leg_join_rules.txt",
+    "fare_transfer_rules.txt",
+    "areas.txt",
+    "stop_areas.txt",
+    "networks.txt",
+    "route_networks.txt",
+    "shapes.txt",
+    "frequencies.txt",
+    "transfers.txt",
+    "pathways.txt",
+    "levels.txt",
+    "location_groups.txt",
+    "location_group_stops.txt",
+    "locations.geojson",
+    "booking_rules.txt",
+    "translations.txt",
+    "feed_info.txt",
+    "attributions.txt",
+];
+
 impl Directory {
-    /// A feed written into `path`.
+    /// A feed written into `path`. It replaces a feed there: when it is
+    /// finished, each file the GTFS reference defines that it did not write
+    /// is removed — a `shapes.txt` or `feed_info.txt` of an earlier feed, a
+    /// `fare_rules.txt` of another program's —, so that the directory holds
+    /// this feed alone; files of other names stay.
     pub fn create(path: impl AsRef<Path>) -> io::Result<Directory> {
         std::fs::create_dir_all(path.as_ref())?;
         Ok(Directory {
             path: path.as_ref().to_path_buf(),
             file: None,
+            written: Vec::new(),
         })
     }
 }
@@ -45,6 +89,7 @@ impl Output for Directory {
         }
         let file = File::create(self.path.join(name))?;
         self.file = Some(BufWriter::with_capacity(1 << 20, file));
+        self.written.push(name.to_owned());
         Ok(())
     }
 
@@ -58,6 +103,15 @@ impl Output for Directory {
     fn finish(mut self: Box<Self>) -> io::Result<()> {
         if let Some(mut file) = self.file.take() {
             file.flush()?;
+        }
+        for name in FILES_OF_A_FEED {
+            if self.written.iter().any(|written| written == name) {
+                continue;
+            }
+            match std::fs::remove_file(self.path.join(name)) {
+                Err(error) if error.kind() != io::ErrorKind::NotFound => return Err(error),
+                _ => {}
+            }
         }
         Ok(())
     }

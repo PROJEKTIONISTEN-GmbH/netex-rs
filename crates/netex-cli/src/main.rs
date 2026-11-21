@@ -115,7 +115,8 @@ enum Command {
         /// The feed's language, an IETF tag.
         #[arg(long)]
         language: Option<String>,
-        /// The time zone of agencies where no document names one.
+        /// The feed's time zone, of all its agencies, where no document names
+        /// one by its name in the time zone database (Europe/Zurich).
         #[arg(long)]
         time_zone: Option<String>,
         /// Writes the conversion's report as JSON to this file.

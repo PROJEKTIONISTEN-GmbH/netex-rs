@@ -7,7 +7,9 @@ country is of the country most of its stops lie in. The borders are Natural
 Earth's Admin 0 countries at 1:10m (public domain), version 5.1.2: the member
 states of the European Union and of EFTA, the United Kingdom and the small
 states among them, each with the time zone of its European part, cut to
-Europe (the overseas parts and islands far out lie outside), every ring
+Europe (the overseas parts and islands far out lie outside) — Iceland and
+Cyprus, beyond it, each to a box of its own; of Cyprus the part its Republic
+governs, as Natural Earth draws the north apart —, every ring
 simplified to 0.005° (Douglas–Peucker) and rings smaller than 0.0001 square
 degrees — some 0.8 km² — left out, but a country's largest and the holes
 small states make in their neighbours. At 1:10m the
@@ -40,6 +42,7 @@ ZONES = {
     "BE": "Europe/Brussels",
     "BG": "Europe/Sofia",
     "CH": "Europe/Zurich",
+    "CY": "Asia/Nicosia",
     "CZ": "Europe/Prague",
     "DE": "Europe/Berlin",
     "DK": "Europe/Copenhagen",
@@ -52,6 +55,7 @@ ZONES = {
     "HR": "Europe/Zagreb",
     "HU": "Europe/Budapest",
     "IE": "Europe/Dublin",
+    "IS": "Atlantic/Reykjavik",
     "IT": "Europe/Rome",
     "LI": "Europe/Vaduz",
     "LT": "Europe/Vilnius",
@@ -74,6 +78,13 @@ ZONES = {
 #: Europe, as west, south, east and north in degrees: a ring is kept where a
 #: position of it lies within.
 EUROPE = (-11.0, 34.5, 32.0, 71.5)
+
+#: The countries beyond `EUROPE`, each with the box its rings are kept in
+#: instead.
+BEYOND = {
+    "CY": (32.0, 34.4, 34.7, 35.8),
+    "IS": (-25.0, 63.0, -13.0, 67.0),
+}
 
 #: How far a simplified ring may stray from the border, in degrees.
 TOLERANCE = 0.005
@@ -112,8 +123,8 @@ def area(ring: list[tuple[float, float]]) -> float:
     return abs(sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(ring, ring[1:]))) / 2
 
 
-def in_europe(ring: list[tuple[float, float]]) -> bool:
-    west, south, east, north = EUROPE
+def in_box(ring: list[tuple[float, float]], box: tuple[float, float, float, float]) -> bool:
+    west, south, east, north = box
     return any(west <= x <= east and south <= y <= north for x, y in ring)
 
 
@@ -156,7 +167,8 @@ def main(source: str) -> None:
     lines = [
         "# The countries a stop of a delivery can lie in, each with the time zone",
         "# of its European part: Natural Earth's Admin 0 countries at 1:10m,",
-        "# version 5.1.2 (public domain), cut to Europe and simplified to 0.005°,",
+        "# version 5.1.2 (public domain), cut to Europe — Iceland and Cyprus each to",
+        "# a box of its own — and simplified to 0.005°,",
         "# written by tools/countries.py. A line naming a country and its zone, then",
         "# its rings, a line each: latitude,longitude in ten-thousandths of a degree,",
         "# each position after the first as the difference to the one before.",
@@ -168,7 +180,7 @@ def main(source: str) -> None:
             (ring, hole)
             for feature in features[code]
             for ring, hole in rings_of(feature["geometry"])
-            if in_europe(ring)
+            if in_box(ring, BEYOND.get(code, EUROPE))
         ]
         largest = max((ring for ring, _ in rings), key=area)
         for ring, hole in rings:

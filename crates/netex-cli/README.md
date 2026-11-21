@@ -97,13 +97,16 @@ netex convert netex.zip --to gtfs gtfs.zip --shapes \
   --publisher-name "Example" --publisher-url https://example.org --report conversion.json
 ```
 
-Writes the feed (a zip archive if the path ends in `.zip`, else a directory) as
+Writes the feed (a zip archive if the path ends in `.zip`, else a directory,
+where it replaces the files of a feed written there before) as
 [netex2gtfs](../netex2gtfs/README.md) makes it, prints the rows written, every
 decision taken and what the feed does not carry, and writes the conversion's
 report as JSON with `--report`. `--stop-ids global` gives stops their `GlobalID`
 (DHID) or, without one, their Swiss `SLOID`, numbered `#2`, `#3` where stops
-share one; `--time-zone` names the agencies' time zone where no document of the
-delivery does. Without it, such a delivery takes the zone of the country its
+share one; `--time-zone` names the feed's time zone — GTFS has one for all its
+agencies — where no document of the delivery names one by its name in the time
+zone database (`Europe/Zurich`; an abbreviation as `CEST` names none). Without
+it, such a delivery takes the zone of the country its
 journeys' identifiers show (`at:` Europe/Vienna, as Austria's national
 deliveries), else of the country most of its stops lie in (Europe/Brussels for
 the Belgian operators', Europe/Paris for the French deliveries naming none);

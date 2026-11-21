@@ -11,7 +11,7 @@ use netex_rs::geometry::{reading_order, AxisOrder};
 use netex_rs::index::{
     CalendarId, Concern, Index, JourneyId, LineId, PassingTime, StopId, StopKind, StopPointId,
 };
-use netex_rs::model::Date;
+use netex_rs::model::{Date, DateTime};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::country;
@@ -52,11 +52,12 @@ pub struct Publisher {
 pub struct Options {
     /// Which identifiers the stops get.
     pub stop_ids: StopIds,
-    /// Who publishes the feed. Without one, `feed_info.txt` is written only
-    /// where the delivery names a data source with a web address.
+    /// Who publishes the feed. Without one, the delivery's data source with
+    /// a web address does, where it names one.
     pub publisher: Option<Publisher>,
-    /// The time zone of agencies whose documents name none, where no
-    /// document of the delivery names one.
+    /// The time zone of the feed — of all its agencies, as GTFS has one for
+    /// them — where no document of the delivery names one by its name in
+    /// the time zone database (`Europe/Zurich`); taken as given.
     pub time_zone: Option<String>,
     /// Whether to write `shapes.txt` from the service links' geometry.
     pub shapes: bool,
@@ -68,9 +69,10 @@ pub struct Options {
 pub enum Error {
     /// A file of the feed could not be written.
     Write(io::Error),
-    /// No document names a time zone, the options give none, and neither
-    /// the delivery's identifiers nor the positions of its stops show its
-    /// country: GTFS needs one for every agency.
+    /// No document names a time zone by its name in the time zone database,
+    /// the options give none, and neither the delivery's identifiers nor the
+    /// positions of its stops show its country: GTFS needs one for its
+    /// agencies.
     NoTimeZone,
 }
 
@@ -79,7 +81,7 @@ impl fmt::Display for Error {
         match self {
             Error::Write(error) => write!(f, "writing the feed: {error}"),
             Error::NoTimeZone => f.write_str(
-                "no document of the delivery names a time zone (FrameDefaults/DefaultLocale/TimeZone), nor do its identifiers or the positions of its stops show its country; give one",
+                "no document of the delivery names a time zone by its name in the time zone database (FrameDefaults/DefaultLocale/TimeZone), nor do its identifiers or the positions of its stops show its country; give one",
             ),
         }
     }
@@ -173,8 +175,11 @@ struct Conversion<'d> {
     options: &'d Options,
     decisions: Decisions,
     profile: Profile,
-    /// The time zone of agencies whose documents name none.
+    /// The time zone of the feed, of all its agencies.
     time_zone: String,
+    /// Who publishes the feed: the publisher given, else the delivery's
+    /// data source with a web address.
+    publisher: Option<Publisher>,
     /// The feed stop of each place calls are made at, by its row.
     place_rows: FxHashMap<Place, u32>,
     /// The station row of each stop place that is a parent.
@@ -184,8 +189,16 @@ struct Conversion<'d> {
     /// document of the journey the line was first met with.
     routes: Vec<(LineId, String, Option<u32>, Name)>,
     route_of_line: FxHashMap<LineId, u32>,
+    /// The route of each definition of a line: its identifier, agency, name,
+    /// number and mode.
+    route_of_definition: FxHashMap<RouteKey<'d>, u32>,
+    route_ids: UniqueIds,
     /// The agencies: the organisation each is, or the publisher.
     agencies: Vec<AgencyRow>,
+    /// The agency row of each organisation, by its identifier.
+    agency_of_organisation: FxHashMap<&'d str, u32>,
+    /// The agency row of the publisher, once a line naming none needs it.
+    publisher_agency: Option<u32>,
     trips: Vec<TripPlan>,
     trip_of_journey: FxHashMap<JourneyId, u32>,
     calendars_used: Vec<CalendarId>,
@@ -197,15 +210,35 @@ struct Conversion<'d> {
     /// Each stop's place in the order of the stops' identifiers, by its
     /// number in the index: the order rows of stops are written in.
     stop_rank: Vec<u32>,
+    /// The parent sites that are no station of the feed, having no position.
+    unplaced_sites: FxHashSet<StopId>,
 }
+
+/// What makes a definition of a line a route of its own: its identifier,
+/// agency, name, number and mode.
+type RouteKey<'d> = (
+    &'d str,
+    Option<u32>,
+    &'d str,
+    Option<&'d str>,
+    Option<&'d str>,
+);
 
 #[derive(Debug, Clone)]
 struct AgencyRow {
     id: String,
     name: String,
     url: String,
-    time_zone: String,
     phone: Option<String>,
+}
+
+/// What `stop_times.txt` found of a trip that `trips.txt` and
+/// `frequencies.txt` write: the display at its first call, and how long
+/// after the journey's first call its first call written is.
+#[derive(Debug, Clone, Copy)]
+struct TripStart {
+    headsign: Option<Name>,
+    delay: u32,
 }
 
 impl<'d> Conversion<'d> {
@@ -223,14 +256,38 @@ impl<'d> Conversion<'d> {
             .any(|&(_, document)| delivery.document_facts(document).epip);
         let profile = profile(index, epip);
         let mut decisions = Decisions::default();
-        let named = documents
-            .iter()
-            .find_map(|&(_, document)| delivery.document_facts(document).time_zone)
-            .map(|zone| delivery.text(zone).to_owned());
-        let time_zone = match named.or_else(|| options.time_zone.clone()) {
+        let mut named = None;
+        for &(document_name, document) in &documents {
+            let Some(zone) = delivery.document_facts(document).time_zone else {
+                continue;
+            };
+            let zone = delivery.text(zone).trim();
+            if names_a_time_zone(zone) {
+                named.get_or_insert(zone);
+            } else {
+                decisions.take(
+                    "time-zone-not-a-name",
+                    "a document naming its time zone otherwise than by its name in the time zone database (`CET`, `CEST`, `BST`): taken as naming none, as GTFS requires such a name",
+                    || format!("{document_name}: {zone}"),
+                );
+            }
+        }
+        let time_zone = match named
+            .map(str::to_owned)
+            .or_else(|| options.time_zone.clone())
+        {
             Some(zone) => zone,
             None => time_zone_of_country(index, &mut decisions)?.to_owned(),
         };
+        let publisher = options.publisher.clone().or_else(|| {
+            data_sources(delivery).into_iter().find_map(|(name, url)| {
+                Some(Publisher {
+                    name: name.to_owned(),
+                    url: url?.to_owned(),
+                    language: None,
+                })
+            })
+        });
         Ok(Conversion {
             delivery,
             index,
@@ -238,12 +295,17 @@ impl<'d> Conversion<'d> {
             decisions,
             profile,
             time_zone,
+            publisher,
             place_rows: FxHashMap::default(),
             station_rows: FxHashMap::default(),
             stop_rows: Vec::new(),
             routes: Vec::new(),
             route_of_line: FxHashMap::default(),
+            route_of_definition: FxHashMap::default(),
+            route_ids: UniqueIds::default(),
             agencies: Vec::new(),
+            agency_of_organisation: FxHashMap::default(),
+            publisher_agency: None,
             trips: Vec::new(),
             trip_of_journey: FxHashMap::default(),
             calendars_used: Vec::new(),
@@ -252,6 +314,7 @@ impl<'d> Conversion<'d> {
             levels_used: Vec::new(),
             quay_positions: FxHashMap::default(),
             stop_rank: stop_ranks(index),
+            unplaced_sites: FxHashSet::default(),
         })
     }
 
@@ -317,11 +380,29 @@ impl<'d> Conversion<'d> {
         }
         self.plan_stops(&used);
         for (journey, line) in candidates {
-            if self.calls(journey).len() < 2 {
-                let record = self.index.journey(journey);
+            let record = self.index.journey(journey);
+            let placed = self.placed_calls(journey);
+            if placed.len() < 2 {
                 self.decisions.take(
                     "trip-at-unplaced-stops",
-                    "a journey calling at a stop the feed cannot place: left out",
+                    "a journey left with fewer than two calls once those at stops the feed cannot place are left out: left out",
+                    || record.id.to_owned(),
+                );
+                continue;
+            }
+            let placed_count = placed.len();
+            let calls = timed_ends(placed, record.passing_times);
+            if calls.len() < placed_count {
+                self.decisions.take(
+                    "trip-untimed-end-cut",
+                    "a journey whose first or last call at a placed stop has no time — the calls before or after it left out —: cut to the first and last with a time, as GTFS requires times there",
+                    || record.id.to_owned(),
+                );
+            }
+            if calls.len() < 2 {
+                self.decisions.take(
+                    "trip-without-two-calls",
+                    "a journey left with fewer than two calls at a place: left out",
                     || record.id.to_owned(),
                 );
                 continue;
@@ -359,9 +440,16 @@ impl<'d> Conversion<'d> {
         }
     }
 
-    /// The calls of a journey the feed writes: each by its position among the
-    /// journey's calls, with the row of its stop.
+    /// The calls of a journey the feed writes: those at a stop of the feed,
+    /// from the first with a time to the last ([`timed_ends`]).
     fn calls(&self, journey: JourneyId) -> Vec<(usize, u32)> {
+        let times = self.index.journey(journey).passing_times;
+        timed_ends(self.placed_calls(journey), times)
+    }
+
+    /// The calls of a journey at a stop of the feed: each by its position
+    /// among the journey's calls, with the row of its stop.
+    fn placed_calls(&self, journey: JourneyId) -> Vec<(usize, u32)> {
         self.index
             .journey(journey)
             .stop_points
@@ -389,6 +477,7 @@ impl<'d> Conversion<'d> {
                 *sum = (sum.0 + latitude, sum.1 + longitude, sum.2 + 1);
             }
         }
+        self.plan_sites(used);
         let mut parents: Vec<StopId> = used
             .iter()
             .filter_map(|place| match place {
@@ -443,9 +532,16 @@ impl<'d> Conversion<'d> {
                         "a stop point assigned to no stop place or quay: a stop of its own, at its own position",
                         || record.id.to_owned(),
                     );
+                    let id = self.unique_stop_id(&mut ids, record.id);
+                    let name = name_or_identifier(
+                        &mut self.decisions,
+                        record.name,
+                        record.id,
+                        STOP_NAMED_BY_ITS_IDENTIFIER,
+                    );
                     Some(StopRow {
-                        id: ids.unique(record.id),
-                        name: record.name.to_owned(),
+                        id,
+                        name,
                         position: (
                             record
                                 .latitude
@@ -479,6 +575,45 @@ impl<'d> Conversion<'d> {
         }
     }
 
+    /// Which parent sites of the stops called at are no station, having no
+    /// position of their own or of their quays: the stop places within one
+    /// stand on their own, or within the site it is within.
+    fn plan_sites(&mut self, used: &[Place]) {
+        let index = self.index;
+        let mut sites: Vec<StopId> = used
+            .iter()
+            .filter_map(|place| match *place {
+                Place::Stop(stop) => {
+                    let record = index.stop(stop);
+                    match record.kind {
+                        StopKind::Quay => record.parent,
+                        StopKind::StopPlace => Some(stop),
+                        // A kind of stop a later index tells apart stands under none.
+                        _ => None,
+                    }
+                }
+                Place::Point(_) => None,
+            })
+            .flat_map(|place| self.parent_sites(place))
+            .collect();
+        sites.sort_unstable_by_key(|site| self.stop_rank[site.0 as usize]);
+        sites.dedup();
+        for site in sites {
+            let record = index.stop(site);
+            let placed = record.latitude.zip(record.longitude).is_some()
+                || self.quay_positions.contains_key(&site);
+            if placed {
+                continue;
+            }
+            self.unplaced_sites.insert(site);
+            self.decisions.take(
+                "parent-site-without-position",
+                "a parent site without a position of its own or of its quays: no station, the stop places within it stand on their own",
+                || record.id.to_owned(),
+            );
+        }
+    }
+
     /// The stops of the index in the order of their identifiers.
     fn stops_in_order(&self) -> Vec<StopId> {
         let mut stops: Vec<StopId> = self.index.stops().collect();
@@ -504,31 +639,33 @@ impl<'d> Conversion<'d> {
         }
     }
 
-    /// The outermost parent site of a stop place, if it is within one the
-    /// delivery defines.
+    /// The outermost parent site of a stop place that is a station of the
+    /// feed, if it is within one.
     fn parent_site_of(&self, place: StopId) -> Option<StopId> {
-        let mut site = None;
+        self.parent_sites(place)
+            .into_iter()
+            .rev()
+            .find(|site| !self.unplaced_sites.contains(site))
+    }
+
+    /// The parent sites the delivery defines that a stop place is within, a
+    /// parent site within a parent site, from the innermost out; where the
+    /// delivery states a cycle, they end where it closes.
+    fn parent_sites(&self, place: StopId) -> Vec<StopId> {
+        let mut sites = Vec::new();
         let mut current = place;
-        // A parent site within a parent site, to the outermost; where the
-        // delivery states a cycle, it ends where it closes.
-        let mut seen = vec![place];
-        loop {
-            let id = self.delivery.name(self.index.stop(current).id)?;
-            let parent = self
-                .delivery
-                .gather
-                .stops
-                .get(&id)
-                .and_then(|facts| facts.parent_site)
-                .and_then(|parent| self.index.stop_by_id(self.delivery.text(parent)))
-                .filter(|parent| !seen.contains(parent));
-            let Some(parent) = parent else {
-                return site;
-            };
-            seen.push(parent);
-            site = Some(parent);
+        while let Some(parent) = self
+            .delivery
+            .name(self.index.stop(current).id)
+            .and_then(|id| self.delivery.gather.stops.get(&id))
+            .and_then(|facts| facts.parent_site)
+            .and_then(|parent| self.index.stop_by_id(self.delivery.text(parent)))
+            .filter(|parent| *parent != place && !sites.contains(parent))
+        {
+            sites.push(parent);
             current = parent;
         }
+        sites
     }
 
     fn push_row(&mut self, row: StopRow) -> u32 {
@@ -574,16 +711,25 @@ impl<'d> Conversion<'d> {
             _ => None,
         })?;
         let parent_station = parent.map(|row| self.stop_rows[row as usize].id.clone());
-        let name = if record.name.is_empty() {
-            let parent_name = record.parent.map(|p| index.stop(p).name).unwrap_or("");
-            self.decisions.take(
-                "stop-named-by-its-station",
-                "a stop without a name: named as its stop place",
-                || record.id.to_owned(),
-            );
-            parent_name.to_owned()
-        } else {
-            record.name.to_owned()
+        let station_name = record
+            .parent
+            .map(|p| index.stop(p).name)
+            .filter(|name| !name.trim().is_empty());
+        let name = match station_name {
+            Some(station_name) if record.name.trim().is_empty() => {
+                self.decisions.take(
+                    "stop-named-by-its-station",
+                    "a stop without a name: named as its stop place",
+                    || record.id.to_owned(),
+                );
+                station_name.to_owned()
+            }
+            _ => name_or_identifier(
+                &mut self.decisions,
+                record.name,
+                record.id,
+                STOP_NAMED_BY_ITS_IDENTIFIER,
+            ),
         };
         let facts = self
             .delivery
@@ -618,14 +764,7 @@ impl<'d> Conversion<'d> {
             (StopIds::Global, Some(global)) => format!("{global}{suffix}"),
             _ => format!("{}{suffix}", record.id),
         };
-        let id = ids.unique(&base);
-        if id != base {
-            self.decisions.take(
-                "stop-made-unique",
-                "a global identifier several stops of the feed carry: the second and each after it numbered, `<id>#<n>`",
-                || base.clone(),
-            );
-        }
+        let id = self.unique_stop_id(ids, &base);
         Some(StopRow {
             id,
             name,
@@ -636,6 +775,19 @@ impl<'d> Conversion<'d> {
             platform: facts.platform.map(|p| self.delivery.text(p).to_owned()),
             level: level.map(|l| self.delivery.text(l).to_owned()),
         })
+    }
+
+    /// A stop's identifier, made unique among the feed's stops.
+    fn unique_stop_id(&mut self, ids: &mut UniqueIds, base: &str) -> String {
+        let id = ids.unique(base);
+        if id != base {
+            self.decisions.take(
+                "stop-made-unique",
+                "an identifier several stops of the feed would carry — a global identifier, or one another stop's number or `#place` took —: the second and each after it numbered, `<id>#<n>`",
+                || base.to_owned(),
+            );
+        }
+        id
     }
 
     /// The route of a line: one per NeTEx identifier — the versions of a
@@ -656,39 +808,28 @@ impl<'d> Conversion<'d> {
             .map(|organisation| self.delivery.agency(organisation))
             .or_else(|| self.delivery.agency_of_journey(journey));
         let agency = self.agency_row(agency, record.id);
-        let same = self
-            .routes
-            .iter()
-            .position(|&(other, ref id, other_agency, _)| {
-                let other_record = self.index.line(other);
-                id == record.id
-                    && other_agency == agency
-                    && (
-                        other_record.name,
-                        other_record.public_code,
-                        other_record.mode,
-                    ) == (record.name, record.public_code, record.mode)
-            });
-        let route = match same {
-            Some(route) => u32::try_from(route).expect("fewer than 2^32 routes"),
+        let key = (
+            record.id,
+            agency,
+            record.name,
+            record.public_code,
+            record.mode,
+        );
+        let route = match self.route_of_definition.get(&key) {
+            Some(&route) => route,
             None => {
-                let taken = self
-                    .routes
-                    .iter()
-                    .filter(|(_, id, _, _)| id == record.id)
-                    .count();
-                let id = if taken == 0 {
-                    record.id.to_owned()
-                } else {
+                let id = self.route_ids.unique(record.id);
+                if id != record.id {
                     self.decisions.take(
                         "route-made-unique",
-                        "a line defined again with another name, number, mode or agency: a route of its own, `<id>#<n>`",
+                        "a line defined again with another name, number, mode or agency, or one whose identifier another route took: a route of its own, `<id>#<n>`",
                         || record.id.to_owned(),
                     );
-                    format!("{}#{}", record.id, taken + 1)
-                };
+                }
                 self.routes.push((line, id, agency, document));
-                u32::try_from(self.routes.len() - 1).expect("fewer than 2^32 routes")
+                let route = u32::try_from(self.routes.len() - 1).expect("fewer than 2^32 routes");
+                self.route_of_definition.insert(key, route);
+                route
             }
         };
         self.route_of_line.insert(line, route);
@@ -697,63 +838,72 @@ impl<'d> Conversion<'d> {
 
     /// The agency row of an organisation; the publisher's for a line naming
     /// none.
-    fn agency_row(&mut self, agency: Option<Agency<'_>>, line: &str) -> Option<u32> {
+    fn agency_row(&mut self, agency: Option<Agency<'d>>, line: &str) -> Option<u32> {
         let row = match agency {
             Some(agency) => {
-                if let Some(at) = self.agencies.iter().position(|row| row.id == agency.id) {
-                    return Some(u32::try_from(at).expect("fewer than 2^32 agencies"));
+                if let Some(&at) = self.agency_of_organisation.get(agency.id) {
+                    return Some(at);
                 }
                 let url = match agency.url {
                     Some(url) => url.to_owned(),
                     None => {
                         self.decisions.take(
                             "agency-without-url",
-                            "an organisation stating no web address: the publisher's is written, GTFS requires one",
+                            "an organisation stating no web address: the feed's publisher's is written — the publisher given, else the delivery's data source with one —, GTFS requires one; without a publisher, none",
                             || agency.id.to_owned(),
                         );
-                        self.options
-                            .publisher
+                        self.publisher
                             .as_ref()
                             .map_or_else(String::new, |publisher| publisher.url.clone())
                     }
                 };
-                let time_zone = self
+                let zone = self
                     .delivery
                     .document_facts(agency.document)
                     .time_zone
-                    .map_or_else(
-                        || self.time_zone.clone(),
-                        |zone| self.delivery.text(zone).to_owned(),
+                    .map(|zone| self.delivery.text(zone).trim())
+                    .filter(|&zone| names_a_time_zone(zone) && zone != self.time_zone);
+                if let Some(zone) = zone {
+                    self.decisions.take(
+                        "agency-time-zone-unified",
+                        "an organisation whose document names another time zone than the feed's: written in the feed's, as GTFS has one time zone for all agencies, its trips' times as stated",
+                        || format!("{}: {zone}", agency.id),
                     );
+                }
+                let name = name_or_identifier(
+                    &mut self.decisions,
+                    agency.name,
+                    agency.id,
+                    AGENCY_NAMED_BY_ITS_IDENTIFIER,
+                );
+                let at = u32::try_from(self.agencies.len()).expect("fewer than 2^32 agencies");
+                self.agency_of_organisation.insert(agency.id, at);
                 AgencyRow {
                     id: agency.id.to_owned(),
-                    name: agency.name.to_owned(),
+                    name,
                     url,
-                    time_zone,
                     phone: agency.phone.map(str::to_owned),
                 }
             }
             None => {
                 self.decisions.take(
                     "route-without-agency",
-                    "a line naming no operator or authority the delivery defines: the publisher given is its agency; without one, the route names none",
+                    "a line naming no operator or authority the delivery defines: the feed's publisher is its agency — the publisher given, else the delivery's data source with a web address —; without one, the route names none",
                     || line.to_owned(),
                 );
-                let publisher = self.options.publisher.as_ref()?;
-                if let Some(at) = self
-                    .agencies
-                    .iter()
-                    .position(|row| row.id == PUBLISHER_AGENCY)
-                {
-                    return Some(u32::try_from(at).expect("fewer than 2^32 agencies"));
+                if self.publisher_agency.is_some() {
+                    return self.publisher_agency;
                 }
-                AgencyRow {
+                let publisher = self.publisher.as_ref()?;
+                let row = AgencyRow {
                     id: PUBLISHER_AGENCY.to_owned(),
                     name: publisher.name.clone(),
                     url: publisher.url.clone(),
-                    time_zone: self.time_zone.clone(),
                     phone: None,
-                }
+                };
+                self.publisher_agency =
+                    Some(u32::try_from(self.agencies.len()).expect("fewer than 2^32 agencies"));
+                row
             }
         };
         self.agencies.push(row);
@@ -820,11 +970,13 @@ impl<'d> Conversion<'d> {
                 || projection.to_owned(),
             );
         }
-        let mut shape_of_course: FxHashMap<Course, u32> = FxHashMap::default();
+        // The shape of each course, none where it has fewer than two
+        // positions: GTFS draws a shape between two at least.
+        let mut shape_of_course: FxHashMap<Course, Option<u32>> = FxHashMap::default();
         for trip_number in 0..self.trips.len() {
             let journey = self.trips[trip_number].journey;
+            let record = self.index.journey(journey);
             let Some(course) = self.course_of(journey) else {
-                let record = self.index.journey(journey);
                 self.decisions.take(
                     "shape-incomplete",
                     "a trip with a pair of calls no service link with a geometry joins: no shape",
@@ -832,15 +984,25 @@ impl<'d> Conversion<'d> {
                 );
                 continue;
             };
-            let next = u32::try_from(shape_of_course.len()).expect("fewer than 2^32 shapes");
             let shape = match shape_of_course.get(&course) {
                 Some(&shape) => shape,
                 None => {
                     let points = self.shape_points(journey, &course);
-                    self.shapes.push(points);
-                    shape_of_course.insert(course, next);
-                    next
+                    let shape = (points.len() >= 2).then(|| {
+                        self.shapes.push(points);
+                        u32::try_from(self.shapes.len() - 1).expect("fewer than 2^32 shapes")
+                    });
+                    shape_of_course.insert(course, shape);
+                    shape
                 }
+            };
+            let Some(shape) = shape else {
+                self.decisions.take(
+                    "shape-without-two-positions",
+                    "a trip whose course gives fewer than two positions — its every stretch in a reference system the crate does not know, or one position —: no shape",
+                    || record.id.to_owned(),
+                );
+                continue;
             };
             let trip_number = u32::try_from(trip_number).expect("fewer than 2^32 trips");
             self.shape_of_trip.insert(trip_number, shape);
@@ -1031,7 +1193,7 @@ impl<'d> Conversion<'d> {
                 agency.id.as_str(),
                 agency.name.as_str(),
                 agency.url.as_str(),
-                agency.time_zone.as_str(),
+                self.time_zone.as_str(),
                 agency.phone.as_deref().unwrap_or(""),
             ])?;
         }
@@ -1119,11 +1281,19 @@ impl<'d> Conversion<'d> {
                         .map(|n| self.delivery.text(n))
                 })
                 .unwrap_or("");
-            // A long name repeating the short one says nothing more.
-            let long = if record.name == short {
-                ""
+            // A long name repeating the short one says nothing more; GTFS
+            // requires one of the two.
+            let long = if short.is_empty() {
+                name_or_identifier(
+                    &mut self.decisions,
+                    record.name,
+                    record.id,
+                    ROUTE_NAMED_BY_ITS_IDENTIFIER,
+                )
+            } else if record.name == short {
+                String::new()
             } else {
-                record.name
+                record.name.to_owned()
             };
             let route_type = route_type(record.mode);
             if route_type.is_none() {
@@ -1138,7 +1308,7 @@ impl<'d> Conversion<'d> {
                 id.as_str(),
                 agency.map_or("", |a| self.agencies[a as usize].id.as_str()),
                 short,
-                long,
+                long.as_str(),
                 route_type.unwrap_or("3"),
                 text(facts.and_then(|f| f.colour)),
                 text(facts.and_then(|f| f.text_colour)),
@@ -1147,9 +1317,29 @@ impl<'d> Conversion<'d> {
         Ok(table.rows())
     }
 
-    /// `trips.txt`, `frequencies.txt` and `stop_times.txt`, trip by trip;
-    /// the stop times, the large file, written as they are made.
+    /// `stop_times.txt`, `trips.txt` and `frequencies.txt`, trip by trip;
+    /// the stop times, the large file, written as they are made, and first,
+    /// so that each trip's calls and displays are found once.
     fn trips(&mut self, output: &mut dyn Output) -> io::Result<(u64, u64, u64)> {
+        let mut table = Table::start(
+            output,
+            "stop_times.txt",
+            &[
+                "trip_id",
+                "arrival_time",
+                "departure_time",
+                "stop_id",
+                "stop_sequence",
+                "pickup_type",
+                "drop_off_type",
+                "stop_headsign",
+            ],
+        )?;
+        let mut starts = Vec::with_capacity(self.trips.len());
+        for number in 0..self.trips.len() {
+            starts.push(self.stop_times(number, &mut table)?);
+        }
+        let stop_times = table.rows();
         let mut table = Table::start(
             output,
             "trips.txt",
@@ -1165,8 +1355,8 @@ impl<'d> Conversion<'d> {
             ],
         )?;
         let mut frequencies: Vec<[String; 4]> = Vec::new();
-        for number in 0..self.trips.len() {
-            let row = self.trip_row(number, &mut frequencies);
+        for (number, &start) in starts.iter().enumerate() {
+            let row = self.trip_row(number, start, &mut frequencies);
             table.row(row.iter().map(String::as_str))?;
         }
         let trips = table.rows();
@@ -1184,30 +1374,18 @@ impl<'d> Conversion<'d> {
         for row in &frequencies {
             table.row(row.iter().map(String::as_str).chain(["0"]))?;
         }
-        let frequency_rows = table.rows();
-        let mut table = Table::start(
-            output,
-            "stop_times.txt",
-            &[
-                "trip_id",
-                "arrival_time",
-                "departure_time",
-                "stop_id",
-                "stop_sequence",
-                "pickup_type",
-                "drop_off_type",
-                "stop_headsign",
-            ],
-        )?;
-        for number in 0..self.trips.len() {
-            self.stop_times(number, &mut table)?;
-        }
-        Ok((trips, table.rows(), frequency_rows))
+        Ok((trips, stop_times, table.rows()))
     }
 
-    /// The row of `trips.txt` of the trip numbered `number`; its headway
-    /// groups added to `frequencies` (trip, start, end, headway).
-    fn trip_row(&mut self, number: usize, frequencies: &mut Vec<[String; 4]>) -> [String; 8] {
+    /// The row of `trips.txt` of the trip numbered `number`, which starts as
+    /// `start` says; its headway groups added to `frequencies` (trip, start,
+    /// end, headway).
+    fn trip_row(
+        &self,
+        number: usize,
+        start: TripStart,
+        frequencies: &mut Vec<[String; 4]>,
+    ) -> [String; 8] {
         let trip = &self.trips[number];
         let record = self.index.journey(trip.journey);
         let document = self.delivery.name(record.document).unwrap_or(Name::MAX);
@@ -1215,10 +1393,6 @@ impl<'d> Conversion<'d> {
         let facts = delivery
             .name(record.id)
             .and_then(|id| delivery.journey_facts(document, id));
-        let headsign = self
-            .calls(trip.journey)
-            .first()
-            .and_then(|&(position, _)| self.displays(trip.journey, document)[position]);
         let short_name = facts.and_then(|facts| {
             let number = facts
                 .train_number
@@ -1231,7 +1405,9 @@ impl<'d> Conversion<'d> {
             self.routes[trip.route as usize].1.clone(),
             service_id(self.index.calendar_of(trip.journey)),
             trip.id.clone(),
-            headsign.map_or_else(String::new, |h| delivery.text(h).to_owned()),
+            start
+                .headsign
+                .map_or_else(String::new, |h| delivery.text(h).to_owned()),
             short_name.map_or_else(String::new, |n| delivery.text(n).to_owned()),
             match self.direction(trip.journey, document) {
                 Some(Direction::Outbound) => "0".to_owned(),
@@ -1244,20 +1420,24 @@ impl<'d> Conversion<'d> {
             wheelchair(facts.and_then(|f| f.wheelchair)).to_owned(),
         ];
         // A headway group states an interval, not departures: a frequency
-        // without exact times, from the first departure to the last.
+        // without exact times. GTFS runs a frequency from its start up to,
+        // not including, its end, from the trip's first stop: from the
+        // group's first departure to a second after its last, each as much
+        // later as the trip's first call is after the journey's.
         for headway in record.headways {
             frequencies.push([
                 trip.id.clone(),
-                time_text(Some(headway.first_departure)),
-                time_text(Some(headway.last_departure)),
+                time_text(Some(headway.first_departure + start.delay)),
+                time_text(Some(headway.last_departure + start.delay + 1)),
                 headway.interval.to_string(),
             ]);
         }
         row
     }
 
-    /// The rows of `stop_times.txt` of the trip numbered `number`.
-    fn stop_times(&mut self, number: usize, table: &mut Table<'_>) -> io::Result<()> {
+    /// The rows of `stop_times.txt` of the trip numbered `number`; how it
+    /// starts.
+    fn stop_times(&self, number: usize, table: &mut Table<'_>) -> io::Result<TripStart> {
         let trip = &self.trips[number];
         let record = self.index.journey(trip.journey);
         let document = self.delivery.name(record.document).unwrap_or(Name::MAX);
@@ -1279,7 +1459,14 @@ impl<'d> Conversion<'d> {
                 stop_headsign.map_or("", |shown| self.delivery.text(shown)),
             ])?;
         }
-        Ok(())
+        // The index starts a journey at a call with a time, and so does the
+        // feed a trip ([`timed_ends`]).
+        let time_of = |position: usize| time_at(record.passing_times[position]);
+        let delay = calls
+            .first()
+            .and_then(|&(position, _)| Some(time_of(position)?.saturating_sub(time_of(0)?)))
+            .unwrap_or(0);
+        Ok(TripStart { headsign, delay })
     }
 
     /// The destination display shown at each call of a journey, by position
@@ -1313,17 +1500,21 @@ impl<'d> Conversion<'d> {
         let mut displays = Vec::with_capacity(record.stop_points.len());
         for &stop_point in record.stop_points {
             let id = delivery.name(self.index.stop_point(stop_point).id);
-            while let Some(point) = stops.get(next) {
-                next += 1;
-                if let Some(display) = point
-                    .display
-                    .and_then(|display| delivery.display(document, display))
-                {
-                    shown = Some(display.text);
+            // A call the points do not name — a journey stating calls of its
+            // own beside its pattern — shows what is shown before it.
+            let found = stops[next..]
+                .iter()
+                .position(|point| Some(point.stop_point) == id);
+            if let Some(found) = found {
+                for point in &stops[next..=next + found] {
+                    if let Some(display) = point
+                        .display
+                        .and_then(|display| delivery.display(document, display))
+                    {
+                        shown = Some(display.text);
+                    }
                 }
-                if Some(point.stop_point) == id {
-                    break;
-                }
+                next += found + 1;
             }
             displays.push(shown.or(fallback));
         }
@@ -1578,23 +1769,7 @@ impl<'d> Conversion<'d> {
     /// —, the period and version; and the organisations whose data it is.
     fn feed_info(&mut self, output: &mut dyn Output) -> io::Result<Vec<(&'static str, u64)>> {
         let delivery = self.delivery;
-        let mut sources: Vec<(&str, Option<&str>)> = delivery
-            .gather
-            .data_sources
-            .iter()
-            .map(|&(_, name, url)| (delivery.text(name), url.map(|u| delivery.text(u))))
-            .collect();
-        sources.sort_unstable();
-        sources.dedup();
-        let publisher = self.options.publisher.clone().or_else(|| {
-            sources.iter().find_map(|&(name, url)| {
-                Some(Publisher {
-                    name: name.to_owned(),
-                    url: url?.to_owned(),
-                    language: None,
-                })
-            })
-        });
+        let sources = data_sources(delivery);
         let mut written = Vec::new();
         let mut documents: Vec<(&str, Name)> = delivery
             .gather
@@ -1603,7 +1778,7 @@ impl<'d> Conversion<'d> {
             .map(|&d| (delivery.text(d), d))
             .collect();
         documents.sort_unstable();
-        match publisher {
+        match &self.publisher {
             Some(publisher) => {
                 let language = publisher.language.clone().or_else(|| {
                     documents
@@ -1615,7 +1790,7 @@ impl<'d> Conversion<'d> {
                     .iter()
                     .filter_map(|&(_, d)| delivery.document_facts(d).published)
                     .map(|p| delivery.text(p))
-                    .max()
+                    .max_by(|&a, &b| publication_order(a, b))
                     .unwrap_or("");
                 let (start, end) = self.period().unwrap_or_default();
                 let mut table = Table::start(
@@ -1730,6 +1905,24 @@ impl<'d> Conversion<'d> {
     }
 }
 
+/// Of the `calls` of a journey, by position among its calls, those from the
+/// first with a time to the last: GTFS requires times at a trip's first and
+/// last stop, and a call left out of a trip — at a stop the feed cannot
+/// place — may leave one without at an end.
+fn timed_ends(mut calls: Vec<(usize, u32)>, times: &[PassingTime]) -> Vec<(usize, u32)> {
+    let timed = |&(position, _): &(usize, u32)| time_at(times[position]).is_some();
+    let start = calls.iter().position(timed).unwrap_or(calls.len());
+    let end = calls.iter().rposition(timed).map_or(start, |last| last + 1);
+    calls.truncate(end);
+    calls.drain(..start);
+    calls
+}
+
+/// When a call takes place: its departure, else its arrival.
+fn time_at(time: PassingTime) -> Option<u32> {
+    time.departure.or(time.arrival)
+}
+
 /// Whether the times a journey states at the calls at `positions` go back
 /// from one to the next.
 fn goes_back(times: &[PassingTime], positions: impl Iterator<Item = usize>) -> bool {
@@ -1744,6 +1937,125 @@ fn goes_back(times: &[PassingTime], positions: impl Iterator<Item = usize>) -> b
         }
     }
     false
+}
+
+/// The data sources a delivery names, each by its name and web address,
+/// in their order, once.
+fn data_sources(delivery: &Delivery) -> Vec<(&str, Option<&str>)> {
+    let mut sources: Vec<(&str, Option<&str>)> = delivery
+        .gather
+        .data_sources
+        .iter()
+        .map(|&(_, name, url)| (delivery.text(name), url.map(|u| delivery.text(u))))
+        .collect();
+    sources.sort_unstable();
+    sources.dedup();
+    sources
+}
+
+/// A stop named by its identifier, as GTFS requires a name.
+const STOP_NAMED_BY_ITS_IDENTIFIER: (&str, &str) = (
+    "stop-named-by-its-identifier",
+    "a stop without a name, nor a stop place with one: named by its identifier, as GTFS requires a name",
+);
+
+/// An agency named by its identifier, as GTFS requires a name.
+const AGENCY_NAMED_BY_ITS_IDENTIFIER: (&str, &str) = (
+    "agency-named-by-its-identifier",
+    "an organisation without a name: named by its identifier, as GTFS requires a name",
+);
+
+/// A route named by its identifier, as GTFS requires a name.
+const ROUTE_NAMED_BY_ITS_IDENTIFIER: (&str, &str) = (
+    "route-named-by-its-identifier",
+    "a line without a name or a number: its long name its identifier, as GTFS requires one of the two",
+);
+
+/// `name`, else — GTFS requiring one — the identifier `id` the delivery
+/// states, the decision `code` taken.
+fn name_or_identifier(
+    decisions: &mut Decisions,
+    name: &str,
+    id: &str,
+    (code, what): (&'static str, &'static str),
+) -> String {
+    if name.trim().is_empty() {
+        decisions.take(code, what, || id.to_owned());
+        id.to_owned()
+    } else {
+        name.to_owned()
+    }
+}
+
+/// Whether `zone` is written as a name of the time zone database, as GTFS
+/// requires: an area and a location (`Europe/Zurich`,
+/// `America/Argentina/Buenos_Aires`, `Etc/GMT+1`), or `UTC`. NeTEx's
+/// `TimeZone` is free text, and the examples of the standard write
+/// abbreviations of an offset — `CET`, `CEST`, `BST` —, which name no rules
+/// over the year. Only the form is checked, not that the location exists.
+fn names_a_time_zone(zone: &str) -> bool {
+    const AREAS: [&str; 11] = [
+        "Africa",
+        "America",
+        "Antarctica",
+        "Arctic",
+        "Asia",
+        "Atlantic",
+        "Australia",
+        "Etc",
+        "Europe",
+        "Indian",
+        "Pacific",
+    ];
+    if zone == "UTC" {
+        return true;
+    }
+    let mut parts = zone.split('/');
+    let area = parts.next().unwrap_or_default();
+    let mut locations = parts.peekable();
+    AREAS.contains(&area)
+        && locations.peek().is_some()
+        && locations.all(|location| {
+            !location.is_empty()
+                && location
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-' | b'+'))
+        })
+}
+
+/// The order of two publication timestamps by the instant they name — an
+/// offset stated taken away, one without as if in UTC —, then by their
+/// text; a timestamp that is none sorts before every one that is.
+fn publication_order(a: &str, b: &str) -> Ordering {
+    (instant(a), a).cmp(&(instant(b), b))
+}
+
+/// The seconds since 1970-01-01 in UTC an `xsd:dateTime` names, its offset
+/// (`Z`, `+02:00`) taken away; one without an offset as if in UTC.
+fn instant(timestamp: &str) -> Option<i64> {
+    let timestamp = timestamp.trim();
+    let written = DateTime::from(timestamp);
+    let day = written.date()?.days_since_epoch()?;
+    let time = written.time()?.seconds_since_midnight()?;
+    let (_, after_date) = timestamp.split_once('T')?;
+    let offset = match after_date.find(['Z', '+', '-']) {
+        None => 0,
+        Some(at) => match &after_date[at..] {
+            "Z" => 0,
+            offset => {
+                let (sign, rest) = offset.split_at(1);
+                let (hours, minutes) = rest.split_once(':')?;
+                let (hours, minutes): (i64, i64) = (hours.parse().ok()?, minutes.parse().ok()?);
+                let seconds = hours * 3600 + minutes * 60;
+                if sign == "-" {
+                    -seconds
+                } else {
+                    seconds
+                }
+            }
+        },
+    };
+    Some(day * 86_400 + i64::from(time) - offset)
 }
 
 /// What a trip's shape is drawn from, the key trips share a shape by.
@@ -1833,22 +2145,28 @@ fn stop_point_order(index: &Index, a: StopPointId, b: StopPointId) -> Ordering {
 /// The agency of lines naming none, from the publisher.
 const PUBLISHER_AGENCY: &str = "publisher";
 
-/// Identifiers made unique: the second of one text gets `#2`, the third `#3`.
+/// Identifiers made unique: the first of one text is the text, each after
+/// it numbered `#2`, `#3`, … — the next number whose identifier none handed
+/// out has taken, an identifier numbered in the delivery among them.
 #[derive(Debug, Default)]
 struct UniqueIds {
-    seen: FxHashMap<String, u32>,
+    taken: FxHashSet<String>,
+    /// The number each text was handed out with last.
+    numbered: FxHashMap<String, u32>,
 }
 
 impl UniqueIds {
     fn unique(&mut self, id: &str) -> String {
-        let count = self.seen.entry(id.to_owned()).or_insert(0);
-        *count += 1;
-        if *count == 1 {
-            id.to_owned()
-        } else {
-            let unique = format!("{id}#{count}");
-            self.seen.insert(unique.clone(), 1);
-            unique
+        if self.taken.insert(id.to_owned()) {
+            return id.to_owned();
+        }
+        let number = self.numbered.entry(id.to_owned()).or_insert(1);
+        loop {
+            *number += 1;
+            let unique = format!("{id}#{number}");
+            if self.taken.insert(unique.clone()) {
+                return unique;
+            }
         }
     }
 }
@@ -1960,10 +2278,11 @@ fn route_type(mode: Option<&str>) -> Option<&'static str> {
         "tram" => "0",
         "metro" => "1",
         "rail" => "2",
-        "bus" | "coach" | "trolleyBus" => "3",
+        "bus" | "coach" => "3",
         "water" | "ferry" => "4",
         "cableway" | "telecabin" => "6",
         "funicular" => "7",
+        "trolleyBus" => "11",
         "air" => "1100",
         "taxi" => "1500",
         _ => return None,
@@ -2047,6 +2366,61 @@ mod tests {
         assert_eq!(route_type(Some("trolleyBus")), Some("11"));
         assert_eq!(route_type(Some("bus")), Some("3"));
         assert_eq!(route_type(Some("snowAndIce")), None);
+    }
+
+    #[test]
+    fn only_a_name_of_the_time_zone_database_is_a_time_zone() {
+        for zone in [
+            "Europe/Zurich",
+            "America/Argentina/Buenos_Aires",
+            "Etc/GMT+1",
+            "UTC",
+        ] {
+            assert!(names_a_time_zone(zone), "{zone}");
+        }
+        // As the examples of the standard write them: abbreviations of an
+        // offset, which name no zone's rules over the year.
+        for zone in [
+            "CET",
+            "CEST",
+            "BST",
+            "GMT",
+            "+01:00",
+            "",
+            "Europe/",
+            "Mars/Olympus",
+        ] {
+            assert!(!names_a_time_zone(zone), "{zone}");
+        }
+    }
+
+    #[test]
+    fn publication_timestamps_are_ordered_by_the_instant_they_name() {
+        let later = |a: &str, b: &str| {
+            [a, b]
+                .into_iter()
+                .max_by(|&a, &b| publication_order(a, b))
+                .expect("two")
+                .to_owned()
+        };
+        // 06:00 at UTC+2 is 04:00 UTC, before 05:00 UTC.
+        assert_eq!(
+            later("2026-10-10T06:00:00+02:00", "2026-10-10T05:00:00Z"),
+            "2026-10-10T05:00:00Z"
+        );
+        assert_eq!(
+            later("2026-10-10T23:30:00-01:00", "2026-10-11T00:15:00Z"),
+            "2026-10-10T23:30:00-01:00"
+        );
+        assert_eq!(
+            later("2026-10-10T06:00:00.5", "2026-10-10T06:00:00"),
+            "2026-10-10T06:00:00.5"
+        );
+        // A timestamp that is none sorts before every one that is.
+        assert_eq!(
+            later("yesterday", "2026-10-10T06:00:00"),
+            "2026-10-10T06:00:00"
+        );
     }
 
     /// Every file of the feed `delivery` converts to, by name, with the report.

@@ -106,7 +106,7 @@ stop_times.txt: 8 rows
 stops.txt: 8 rows
 transfers.txt: 1 rows
 trips.txt: 4 rows
-1 × agency-without-url: an organisation stating no web address: the publisher's is written, GTFS requires one
+1 × agency-without-url: an organisation stating no web address: the feed's publisher's is written — the publisher given, else the delivery's data source with one —, GTFS requires one; without a publisher, none
 1 × feed-info-without-publisher: neither a publisher given nor a data source with a web address in the delivery: no feed_info.txt
 5 × stop-named-by-its-station: a stop without a name: named as its stop place
 not carried: 1 × FlexibleLine (first in EX_FlexibleLine-hent_Hent-meg-Eksempelby.xml)
@@ -284,7 +284,7 @@ library behind it) writes from the resolved delivery:
 
 | GTFS | From NeTEx |
 |---|---|
-| `agency.txt` | the operator of each line, else its additional operator, else its authority; the time zone a document names, else that of the country the identifiers or the stops show |
+| `agency.txt` | the operator of each line, else its additional operator, else its authority; one time zone for all: the first a document names, else that of the country the identifiers or the stops show |
 | `stops.txt`, `levels.txt` | stop places as stations, their quays as stops under them, stop points no stop is assigned as stops of their own; accessibility, platform codes, levels |
 | `routes.txt` | lines — a line's versions are one route —, their mode as a route type, their colours |
 | `trips.txt`, `stop_times.txt` | journeys with their calls and passing times, the destination shown, train numbers, direction, accessibility; boarding and alighting; a point passed through is no call |

@@ -1,7 +1,8 @@
 //! The countries a stop can lie in, each with its time zone: the member
 //! states of the European Union and of EFTA, the United Kingdom and the small
 //! states among them, their borders Natural Earth's (public domain), cut to
-//! Europe and simplified to 0.005° — some 500 m — by `tools/countries.py`.
+//! Europe — Iceland and Cyprus to their own — and simplified to 0.005° — some
+//! 500 m — by `tools/countries.py`.
 
 use std::sync::OnceLock;
 
@@ -16,7 +17,8 @@ const QUANTUM: f64 = 1e-4;
 pub(crate) struct Country {
     /// Its ISO 3166 code.
     pub(crate) code: &'static str,
-    /// The time zone of its European part.
+    /// The time zone of its part the table holds: of its European part, or
+    /// Iceland's and Cyprus's own.
     pub(crate) zone: &'static str,
     rings: Vec<Ring>,
 }
@@ -149,7 +151,7 @@ mod tests {
             ("Corte", (42.3061, 9.1497), "FR"),
             ("Selfoss", (63.9331, -20.9971), "IS"),
             ("Egilsstaðir", (65.2653, -14.3948), "IS"),
-            ("Strovolos", (35.1450, 33.3300), "CY"),
+            ("Limassol", (34.7071, 33.0226), "CY"),
             ("Kakopetria", (34.9879, 32.9020), "CY"),
         ] {
             assert_eq!(
