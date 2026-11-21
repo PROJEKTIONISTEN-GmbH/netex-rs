@@ -741,9 +741,11 @@ impl Finish {
         }
     }
 
-    /// Stop points → stops, quay before stop place. A stop point assigned in
-    /// several documents takes the assignment of the document named first;
-    /// within one document, the last. A `QuayRef` naming a stop place, or a
+    /// Stop points → stops, quay before stop place: an assignment whose
+    /// quay does not resolve — a reference to nothing — assigns the stop
+    /// place it names beside it. A stop point assigned in several documents
+    /// takes the assignment of the document named first; within one
+    /// document, the last. A `QuayRef` naming a stop place, or a
     /// `StopPlaceRef` naming a quay — as the Belgian deliveries assign their
     /// stop points —, assigns the stop it names, and resolves to another class
     /// than it names.
@@ -754,15 +756,16 @@ impl Finish {
             let Some(point_index) = self.resolve_stop_point(point) else {
                 continue;
             };
-            let Some(reference) = quay.as_ref().or(place.as_ref()) else {
-                continue;
-            };
-            if let Some(stop) = self.resolve_stop(reference) {
-                let found = match self.b.stops[stop as usize].kind {
+            let found = [quay, place]
+                .into_iter()
+                .flatten()
+                .find_map(|reference| Some((reference, self.resolve_stop(reference)?)));
+            if let Some((reference, stop)) = found {
+                let class = match self.b.stops[stop as usize].kind {
                     StopKind::StopPlace => "StopPlace",
                     StopKind::Quay => "Quay",
                 };
-                self.check_class(reference, found);
+                self.check_class(reference, class);
                 let by = &mut assigned_by[point_index as usize];
                 if by.is_none_or(|current| !precedes(&self.b.strings, current, point.origin)) {
                     *by = Some(point.origin);
@@ -1998,14 +2001,22 @@ impl Finish {
         Some((position_of(first), position_of(last + 1)))
     }
 
+    /// The stop an end of a walk names: of its references, most specific
+    /// first, the first resolving — the stop place a DELFI end names beside
+    /// a quay no document states —, each that does not a reference to
+    /// nothing.
+    fn resolve_end(&mut self, end: &[Pending]) -> Option<u32> {
+        end.iter().find_map(|pending| self.resolve_stop(pending))
+    }
+
     /// The walks, by the stop they start at, each stop's sorted and without
     /// repetitions: the offsets of each stop's walks, and the walks.
     fn transfers(&mut self) -> (Vec<u32>, Vec<Transfer>) {
         let transfers = std::mem::take(&mut self.b.transfers);
         let mut by_stop: Vec<Vec<Transfer>> = vec![Vec::new(); self.b.stops.len()];
         for transfer in &transfers {
-            let from = self.resolve_stop(&transfer.from[0]);
-            let to = self.resolve_stop(&transfer.to[0]);
+            let from = self.resolve_end(&transfer.from);
+            let to = self.resolve_end(&transfer.to);
             let (Some(from), Some(to)) = (from, to) else {
                 continue;
             };

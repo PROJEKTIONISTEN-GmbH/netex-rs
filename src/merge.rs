@@ -364,7 +364,7 @@ struct Merged<'x> {
     definitions: FxHashMap<&'x str, Vec<At>>,
     stops: Stops<'x>,
     /// The journeys kept, by the stations they call at with their times and
-    /// by their headways: delivery, identifier and days.
+    /// by their headways: delivery, identifier as written and days.
     journeys: FxHashMap<JourneyKey, Vec<(u32, String, Vec<i64>)>>,
     /// The stations, numbered.
     stations: FxHashMap<String, u32>,
@@ -427,15 +427,9 @@ pub fn merge(inputs: &[Input], to: &Path) -> Result<Report, Error> {
                 ),
             );
         }
-        pair_journeys(
-            number as u32,
-            read,
-            earlier,
-            &mut merged,
-            &rewrite,
-            &mut findings,
-        );
+        let journeys = pair_journeys(read, earlier, &mut merged, &rewrite, &mut findings);
         rename(read, earlier, &merged, &mut findings);
+        register_journeys(number as u32, read, journeys, &mut merged);
         let written = write(number, read, &rewrite, &renamed_quays, to)?;
         reports.push(DeliveryReport {
             label: read.label.to_owned(),
@@ -770,16 +764,20 @@ fn journey_key(
     key
 }
 
+/// A journey of a delivery kept by [`pair_journeys`]: what it does, where it
+/// is, and its days.
+type KeptJourney = (JourneyKey, (u32, u32), Vec<i64>);
+
 /// Leaves out the journeys of `read` an earlier delivery states with the
-/// same calls and times on the same days or more, and registers the others.
+/// same calls and times on the same days or more; the others, to be
+/// registered once their identifiers are settled ([`register_journeys`]).
 fn pair_journeys(
-    rank: u32,
     read: &mut Read,
     earlier: &[Read],
     merged: &mut Merged,
     rewrite: &FxHashMap<&str, String>,
     findings: &mut Findings,
-) {
+) -> Vec<KeptJourney> {
     let mut kept = Vec::new();
     let ats: Vec<(u32, u32)> = read
         .objects()
@@ -821,15 +819,27 @@ fn pair_journeys(
                     format!("{id} ({})", read.label),
                 );
             }
-            kept.push((key, id, days));
+            kept.push((key, at, days));
         }
     }
-    for (key, id, days) in kept {
+    kept
+}
+
+/// Registers the journeys `read` keeps under the identifiers they are
+/// written with, renamed where they are: what a later delivery's journey
+/// kept once points at.
+fn register_journeys(rank: u32, read: &Read, kept: Vec<KeptJourney>, merged: &mut Merged) {
+    for (key, at, days) in kept {
+        let id = match read.fate(at) {
+            Fate::Kept => read.object(at.0, at.1).id.to_owned(),
+            Fate::Renamed(new) => new.clone(),
+            _ => continue,
+        };
         merged
             .journeys
             .entry(key)
             .or_default()
-            .push((rank, id.to_owned(), days));
+            .push((rank, id, days));
     }
 }
 

@@ -53,8 +53,9 @@
             "quay-of-two-stop-places", "passing-times-other-than-points", "properties-of-day-unread",
             "walk-without-duration", "local-identifier", "link-without-run-time",
             "property-of-day-without-days", "link-between-other-points", "days-outside-calendar",
-            "journey-without-travel-time", "time-goes-back", "stop-reference-to-nothing",
-            "stop-point-without-place", "stop-point-without-position", "unreferenced"
+            "time-out-of-range", "journey-without-travel-time", "time-goes-back",
+            "stop-reference-to-nothing", "stop-point-without-place", "stop-point-without-position",
+            "unreferenced"
           ]
         },
         "kind": { "enum": ["index", "check"] },

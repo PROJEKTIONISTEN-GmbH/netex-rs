@@ -263,9 +263,26 @@ impl MultilingualString {
         }
     }
 
-    /// The text.
+    /// The element's own text: empty where it states its text as
+    /// [`translations`](Self::translations) alone; see
+    /// [`default_text`](Self::default_text).
     pub fn as_str(&self) -> &str {
         &self.text
+    }
+
+    /// The text where no language is asked for: the element's own, else the
+    /// first of its translations stating no language — a `Text` without
+    /// `lang` is in the frame's default language —, else its first
+    /// translation; empty where it states none.
+    pub fn default_text(&self) -> &str {
+        if !self.text.is_empty() {
+            return &self.text;
+        }
+        self.translations
+            .iter()
+            .find(|translation| translation.lang.is_none())
+            .or(self.translations.first())
+            .map_or("", |translation| translation.default_text())
     }
 }
 

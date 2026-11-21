@@ -1,6 +1,7 @@
 //! Gathering the index: the entities and references of each document, as they
 //! come; [`finish`](super::finish) resolves them once every document is in.
 
+use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
 use std::hash::{Hash, Hasher};
 use std::ops::RangeInclusive;
@@ -516,7 +517,10 @@ pub(crate) struct LinkRecord {
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct TransferRecord {
+    /// The references of the end the walk starts at, most specific first:
+    /// its `QuayRef`, then its `StopPlaceRef`.
     pub(crate) from: Vec<Pending>,
+    /// The references of the end the walk leads to, most specific first.
     pub(crate) to: Vec<Pending>,
     pub(crate) seconds: u32,
     pub(crate) both_ways: bool,
@@ -605,20 +609,36 @@ pub(crate) fn precedes(strings: &Strings, a: Sym, b: Sym) -> bool {
     a != b && strings.resolve(a) < strings.resolve(b)
 }
 
-/// Whether version `a` is higher than `b`: numerically when both are numbers,
-/// else as text; a version beats none.
-pub(crate) fn version_is_higher(strings: &Strings, a: Option<Sym>, b: Option<Sym>) -> bool {
+/// The order of versions, lowest first: none, then those written in digits
+/// alone by their number — of one number (`1`, `01`) by their text —, then
+/// the others by their text. An order of every two versions, whatever order
+/// they are met in: `9` < `10` < `2.0`.
+pub(crate) fn version_order(strings: &Strings, a: Option<Sym>, b: Option<Sym>) -> Ordering {
     match (a, b) {
-        (None, _) => false,
-        (Some(_), None) => true,
+        (None, None) => Ordering::Equal,
+        (None, Some(_)) => Ordering::Less,
+        (Some(_), None) => Ordering::Greater,
         (Some(a), Some(b)) => {
             let (a, b) = (strings.resolve(a), strings.resolve(b));
-            match (a.parse::<u64>(), b.parse::<u64>()) {
-                (Ok(a), Ok(b)) => a > b,
-                _ => a > b,
+            match (number_of(a), number_of(b)) {
+                (Some(x), Some(y)) => x.len().cmp(&y.len()).then(x.cmp(y)).then(a.cmp(b)),
+                (Some(_), None) => Ordering::Less,
+                (None, Some(_)) => Ordering::Greater,
+                (None, None) => a.cmp(b),
             }
         }
     }
+}
+
+/// The digits of a version written in digits alone, without leading zeros.
+fn number_of(version: &str) -> Option<&str> {
+    (!version.is_empty() && version.bytes().all(|byte| byte.is_ascii_digit()))
+        .then(|| version.trim_start_matches('0'))
+}
+
+/// Whether version `a` is higher than `b` ([`version_order`]).
+pub(crate) fn version_is_higher(strings: &Strings, a: Option<Sym>, b: Option<Sym>) -> bool {
+    version_order(strings, a, b) == Ordering::Greater
 }
 
 /// Builds an [`Index`] from documents, one at a time.
@@ -1214,7 +1234,7 @@ impl Visit<'_> {
             place.private_codes.as_ref(),
             "StopPlaceCode",
         );
-        let name = place.name.as_ref().map_or("", |n| n.as_str());
+        let name = place.name.as_ref().map_or("", |n| n.default_text());
         let (latitude, longitude) = self.position(location, "StopPlace", key.id);
         StopRecord {
             key,
@@ -1244,9 +1264,9 @@ impl Visit<'_> {
             let name = level
                 .short_name
                 .as_ref()
-                .map(|n| n.as_str())
+                .map(|n| n.default_text())
                 .or(level.public_code.as_deref())
-                .or(level.name.as_ref().map(|n| n.as_str()))
+                .or(level.name.as_ref().map(|n| n.default_text()))
                 .unwrap_or("");
             let content = level_fingerprint(name);
             let level = LevelRecord {
@@ -1329,7 +1349,7 @@ impl Visit<'_> {
             quay.private_codes.as_ref(),
             "QuayCode",
         );
-        let name = quay.name.as_ref().map_or("", |n| n.as_str());
+        let name = quay.name.as_ref().map_or("", |n| n.default_text());
         let record = StopRecord {
             key,
             origin,
@@ -1390,7 +1410,7 @@ impl Visit<'_> {
             name: self
                 .builder
                 .strings
-                .intern(line.name.as_ref().map_or("", |n| n.as_str())),
+                .intern(line.name.as_ref().map_or("", |n| n.default_text())),
             public_code: line
                 .public_code
                 .as_deref()
@@ -1409,7 +1429,7 @@ impl Visit<'_> {
     fn stop_point(&mut self, point: &crate::model::ScheduledStopPoint, inherited: Validity) {
         let validity = Validity::of(&point.valid_between, inherited);
         let key = self.builder.key(&point.id, &point.version);
-        let name = point.name.as_ref().map_or("", |n| n.as_str());
+        let name = point.name.as_ref().map_or("", |n| n.default_text());
         let (latitude, longitude) =
             self.position(point.location.as_ref(), "ScheduledStopPoint", key.id);
         let record = StopPointRecord {
@@ -1649,8 +1669,9 @@ impl Visit<'_> {
         let day_types_end = u32::try_from(self.builder.journey_day_types.len())
             .expect("fewer than 2^32 day type refs");
         let conditions = self.journey_conditions(journey, referrer);
-        let calls = self.calls(journey, referrer);
-        let headways = self.headways(journey);
+        let mut clock = Clock::default();
+        let calls = self.calls(journey, referrer, &mut clock);
+        let headways = self.headways(journey, &mut clock);
         let times_start =
             u32::try_from(self.builder.raw_times.len()).expect("fewer than 2^32 passing times");
         for passing in journey.passing_times.iter().flat_map(|p| &p.passing_times) {
@@ -1674,8 +1695,8 @@ impl Visit<'_> {
                 None => None,
             };
             let time = PassingTime {
-                arrival: seconds(&passing.arrival_time, passing.arrival_day_offset),
-                departure: seconds(&passing.departure_time, passing.departure_day_offset),
+                arrival: clock.seconds(&passing.arrival_time, passing.arrival_day_offset),
+                departure: clock.seconds(&passing.departure_time, passing.departure_day_offset),
             };
             self.builder.raw_times.push(RawTime { point, time });
         }
@@ -1685,6 +1706,7 @@ impl Visit<'_> {
             self.builder
                 .pending(r, "TimeDemandTypeRef", referrer, origin)
         });
+        let departure = clock.seconds(&journey.departure_time, journey.departure_day_offset);
         self.builder.journeys.push(JourneyRecord {
             key,
             origin,
@@ -1697,10 +1719,19 @@ impl Visit<'_> {
             calls,
             headways,
             raw_times: (times_start, times_end),
-            departure: seconds(&journey.departure_time, journey.departure_day_offset),
+            departure,
             time_demand,
             validity,
         });
+        if clock.out_of_range {
+            self.builder.gathered.push(FindingRecord {
+                concern: Concern::TimeOutOfRange,
+                element: "ServiceJourney",
+                document: origin,
+                entity: referrer.id,
+                about: None,
+            });
+        }
     }
 
     /// A dated journey. One naming a service journey and an operating day
@@ -1773,7 +1804,12 @@ impl Visit<'_> {
 
     /// The calls a journey states, in the order of their `order` — the order
     /// written where they state none: a range of the builder's `raw_calls`.
-    fn calls(&mut self, journey: &ServiceJourney, referrer: Referrer) -> (u32, u32) {
+    fn calls(
+        &mut self,
+        journey: &ServiceJourney,
+        referrer: Referrer,
+        clock: &mut Clock,
+    ) -> (u32, u32) {
         let origin = self.origin;
         let start = len_of(&self.builder.raw_calls);
         let mut calls: Vec<(u32, RawCall)> = Vec::new();
@@ -1804,8 +1840,8 @@ impl Visit<'_> {
                 stop_point,
                 point_use,
                 time: PassingTime {
-                    arrival: arrival.and_then(|a| seconds(&a.time, a.day_offset)),
-                    departure: departure.and_then(|d| seconds(&d.time, d.day_offset)),
+                    arrival: arrival.and_then(|a| clock.seconds(&a.time, a.day_offset)),
+                    departure: departure.and_then(|d| clock.seconds(&d.time, d.day_offset)),
                 },
             };
             let order = call
@@ -1823,7 +1859,7 @@ impl Visit<'_> {
     }
 
     /// A template journey's headway groups: a range of the builder's `raw_headways`.
-    fn headways(&mut self, journey: &ServiceJourney) -> (u32, u32) {
+    fn headways(&mut self, journey: &ServiceJourney, clock: &mut Clock) -> (u32, u32) {
         let start = len_of(&self.builder.raw_headways);
         for item in journey.frequency_groups.iter().flat_map(|g| &g.items) {
             let crate::model::FrequencyGroupItem::HeadwayJourneyGroup(group) = item else {
@@ -1834,8 +1870,8 @@ impl Visit<'_> {
                     .builder
                     .strings
                     .intern(group.id.as_ref().map_or("", |id| id.as_str())),
-                first: seconds(&group.first_departure_time, group.first_day_offset),
-                last: seconds(&group.last_departure_time, group.last_day_offset),
+                first: clock.seconds(&group.first_departure_time, group.first_day_offset),
+                last: clock.seconds(&group.last_departure_time, group.last_day_offset),
                 interval: group
                     .scheduled_headway_interval
                     .as_ref()
@@ -2196,12 +2232,27 @@ fn timing_point_ref(reference: &TimingPointRef) -> &str {
     }
 }
 
-/// A time of day plus a day offset, in seconds since midnight of the operating day.
-fn seconds(time: &Option<Time>, day_offset: Option<i64>) -> Option<u32> {
-    let seconds = time.as_ref()?.seconds_since_midnight()?;
-    let offset = day_offset.unwrap_or(0);
-    let total = i64::from(seconds) + offset * 86_400;
-    u32::try_from(total).ok()
+/// The times of one journey as they are read, and whether one fell outside
+/// what the index counts ([`Concern::TimeOutOfRange`]).
+#[derive(Default)]
+struct Clock {
+    out_of_range: bool,
+}
+
+impl Clock {
+    /// A time of day plus a day offset, in seconds since midnight of the
+    /// operating day: none where no time is stated, or where the offset puts
+    /// it before that midnight or 2^32 seconds or more after it — noted.
+    fn seconds(&mut self, time: &Option<Time>, day_offset: Option<i64>) -> Option<u32> {
+        let seconds = time.as_ref()?.seconds_since_midnight()?;
+        let counted = day_offset
+            .unwrap_or(0)
+            .checked_mul(86_400)
+            .and_then(|offset| offset.checked_add(i64::from(seconds)))
+            .and_then(|total| u32::try_from(total).ok());
+        self.out_of_range |= counted.is_none();
+        counted
+    }
 }
 
 /// The defaults a frame states.

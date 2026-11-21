@@ -152,6 +152,11 @@ pub enum Concern {
     /// others are none. A date of an assignment is a finding about the day
     /// type it assigns.
     DaysOutsideCalendar,
+    /// A journey with a time — of a passing time, a call, its departure or a
+    /// headway group — whose day offset puts it before the midnight
+    /// beginning its operating day, or 2^32 seconds or more after it, which
+    /// the index does not count: no time there.
+    TimeOutOfRange,
 }
 
 impl Concern {
@@ -183,6 +188,7 @@ impl Concern {
         Concern::PropertyOfDayWithoutDays,
         Concern::LinkBetweenOtherPoints,
         Concern::DaysOutsideCalendar,
+        Concern::TimeOutOfRange,
     ];
 
     /// The concern's name in reports and on command lines, in lower case with
@@ -215,6 +221,7 @@ impl Concern {
             Concern::PropertyOfDayWithoutDays => "property-of-day-without-days",
             Concern::LinkBetweenOtherPoints => "link-between-other-points",
             Concern::DaysOutsideCalendar => "days-outside-calendar",
+            Concern::TimeOutOfRange => "time-out-of-range",
         }
     }
 
@@ -280,6 +287,9 @@ impl Concern {
             }
             Concern::DaysOutsideCalendar => {
                 "days before the year 1 or after the year 9999, which no calendar holds"
+            }
+            Concern::TimeOutOfRange => {
+                "time before its operating day or beyond what the index counts, no time"
             }
         }
     }

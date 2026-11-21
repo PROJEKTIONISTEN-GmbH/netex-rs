@@ -369,7 +369,7 @@ impl Gather {
             operator: self.reference(line.operator_ref.as_ref()),
             additional_operator: self.reference(additional),
             authority: self.reference(line.authority_ref.as_ref()),
-            short_name: self.intern(line.short_name.as_ref().map(|n| n.as_str())),
+            short_name: self.intern(line.short_name.as_ref().map(|n| n.default_text())),
             colour: self.intern(colour.as_deref()),
             text_colour: self.intern(text_colour.as_deref()),
         };
@@ -556,8 +556,8 @@ impl Gather {
             let name = level
                 .name
                 .as_ref()
-                .map(|n| n.as_str())
-                .or(level.short_name.as_ref().map(|n| n.as_str()));
+                .map(|n| n.default_text())
+                .or(level.short_name.as_ref().map(|n| n.default_text()));
             let index = level
                 .public_code
                 .as_deref()
@@ -701,7 +701,7 @@ impl Gather {
         let advertised = number
             .for_advertisement
             .as_deref()
-            .or(number.description.as_ref().map(|d| d.as_str()))
+            .or(number.description.as_ref().map(|d| d.default_text()))
             .map(str::trim)
             .filter(|advertised| !advertised.is_empty());
         if let (Some(id), Some(advertised)) = (number.id.as_ref(), advertised) {
@@ -893,7 +893,7 @@ impl<'i> Sink<'i> for Gather {
                 self.organisation(organisation)
             }
             Entity::DataSource(source) => {
-                if let Some(text) = source.name.as_ref().map(|n| n.as_str()) {
+                if let Some(text) = source.name.as_ref().map(|n| n.default_text()) {
                     let record = (
                         self.document,
                         self.names.intern(text),
@@ -1016,7 +1016,7 @@ fn stated(text: Option<&str>) -> Option<&str> {
 
 /// The text of a multilingual string, if there is one.
 fn text_of(name: &Option<model::MultilingualString>) -> Option<&str> {
-    name.as_ref().map(|name| name.as_str())
+    name.as_ref().map(|name| name.default_text())
 }
 
 /// The Swiss location identifier a stop place or quay carries.

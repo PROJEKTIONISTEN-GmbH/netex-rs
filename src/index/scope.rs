@@ -19,10 +19,11 @@
 //!   ([`Scoped`]).
 
 use std::collections::hash_map::Entry;
+use std::hash::Hash;
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use super::build::{version_is_higher, Key, Pending, Validity};
+use super::build::{version_order, Key, Pending, Validity};
 use super::strings::{Strings, Sym};
 use super::Unresolved;
 
@@ -34,8 +35,76 @@ pub(crate) trait Lookup {
     /// The definition of `id` at its highest version, as `document` sees it.
     fn latest(&self, id: Sym, document: Sym) -> Option<u32>;
 
-    /// Every definition of `id`, at any version, as `document` sees it.
-    fn versions(&self, id: Sym, document: Sym) -> Vec<u32>;
+    /// Every definition of `id`, at any version, as `document` sees it:
+    /// the highest version first.
+    fn versions(&self, id: Sym, document: Sym) -> &[u32];
+}
+
+/// Definitions grouped by what they define — an identifier, or an
+/// identifier in one document —, each group's highest version first.
+#[derive(Debug)]
+struct ByVersion<G> {
+    /// Per group, where its definitions stand in `definitions`.
+    ranges: FxHashMap<G, (u32, u32)>,
+    definitions: Vec<u32>,
+}
+
+impl<G: Eq + Hash> PartialEq for ByVersion<G> {
+    fn eq(&self, other: &Self) -> bool {
+        self.ranges == other.ranges && self.definitions == other.definitions
+    }
+}
+
+impl<G> Default for ByVersion<G> {
+    fn default() -> Self {
+        ByVersion {
+            ranges: FxHashMap::default(),
+            definitions: Vec::new(),
+        }
+    }
+}
+
+impl<G: Copy + Ord + Hash> ByVersion<G> {
+    /// The definitions given with their groups, each group's ordered by
+    /// `version_of` ([`version_order`]), the highest first; definitions of
+    /// one version keep the order they are given in.
+    fn of(
+        strings: &Strings,
+        mut grouped: Vec<(G, u32)>,
+        version_of: impl Fn(u32) -> Option<Sym>,
+    ) -> ByVersion<G> {
+        grouped.sort_by(|(a, x), (b, y)| {
+            a.cmp(b)
+                .then_with(|| version_order(strings, version_of(*y), version_of(*x)))
+        });
+        let mut by_version = ByVersion {
+            ranges: FxHashMap::default(),
+            definitions: Vec::with_capacity(grouped.len()),
+        };
+        for (group, definition) in grouped {
+            let at =
+                u32::try_from(by_version.definitions.len()).expect("fewer than 2^32 definitions");
+            by_version
+                .ranges
+                .entry(group)
+                .and_modify(|(_, end)| *end = at + 1)
+                .or_insert((at, at + 1));
+            by_version.definitions.push(definition);
+        }
+        by_version
+    }
+
+    /// The definitions of `group`, the highest version first.
+    fn of_group(&self, group: G) -> &[u32] {
+        self.ranges.get(&group).map_or(&[], |&(start, end)| {
+            &self.definitions[start as usize..end as usize]
+        })
+    }
+
+    /// The definition of `group` at its highest version.
+    fn highest(&self, group: G) -> Option<u32> {
+        self.of_group(group).first().copied()
+    }
 }
 
 /// Entities gathered once, by key and name: the documents repeating an
@@ -56,15 +125,15 @@ pub(crate) struct Table {
     definitions: Vec<(u32, Sym)>,
     /// Per key, the entity the delivery answers with.
     by_key: FxHashMap<Key, u32>,
-    /// Per identifier, the delivery's entity at its highest version.
-    latest: FxHashMap<Sym, u32>,
+    /// Per identifier, the delivery's entities, the highest version first.
+    versions: ByVersion<Sym>,
     /// The keys the documents name otherwise.
     named_otherwise: FxHashSet<Key>,
     /// For a key the documents name otherwise: each defining document's entity.
     in_document: FxHashMap<(Key, Sym), u32>,
     /// For an identifier the documents name otherwise: each defining
-    /// document's entity at the highest version that document states.
-    latest_in_document: FxHashMap<(Sym, Sym), u32>,
+    /// document's entities, the highest version that document states first.
+    versions_in_document: ByVersion<(Sym, Sym)>,
 }
 
 impl Table {
@@ -132,19 +201,14 @@ impl Table {
             .into_iter()
             .map(|(key, (index, _))| (key, index))
             .collect();
-        self.latest.clear();
-        for (&key, &index) in &self.by_key {
-            match self.latest.entry(key.id) {
-                Entry::Vacant(slot) => {
-                    slot.insert(index);
-                }
-                Entry::Occupied(mut held) => {
-                    if version_is_higher(strings, key.version, of(*held.get()).0.version) {
-                        held.insert(index);
-                    }
-                }
-            }
-        }
+        self.versions = ByVersion::of(
+            strings,
+            self.by_key
+                .iter()
+                .map(|(key, &index)| (key.id, index))
+                .collect(),
+            |index| of(index).0.version,
+        );
         let mut others: Vec<(u32, u32)> = self
             .by_name
             .iter()
@@ -161,25 +225,20 @@ impl Table {
             }
         }
         self.named_otherwise = named_otherwise;
-        self.latest_in_document.clear();
-        for (&(key, document), &entity) in &self.in_document {
-            match self.latest_in_document.entry((key.id, document)) {
-                Entry::Vacant(slot) => {
-                    slot.insert(entity);
-                }
-                Entry::Occupied(mut held) => {
-                    if version_is_higher(strings, key.version, of(*held.get()).0.version) {
-                        held.insert(entity);
-                    }
-                }
-            }
-        }
+        self.versions_in_document = ByVersion::of(
+            strings,
+            self.in_document
+                .iter()
+                .map(|(&(key, document), &entity)| ((key.id, document), entity))
+                .collect(),
+            |entity| of(entity).0.version,
+        );
         others
     }
 
     /// The delivery's entity with this identifier, at its highest version.
     pub(crate) fn latest_of(&self, id: Sym) -> Option<u32> {
-        self.latest.get(&id).copied()
+        self.versions.highest(id)
     }
 
     /// Whether the documents name `key` otherwise, once settled.
@@ -197,27 +256,14 @@ impl Lookup for Table {
     }
 
     fn latest(&self, id: Sym, document: Sym) -> Option<u32> {
-        self.latest_in_document
-            .get(&(id, document))
-            .or_else(|| self.latest.get(&id))
-            .copied()
+        self.versions(id, document).first().copied()
     }
 
-    fn versions(&self, id: Sym, document: Sym) -> Vec<u32> {
-        let own: Vec<u32> = self
-            .in_document
-            .iter()
-            .filter(|((key, by), _)| key.id == id && *by == document)
-            .map(|(_, &index)| index)
-            .collect();
-        if !own.is_empty() {
-            return own;
+    fn versions(&self, id: Sym, document: Sym) -> &[u32] {
+        match self.versions_in_document.of_group((id, document)) {
+            [] => self.versions.of_group(id),
+            own => own,
         }
-        self.by_key
-            .iter()
-            .filter(|(key, _)| key.id == id)
-            .map(|(_, &index)| index)
-            .collect()
     }
 }
 
@@ -232,51 +278,54 @@ pub(crate) struct Scoped {
     /// Per key, the definition the delivery answers with: the first, in the
     /// order of the documents' names.
     by_key: FxHashMap<Key, u32>,
-    /// Per identifier, the delivery's definition at its highest version.
-    latest: FxHashMap<Sym, u32>,
+    /// Per identifier, the delivery's definitions, the highest version first.
+    versions: ByVersion<Sym>,
     /// For an identifier more than one document defines: each document's
     /// first definition of each of its keys.
     in_document: FxHashMap<(Key, Sym), u32>,
     /// For an identifier more than one document defines: each document's
-    /// definition at the highest version that document states.
-    latest_in_document: FxHashMap<(Sym, Sym), u32>,
+    /// definitions, the highest version that document states first.
+    versions_in_document: ByVersion<(Sym, Sym)>,
 }
 
 impl Scoped {
     /// The table of `definitions` — each a key and the document defining it,
     /// numbered by position, in the order of their documents' names.
     pub(crate) fn build(strings: &Strings, definitions: &[(Key, Sym)]) -> Scoped {
-        let mut scoped = Scoped::default();
+        let mut by_key: FxHashMap<Key, u32> = FxHashMap::default();
         // The first document defining each identifier, and whether another does too.
         let mut documents_of: FxHashMap<Sym, (Sym, bool)> = FxHashMap::default();
         for (index, &(key, document)) in definitions.iter().enumerate() {
             let index = u32::try_from(index).expect("fewer than 2^32 definitions");
-            scoped.by_key.entry(key).or_insert(index);
-            let higher = |kept: u32| {
-                version_is_higher(strings, key.version, definitions[kept as usize].0.version)
-            };
-            match scoped.latest.get(&key.id) {
-                Some(&kept) if !higher(kept) => {}
-                _ => {
-                    scoped.latest.insert(key.id, index);
-                }
-            }
+            by_key.entry(key).or_insert(index);
             let (first, shared) = documents_of.entry(key.id).or_insert((document, false));
             *shared |= *first != document;
         }
+        let mut in_document: FxHashMap<(Key, Sym), u32> = FxHashMap::default();
         for (index, &(key, document)) in definitions.iter().enumerate() {
-            if !documents_of[&key.id].1 {
-                continue;
-            }
-            let index = u32::try_from(index).expect("fewer than 2^32 definitions");
-            scoped.in_document.entry((key, document)).or_insert(index);
-            let slot = scoped.latest_in_document.entry((key.id, document));
-            let kept = *slot.or_insert(index);
-            if version_is_higher(strings, key.version, definitions[kept as usize].0.version) {
-                scoped.latest_in_document.insert((key.id, document), index);
+            if documents_of[&key.id].1 {
+                let index = u32::try_from(index).expect("fewer than 2^32 definitions");
+                in_document.entry((key, document)).or_insert(index);
             }
         }
-        scoped
+        let version_of = |index: u32| definitions[index as usize].0.version;
+        Scoped {
+            versions: ByVersion::of(
+                strings,
+                by_key.iter().map(|(key, &index)| (key.id, index)).collect(),
+                version_of,
+            ),
+            versions_in_document: ByVersion::of(
+                strings,
+                in_document
+                    .iter()
+                    .map(|(&(key, document), &index)| ((key.id, document), index))
+                    .collect(),
+                version_of,
+            ),
+            by_key,
+            in_document,
+        }
     }
 
     /// The definition the delivery answers with for `key`, whichever document asks.
@@ -286,13 +335,13 @@ impl Scoped {
 
     /// The definition the delivery answers with for `id`, at its highest version.
     pub(crate) fn latest_of_delivery(&self, id: Sym) -> Option<u32> {
-        self.latest.get(&id).copied()
+        self.versions.highest(id)
     }
 
     /// The definition of `id` at its highest version in `document`, if
     /// `document` defines it and another document does too.
     pub(crate) fn latest_in(&self, id: Sym, document: Sym) -> Option<u32> {
-        self.latest_in_document.get(&(id, document)).copied()
+        self.versions_in_document.highest((id, document))
     }
 }
 
@@ -305,25 +354,14 @@ impl Lookup for Scoped {
     }
 
     fn latest(&self, id: Sym, document: Sym) -> Option<u32> {
-        self.latest_in(id, document)
-            .or_else(|| self.latest.get(&id).copied())
+        self.versions(id, document).first().copied()
     }
 
-    fn versions(&self, id: Sym, document: Sym) -> Vec<u32> {
-        let own: Vec<u32> = self
-            .in_document
-            .iter()
-            .filter(|((key, by), _)| key.id == id && *by == document)
-            .map(|(_, &index)| index)
-            .collect();
-        if !own.is_empty() {
-            return own;
+    fn versions(&self, id: Sym, document: Sym) -> &[u32] {
+        match self.versions_in_document.of_group((id, document)) {
+            [] => self.versions.of_group(id),
+            own => own,
         }
-        self.by_key
-            .iter()
-            .filter(|(key, _)| key.id == id)
-            .map(|(_, &index)| index)
-            .collect()
     }
 }
 
@@ -336,8 +374,8 @@ pub(crate) struct Resolved {
 }
 
 /// Resolves a reference: the version it names, else its `versionRef`, else an
-/// unversioned definition, else — with a day given — the version valid that
-/// day, else the highest version; each as the reference's document sees the
+/// unversioned definition, else — with a day given — the highest version
+/// valid that day, else the highest version; each as the reference's document sees the
 /// table. A reference to nothing the table holds is a finding; one resolved
 /// past the version it names says so, unless it names `any`.
 pub(crate) fn resolve(
@@ -383,11 +421,10 @@ pub(crate) fn resolve(
         return Ok(past_the_version(found));
     }
     if let Some(day) = at {
-        if let Some(valid) = table
+        if let Some(&valid) = table
             .versions(pending.key.id, document)
-            .into_iter()
-            .filter(|&index| validity(index).covers(day))
-            .max()
+            .iter()
+            .find(|&&index| validity(index).covers(day))
         {
             return Ok(past_the_version(valid));
         }
