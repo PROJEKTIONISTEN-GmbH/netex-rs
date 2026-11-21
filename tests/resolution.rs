@@ -355,11 +355,18 @@ fn a_level_named_but_not_stated_is_a_reference_to_nothing() {
         "</StopPlace></stopPlaces></SiteFrame>"
     );
     let index = serially(&[("a.xml".to_owned(), publication(frames))]);
-    let unresolved: Vec<String> = index.unresolved().iter().map(ToString::to_string).collect();
-    assert_eq!(
-        unresolved,
-        ["a.xml: <LevelRef> in Quay Q1 refers to L-missing, version 1"]
-    );
+    let unresolved: Vec<(&str, &str, &str)> = index
+        .unresolved()
+        .iter()
+        .map(|reference| {
+            (
+                reference.element.as_str(),
+                reference.referrer.as_str(),
+                reference.id.as_str(),
+            )
+        })
+        .collect();
+    assert_eq!(unresolved, [("LevelRef", "Quay Q1", "L-missing")]);
     let level = |quay: &str| index.stop(index.stop_by_id(quay).expect("the quay")).level;
     assert_eq!(level("Q1"), None);
     assert_eq!(level("Q2"), Some("Erdgeschoss"));

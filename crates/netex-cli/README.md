@@ -169,7 +169,8 @@ Merges the deliveries in the order given — the home source of what they share
 first — into a new or empty directory, by the merge of netex-rs (`netex_rs::merge`,
 since netex-rs 0.7.0; the command reads its arguments and prints or writes its
 report), each under its rank and label
-(`1-oebb/…`, `2-vor/…`), so that netex-rs, answering a reference outside its
+(`1-oebb/…`, `2-vor/…`; from ten deliveries on the rank in as many digits as
+the last takes, `01-oebb/…`), so that netex-rs, answering a reference outside its
 document from the document whose name sorts first, answers it as the
 deliveries are ranked. A delivery named by its path alone is labelled by its
 file name. Not the first delivery wins, but these rules:

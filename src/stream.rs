@@ -315,7 +315,9 @@ pub struct FrameHeader {
     pub id: Option<Id>,
     /// The `version` attribute.
     pub version: Option<Version>,
-    /// The frame's `ValidBetween` periods, those written before its entities.
+    /// The frame's validity: each `ValidBetween` it states — within its
+    /// `validityConditions`, then directly —, those written before its
+    /// entities.
     pub valid_between: Vec<ValidBetween>,
 }
 
@@ -323,12 +325,41 @@ pub struct FrameHeader {
 #[derive(Debug, Default)]
 pub struct Scope {
     frames: Vec<FrameHeader>,
+    /// How often the frames changed: a frame entered or left, a validity
+    /// added to one.
+    changes: u64,
 }
 
 impl Scope {
     /// The frames, outermost first; the last is the entity's own.
     pub fn frames(&self) -> &[FrameHeader] {
         &self.frames
+    }
+
+    /// How often the frames changed so far: two entities of one count stand
+    /// in the same frames, which a reader may then take as read.
+    pub(crate) fn changes(&self) -> u64 {
+        self.changes
+    }
+
+    fn enter(&mut self, frame: FrameHeader) {
+        self.frames.push(frame);
+        self.changes += 1;
+    }
+
+    fn leave(&mut self) {
+        self.frames.pop();
+        self.changes += 1;
+    }
+
+    /// Adds a validity to the frame entered last.
+    fn add_validity(&mut self, valid: ValidBetween) {
+        self.frames
+            .last_mut()
+            .expect("a frame is entered before its validity is read")
+            .valid_between
+            .push(valid);
+        self.changes += 1;
     }
 }
 
@@ -627,7 +658,7 @@ impl<'i, S: Sink<'i>> Walker<'i, '_, S> {
                 _ => {}
             }
         }
-        self.scope.frames.push(header);
+        self.scope.enter(header);
         self.cursor.enter(frame)?;
         if !frame.empty {
             while let Some(child) = self.cursor.next_child()? {
@@ -636,15 +667,13 @@ impl<'i, S: Sink<'i>> Walker<'i, '_, S> {
                     continue;
                 }
                 let place = Skipped::Frame(kind);
+                if child.local == "validityConditions" {
+                    self.validities_within(&child)?;
+                }
                 match (kind, child.local) {
                     (_, "ValidBetween") => {
                         let period = ValidBetween::read(&mut self.cursor, &child)?;
-                        self.scope
-                            .frames
-                            .last_mut()
-                            .expect("the frame was pushed above")
-                            .valid_between
-                            .push(period);
+                        self.scope.add_validity(period);
                     }
                     (FrameKind::Composite, "frames") => self.frames(&child)?,
                     (FrameKind::ServiceCalendar, "ServiceCalendar") => {
@@ -661,7 +690,26 @@ impl<'i, S: Sink<'i>> Walker<'i, '_, S> {
             }
         }
         self.cursor.leave();
-        self.scope.frames.pop();
+        self.scope.leave();
+        Ok(())
+    }
+
+    /// Takes the validities a frame states within its validity conditions
+    /// (`conditions`) into its header, read from a copy of the cursor: the
+    /// conditions themselves are read after, as any container is.
+    fn validities_within(&mut self, conditions: &Child<'i>) -> Result<()> {
+        let mut copy = self.cursor.clone();
+        copy.enter(conditions)?;
+        if !conditions.empty {
+            while let Some(item) = copy.next_child()? {
+                if item.netex && item.local == "ValidBetween" {
+                    let period = ValidBetween::read(&mut copy, &item)?;
+                    self.scope.add_validity(period);
+                } else {
+                    copy.skip_over(&item)?;
+                }
+            }
+        }
         Ok(())
     }
 

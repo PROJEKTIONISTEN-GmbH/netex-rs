@@ -9,20 +9,21 @@
 //! repeated with other content, it is the document's own, and a finding.
 
 use std::borrow::Cow;
+use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
 use rustc_hash::FxHashMap;
 
 use super::build::{
-    level_fingerprint, precedes, version_is_higher, AssignedDaysRecord, DemandTime, IndexBuilder,
+    level_fingerprint, precedes, version_order, AssignedDaysRecord, DemandTime, IndexBuilder,
     JourneyRecord, Key, LevelRecord, Pending, PeriodRecord, RawCall, RawHeadway, RawTime,
     TimingStep, Validity,
 };
 use super::calendar::DayBits;
 use super::findings::{self, Concern, FindingRecord};
 use super::referrers::{Kind, Recorder};
-use super::scope::{resolve, Lookup, Resolved, Scoped};
+use super::scope::{resolve, Levels, Lookup, Resolved, Scoped};
 use super::strings::{Strings, Sym};
 use super::{
     CallUse, Headway, Index, IndexedJourney, IndexedPattern, Interchange, JourneyId, LineId,
@@ -182,11 +183,26 @@ struct Scope {
 }
 
 impl Scope {
-    fn validity(&self, position: u32) -> Validity {
+    /// Whether the definition at `position` is valid on `day`: every one is
+    /// where references are not resolved by the day.
+    fn covers(&self, position: u32, day: i64) -> bool {
         self.validity
             .get(position as usize)
-            .copied()
-            .unwrap_or(Validity::ALWAYS)
+            .is_none_or(|validity| validity.covers(day))
+    }
+}
+
+/// The validities of `records`, where references are resolved by the day
+/// ([`IndexBuilder::at`]); none otherwise.
+fn validities<'r, R: 'r>(
+    dated: bool,
+    records: impl Iterator<Item = &'r R>,
+    of: impl Fn(&R) -> &Validity,
+) -> Vec<Validity> {
+    if dated {
+        records.map(|record| of(record).clone()).collect()
+    } else {
+        Vec::new()
     }
 }
 
@@ -501,7 +517,7 @@ impl Finish {
         let resolution = resolve(
             &self.b.strings,
             &scope.table,
-            |position| scope.validity(position),
+            |position, day| scope.covers(position, day),
             self.b.at,
             pending,
         );
@@ -512,7 +528,7 @@ impl Finish {
         let resolution = resolve(
             &self.b.strings,
             &self.b.stop_table,
-            |i| self.b.stops[i as usize].validity,
+            |i, day| self.b.stops[i as usize].validity.covers(day),
             self.b.at,
             pending,
         );
@@ -523,7 +539,7 @@ impl Finish {
         let resolution = resolve(
             &self.b.strings,
             &self.b.stop_point_table,
-            |i| self.b.stop_points[i as usize].validity,
+            |i, day| self.b.stop_points[i as usize].validity.covers(day),
             self.b.at,
             pending,
         );
@@ -540,7 +556,7 @@ impl Finish {
         let resolution = resolve(
             &self.b.strings,
             &self.b.stop_point_table,
-            |i| self.b.stop_points[i as usize].validity,
+            |i, day| self.b.stop_points[i as usize].validity.covers(day),
             self.b.at,
             pending,
         );
@@ -658,42 +674,23 @@ impl Finish {
         })
     }
 
-    /// Levels of quays: the level named, else the highest version of its identifier.
+    /// Levels of quays, each reference resolved as any other: the level of
+    /// the version it names, else the highest version of its identifier; one
+    /// to nothing a finding.
     fn resolve_levels(&mut self) {
+        let levels = Levels::of(&self.b.strings, &self.level_order);
         for index in 0..self.b.stops.len() {
             let Some(pending) = self.b.stops[index].level_ref else {
                 continue;
             };
+            let resolution = resolve(&self.b.strings, &levels, |_, _| true, self.b.at, &pending);
             let level = self
-                .b
-                .levels
-                .get_key_value(&pending.key)
-                .or_else(|| {
-                    self.b
-                        .levels
-                        .iter()
-                        .filter(|(key, _)| key.id == pending.key.id)
-                        .reduce(|highest, candidate| {
-                            if version_is_higher(
-                                &self.b.strings,
-                                candidate.0.version,
-                                highest.0.version,
-                            ) {
-                                candidate
-                            } else {
-                                highest
-                            }
-                        })
-                })
-                .map(|(&key, level)| (key, level.name));
-            self.b.stops[index].level = level.map(|(_, name)| name);
-            if let (Some(recorder), Some((key, _))) = (&mut self.recorder, level) {
-                let position = self
-                    .level_order
-                    .binary_search_by(|probe| level_order(&self.b.strings, probe, &key))
-                    .expect("every level is among the levels in order");
-                recorder.record(&pending, Kind::Level, position_of(position));
-            }
+                .note(&pending, Kind::Level, resolution)
+                .map(|position| {
+                    let key = self.level_order[position as usize];
+                    self.b.levels[&key].name
+                });
+            self.b.stops[index].level = level;
         }
     }
 
@@ -795,6 +792,9 @@ impl Finish {
             let record = &stop_points[point as usize];
             (record.key, record.origin)
         });
+        let mut levels: Vec<Key> = self.b.levels.keys().copied().collect();
+        levels.sort_unstable_by(|a, b| level_order(&self.b.strings, a, b));
+        self.level_order = levels;
         for (stop, delivery) in stops_named_otherwise {
             let record = &self.b.stops[stop as usize];
             let element = match record.kind {
@@ -912,14 +912,10 @@ impl Finish {
                 document.then_some(point.origin),
             );
         }
-        let mut levels: Vec<Key> = b.levels.keys().copied().collect();
-        levels.sort_unstable_by(|a, b| level_order(&self.b.strings, a, b));
         recorder.begin(Kind::Level);
-        for key in &levels {
+        for key in &self.level_order {
             recorder.define("Level", key.id, None);
         }
-        self.level_order = levels;
-        let b = &self.b;
         recorder.begin(Kind::Route);
         for route in &b.routes {
             recorder.define("Route", route.key.id, Some(route.origin));
@@ -981,24 +977,24 @@ impl Finish {
         let scope = |kind: Kind, definitions: Vec<(Key, Sym)>, validity: Vec<Validity>| Scope {
             kind,
             table: Scoped::build(&b.strings, &definitions),
-            validity: if dated { validity } else { Vec::new() },
+            validity,
         };
         let journeys = self.journey_order.iter().map(|&i| &b.journeys[i as usize]);
         Scopes {
             routes: scope(
                 Kind::Route,
                 b.routes.iter().map(|r| (r.key, r.origin)).collect(),
-                b.routes.iter().map(|r| r.validity).collect(),
+                validities(dated, b.routes.iter(), |r| &r.validity),
             ),
             lines: scope(
                 Kind::Line,
                 b.lines.iter().map(|r| (r.key, r.origin)).collect(),
-                b.lines.iter().map(|r| r.validity).collect(),
+                validities(dated, b.lines.iter(), |r| &r.validity),
             ),
             patterns: scope(
                 Kind::Pattern,
                 b.patterns.iter().map(|r| (r.key, r.origin)).collect(),
-                b.patterns.iter().map(|r| r.validity).collect(),
+                validities(dated, b.patterns.iter(), |r| &r.validity),
             ),
             day_types: scope(
                 Kind::DayType,
@@ -1028,7 +1024,7 @@ impl Finish {
             journeys: scope(
                 Kind::Journey,
                 journeys.clone().map(|r| (r.key, r.origin)).collect(),
-                journeys.map(|r| r.validity).collect(),
+                validities(dated, journeys, |r| &r.validity),
             ),
         }
     }
@@ -1223,16 +1219,17 @@ impl Finish {
             .day_types
             .iter()
             .zip(&by_properties)
-            .map(
-                |(record, &decided)| match (decided, record.properties, record.validity) {
-                    (true, Properties::DaysOfWeek(days), Some((from, to))) => {
-                        let mut own = calendar.days_between(from, to);
-                        calendar.keep_days_of_week(&mut own, days);
-                        own
+            .map(|(record, &decided)| match (decided, record.properties) {
+                (true, Properties::DaysOfWeek(days)) => {
+                    let mut own = DayBits::none();
+                    for &(from, to) in &record.validity {
+                        own.union(&calendar.days_between(from, to));
                     }
-                    _ => DayBits::none(),
-                },
-            )
+                    calendar.keep_days_of_week(&mut own, days);
+                    own
+                }
+                _ => DayBits::none(),
+            })
             .collect();
         for assignment in &assignments {
             let day_type = assignment.day_type as usize;
@@ -1296,7 +1293,8 @@ impl Finish {
             let (id, origin) = (record.key.id, record.origin);
             let outside = record
                 .validity
-                .is_some_and(|(from, to)| !held(from) || !held(to));
+                .iter()
+                .any(|&(from, to)| !held(from) || !held(to));
             let first = first_of(&scopes.day_types.table, record.key);
             if outside {
                 self.found(Concern::DaysOutsideCalendar, "DayType", (origin, id), None);
@@ -1401,9 +1399,13 @@ impl Finish {
             given_any_day[day_type] = true;
             given_own_day[day_type] |= match assignment.days {
                 AssignmentDays::Period(_) => true,
-                AssignmentDays::Day(day) => match (record.properties, record.validity) {
-                    (Properties::DaysOfWeek(named), Some((from, to))) => {
-                        (from..=to).contains(&day) && named.contains(day)
+                AssignmentDays::Day(day) => match record.properties {
+                    Properties::DaysOfWeek(named) => {
+                        named.contains(day)
+                            && record
+                                .validity
+                                .iter()
+                                .any(|&(from, to)| (from..=to).contains(&day))
                     }
                     _ => false,
                 },
@@ -1413,9 +1415,11 @@ impl Finish {
         let mut unread = Vec::new();
         for (position, record) in day_types.iter().enumerate() {
             decided.push(match record.properties {
-                Properties::DaysOfWeek(_) => record.validity.is_some() && !given_own_day[position],
+                Properties::DaysOfWeek(_) => {
+                    !record.validity.is_empty() && !given_own_day[position]
+                }
                 Properties::Unread => {
-                    let relied_on = record.validity.is_some() && !given_any_day[position];
+                    let relied_on = !record.validity.is_empty() && !given_any_day[position];
                     if relied_on || assigned_plain_period[position] {
                         unread.push((record.origin, record.key.id));
                     }
@@ -1441,8 +1445,8 @@ impl Finish {
             .journey_conditions
             .iter()
             .filter_map(|pending| {
-                let validity = |position| scope.validity(position);
-                resolve(&self.b.strings, &scope.table, validity, self.b.at, pending).ok()
+                let covers = |position, day| scope.covers(position, day);
+                resolve(&self.b.strings, &scope.table, covers, self.b.at, pending).ok()
             })
             .map(|resolved| resolved.index)
             .collect();
@@ -1497,8 +1501,10 @@ impl Finish {
             extend(day.day, day.day);
         }
         for (record, &decided) in self.b.day_types.iter().zip(by_properties) {
-            if let (true, Some((first, last))) = (decided, record.validity) {
-                extend(first, last);
+            if decided {
+                for &(first, last) in &record.validity {
+                    extend(first, last);
+                }
             }
         }
         if first_day <= last_day {
@@ -1789,9 +1795,9 @@ impl Finish {
     fn governed_by(&self, line: u32, lines: &Lines, calendar: &Calendar) -> Option<DayBits> {
         let record = &self.b.lines[line as usize];
         let versions = &lines.versions[&(record.key.id, record.origin)];
-        let spans: Vec<Span> = versions
+        let spans: Vec<Vec<Span>> = versions
             .iter()
-            .map(|&version| self.b.lines[version as usize].span)
+            .map(|&version| self.b.lines[version as usize].spans.to_vec())
             .collect();
         let position = versions
             .iter()
@@ -2042,7 +2048,7 @@ impl Finish {
         let mut all = Vec::new();
         offsets.push(0u32);
         for mut list in by_stop {
-            list.sort_by_key(|t| (t.to, t.seconds));
+            list.sort_by_key(|t| (t.to, t.seconds, t.both_ways));
             list.dedup();
             all.extend(list);
             offsets.push(u32::try_from(all.len()).expect("fewer than 2^32 transfers"));
@@ -2096,8 +2102,11 @@ impl Finish {
     }
 
     /// The stops by DHID: of several stops carrying one, the one whose
-    /// identifier sorts first, at its highest version.
+    /// identifier sorts first, at its highest version; of one identifier and
+    /// version that documents name otherwise, the stop of the document named
+    /// first, as the identifier alone finds it.
     fn stops_by_dhid(&self) -> FxHashMap<Sym, StopId> {
+        let strings = &self.b.strings;
         let mut stop_by_dhid: FxHashMap<Sym, StopId> = FxHashMap::default();
         for (index, stop) in self.b.stops.iter().enumerate() {
             let Some(dhid) = stop.dhid else { continue };
@@ -2107,13 +2116,21 @@ impl Finish {
                     slot.insert(found);
                 }
                 Entry::Occupied(mut slot) => {
-                    let held = self.b.stops[slot.get().0 as usize].key;
-                    let strings = &self.b.strings;
-                    let (id, held_id) = (strings.resolve(stop.key.id), strings.resolve(held.id));
-                    if id < held_id
-                        || (id == held_id
-                            && version_is_higher(strings, stop.key.version, held.version))
-                    {
+                    let held = &self.b.stops[slot.get().0 as usize];
+                    let (id, held_id) =
+                        (strings.resolve(stop.key.id), strings.resolve(held.key.id));
+                    let answers = match id.cmp(held_id) {
+                        Ordering::Less => true,
+                        Ordering::Greater => false,
+                        Ordering::Equal => {
+                            match version_order(strings, stop.key.version, held.key.version) {
+                                Ordering::Greater => true,
+                                Ordering::Less => false,
+                                Ordering::Equal => precedes(strings, stop.origin, held.origin),
+                            }
+                        }
+                    };
+                    if answers {
                         slot.insert(found);
                     }
                 }
@@ -2290,10 +2307,13 @@ fn bits_of_periods(
             let issue = record.runs(within.clone(), |first, last| {
                 calendar.set_days(&mut bits, first, last);
             });
-            let issue = issue.map(|issue| match issue {
-                PeriodIssue::NoFirstDay => Concern::PeriodWithoutFirstDay,
-                PeriodIssue::BitsOtherThanDays { .. } => Concern::DayBitsLengthDiffers,
-            });
+            let issue = issue
+                .map(|issue| match issue {
+                    PeriodIssue::NoFirstDay => Concern::PeriodWithoutFirstDay,
+                    PeriodIssue::BitsOtherThanDays { .. } => Concern::DayBitsLengthDiffers,
+                    PeriodIssue::BitOtherThanZeroOrOne { .. } => Concern::DayBitOtherThanZeroOrOne,
+                })
+                .or(record.bound_of_no_day.then_some(Concern::DateOfNoDay));
             let beyond = record
                 .span()
                 .is_some_and(|(first, last)| !held(first) || !held(last))

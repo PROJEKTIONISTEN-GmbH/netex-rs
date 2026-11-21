@@ -356,7 +356,7 @@ pub fn check(index: &Index, source: &str, limits: &Limits, examples: usize) -> R
     let referrers = index
         .referrers()
         .expect("the index is built with its references");
-    let affected = Affected::new(index, &referrers);
+    let affected = Affected::new(&referrers);
     let mut classes = Vec::new();
     for class in Class::all() {
         let found = find(index, &referrers, class);
@@ -609,13 +609,11 @@ struct Affected<'a> {
 }
 
 impl<'a> Affected<'a> {
-    fn new(index: &Index, referrers: &'a Referrers<'a>) -> Affected<'a> {
-        let mut journey_of = vec![None; referrers.object_count()];
-        for journey in (0..index.journey_count() as u32).map(JourneyId) {
-            for object in referrers.journey(journey) {
-                journey_of[object.0 as usize] = Some(journey);
-            }
-        }
+    fn new(referrers: &'a Referrers<'a>) -> Affected<'a> {
+        let journey_of = referrers
+            .objects()
+            .map(|object| referrers.journey_of(object))
+            .collect();
         Affected {
             referrers,
             journey_of,

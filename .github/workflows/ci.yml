@@ -165,4 +165,4 @@ jobs:
         with:
           workspaces: fuzz
       - run: cargo install cargo-fuzz --locked
-      - run: cargo +nightly fuzz run ${{ matrix.target }} -- -max_total_time=120
+      - run: cargo +nightly fuzz run ${{ matrix.target }} -- -dict="$GITHUB_WORKSPACE/fuzz/netex.dict" -max_total_time=120

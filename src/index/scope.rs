@@ -23,7 +23,7 @@ use std::hash::Hash;
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use super::build::{version_order, Key, Pending, Validity};
+use super::build::{version_order, Key, Pending};
 use super::strings::{Strings, Sym};
 use super::Unresolved;
 
@@ -365,6 +365,51 @@ impl Lookup for Scoped {
     }
 }
 
+/// The levels of the stop places, one for each key however many documents
+/// state it, numbered in the order given: a reference resolves to its key's
+/// level, else to its identifier's at its highest version, as any other.
+#[derive(Debug, Default)]
+pub(crate) struct Levels {
+    by_key: FxHashMap<Key, u32>,
+    versions: ByVersion<Sym>,
+}
+
+impl Levels {
+    /// The table of the levels of `keys`, numbered by position.
+    pub(crate) fn of(strings: &Strings, keys: &[Key]) -> Levels {
+        let numbered = keys.iter().enumerate().map(|(position, key)| {
+            let position = u32::try_from(position).expect("fewer than 2^32 levels");
+            (*key, position)
+        });
+        let by_key: FxHashMap<Key, u32> = numbered.collect();
+        Levels {
+            versions: ByVersion::of(
+                strings,
+                by_key
+                    .iter()
+                    .map(|(key, &position)| (key.id, position))
+                    .collect(),
+                |position| keys[position as usize].version,
+            ),
+            by_key,
+        }
+    }
+}
+
+impl Lookup for Levels {
+    fn exact(&self, key: Key, _document: Sym) -> Option<u32> {
+        self.by_key.get(&key).copied()
+    }
+
+    fn latest(&self, id: Sym, _document: Sym) -> Option<u32> {
+        self.versions.highest(id)
+    }
+
+    fn versions(&self, id: Sym, _document: Sym) -> &[u32] {
+        self.versions.of_group(id)
+    }
+}
+
 /// A reference resolved: the entity, and the version it names where that was
 /// set aside to resolve it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -381,7 +426,7 @@ pub(crate) struct Resolved {
 pub(crate) fn resolve(
     strings: &Strings,
     table: &impl Lookup,
-    validity: impl Fn(u32) -> Validity,
+    covers: impl Fn(u32, i64) -> bool,
     at: Option<i64>,
     pending: &Pending,
 ) -> Result<Resolved, Unresolved> {
@@ -424,7 +469,7 @@ pub(crate) fn resolve(
         if let Some(&valid) = table
             .versions(pending.key.id, document)
             .iter()
-            .find(|&&index| validity(index).covers(day))
+            .find(|&&index| covers(index, day))
         {
             return Ok(past_the_version(valid));
         }

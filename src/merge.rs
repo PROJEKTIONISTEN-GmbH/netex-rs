@@ -1,7 +1,8 @@
 //! `netex merge`: several deliveries into one, each written under its rank
-//! and label (`1-oebb/…`, `2-vor/…`) so that netex-rs, resolving a reference
-//! in the document of the delivery whose name sorts first, answers it as the
-//! deliveries are ranked.
+//! and label (`1-oebb/…`, `2-vor/…`; from ten deliveries on the rank in as
+//! many digits as the last takes, `01-oebb/…`) so that netex-rs, resolving a
+//! reference in the document of the delivery whose name sorts first, answers
+//! it as the deliveries are ranked.
 //!
 //! Not the first delivery wins, but the rules a journey planner learned for
 //! several timetables (`docs/INTERPRETATION.md` § 16):
@@ -19,7 +20,8 @@
 //!   objects alike, is left out; its references find the earlier one.
 //! - **An identifier taken with other content is renamed** into the
 //!   delivery's codespace, `<label>:<identifier>`, with the references
-//!   finding it.
+//!   finding it — and so is each identifier within it an earlier delivery
+//!   holds, a passing time of a journey renamed, a point of a pattern.
 //! - **A journey stated in two deliveries is kept once**: a journey of a later
 //!   delivery calling at the same stops at the same times as one of an earlier
 //!   one, on days the earlier one runs on too, is left out; one running on
@@ -400,19 +402,21 @@ pub fn merge(inputs: &[Input], to: &Path) -> Result<Report, Error> {
     let mut findings = Findings::default();
     let mut merged = Merged::default();
     let mut reports = Vec::with_capacity(reads.len());
+    // Ranks written in as many digits as the last takes sort as they rank.
+    let width = inputs.len().to_string().len();
     for (number, input) in inputs.iter().enumerate() {
         let (earlier, rest) = reads.split_at_mut(number);
         let read = &mut rest[0];
         let places = places(read);
         let mut rewrite: FxHashMap<&str, String> = FxHashMap::default();
-        let mut renamed_quays: Vec<((u32, u32), &str)> = Vec::new();
+        let mut renamed_nested: Vec<((u32, u32), &str)> = Vec::new();
         pair_stops(
             read,
             earlier,
             &places,
             &merged.stops,
             &mut rewrite,
-            &mut renamed_quays,
+            &mut renamed_nested,
             &mut findings,
         );
         for (here, there) in alike(read, earlier, &merged, &rewrite) {
@@ -428,9 +432,17 @@ pub fn merge(inputs: &[Input], to: &Path) -> Result<Report, Error> {
             );
         }
         let journeys = pair_journeys(read, earlier, &mut merged, &rewrite, &mut findings);
-        rename(read, earlier, &merged, &mut findings);
+        rename(
+            read,
+            earlier,
+            &merged,
+            &mut rewrite,
+            &mut renamed_nested,
+            &mut findings,
+        );
         register_journeys(number as u32, read, journeys, &mut merged);
-        let written = write(number, read, &rewrite, &renamed_quays, to)?;
+        let directory = to.join(format!("{:0width$}-{}", number + 1, read.label));
+        let written = write(read, &rewrite, &renamed_nested, &directory)?;
         reports.push(DeliveryReport {
             label: read.label.to_owned(),
             source: input.source.path().display().to_string(),
@@ -489,7 +501,7 @@ fn pair_stops<'x>(
     places: &BTreeMap<&'x str, Place<'x>>,
     stops: &Stops<'x>,
     rewrite: &mut FxHashMap<&'x str, String>,
-    renamed_quays: &mut Vec<((u32, u32), &'x str)>,
+    renamed_nested: &mut Vec<((u32, u32), &'x str)>,
     findings: &mut Findings,
 ) {
     for (&id, place) in places {
@@ -538,7 +550,7 @@ fn pair_stops<'x>(
                 rewrite.insert(id, new);
                 for &quay in place.quays.iter().filter(|quay| base_quays.contains(quay)) {
                     for &at in &place.definitions {
-                        renamed_quays.push((at, quay));
+                        renamed_nested.push((at, quay));
                     }
                     rewrite.insert(quay, format!("{}:{quay}", read.label));
                 }
@@ -844,9 +856,18 @@ fn register_journeys(rank: u32, read: &Read, kept: Vec<KeptJourney>, merged: &mu
 }
 
 /// Renames the objects of `read` whose identifier an earlier delivery
-/// answers otherwise, and leaves out those renamed only objects left out
-/// needed, and the assignments of what is left out.
-fn rename(read: &mut Read, earlier: &[Read], merged: &Merged, findings: &mut Findings) {
+/// answers otherwise — with each identifier within one an earlier delivery
+/// holds, noted in `rewrite` and `renamed_nested` —, and leaves out those
+/// renamed only objects left out needed, and the assignments of what is left
+/// out.
+fn rename<'x>(
+    read: &mut Read<'x>,
+    earlier: &[Read<'x>],
+    merged: &Merged<'x>,
+    rewrite: &mut FxHashMap<&'x str, String>,
+    renamed_nested: &mut Vec<((u32, u32), &'x str)>,
+    findings: &mut Findings,
+) {
     let taken: Vec<(u32, u32)> = read
         .objects()
         .filter(|(at, object)| {
@@ -871,6 +892,12 @@ fn rename(read: &mut Read, earlier: &[Read], merged: &Merged, findings: &mut Fin
             read.fates[at.0 as usize][at.1 as usize] = Fate::Paired;
         } else {
             let new = format!("{}:{}", read.label, object.id);
+            for nested in &object.nested {
+                if merged.answers.contains_key(nested.id) {
+                    rewrite.insert(nested.id, format!("{}:{}", read.label, nested.id));
+                    renamed_nested.push((at, nested.id));
+                }
+            }
             read.fates[at.0 as usize][at.1 as usize] = Fate::Renamed(new);
         }
     }
@@ -923,11 +950,22 @@ fn rename(read: &mut Read, earlier: &[Read], merged: &Merged, findings: &mut Fin
     }
     for (at, object) in read.objects() {
         match read.fate(at) {
-            Fate::Renamed(new) => findings.note(
-                "identifier-renamed",
-                "an object under an identifier an earlier delivery answers otherwise: renamed into the delivery's codespace, its references with it",
-                format!("{} {} → {new}", object.element, object.id),
-            ),
+            Fate::Renamed(new) => {
+                findings.note(
+                    "identifier-renamed",
+                    "an object under an identifier an earlier delivery answers otherwise: renamed into the delivery's codespace, its references with it",
+                    format!("{} {} → {new}", object.element, object.id),
+                );
+                for nested in object.nested.iter().filter(|nested| {
+                    renamed_nested.contains(&(at, nested.id)) && !is_place(object.element)
+                }) {
+                    findings.note(
+                        "identifier-renamed",
+                        "an object under an identifier an earlier delivery answers otherwise: renamed into the delivery's codespace, its references with it",
+                        format!("{} {} → {}", nested.element, nested.id, rewrite[nested.id]),
+                    );
+                }
+            }
             Fate::NoLongerNeeded => findings.note(
                 "object-no-longer-needed",
                 "an object only what is left out needed, or an assignment of what is left out: left out",
@@ -958,16 +996,14 @@ fn rewritten(
     }
 }
 
-/// Writes the documents of `read` keeping an object under
-/// `<to>/<rank>-<label>/`; how many.
+/// Writes the documents of `read` keeping an object into `directory`; how
+/// many.
 fn write(
-    number: usize,
     read: &Read,
     rewrite: &FxHashMap<&str, String>,
-    renamed_quays: &[((u32, u32), &str)],
-    to: &Path,
+    renamed_nested: &[((u32, u32), &str)],
+    directory: &Path,
 ) -> Result<u64, Error> {
-    let directory = to.join(format!("{}-{}", number + 1, read.label));
     let mut written = 0;
     for (index, document) in read.documents.iter().enumerate() {
         let number = index as u32;
@@ -995,13 +1031,13 @@ fn write(
         if !keeps {
             continue;
         }
-        for &((document, object), quay) in renamed_quays {
+        for &((document, object), id) in renamed_nested {
             if document != number {
                 continue;
             }
             let record = read.object(document, object);
-            for nested in record.nested.iter().filter(|nested| nested.id == quay) {
-                edits.replace(nested.id_at.clone(), attribute_value(&rewrite[quay]));
+            for nested in record.nested.iter().filter(|nested| nested.id == id) {
+                edits.replace(nested.id_at.clone(), attribute_value(&rewrite[id]));
             }
         }
         for reference in &outline.header {

@@ -343,7 +343,10 @@ invent identifiers or tokens to satisfy the other release's validator.
   left out and counted.
 - **Reference systems behind a feature.** Positions in a national system —
   LV95/LV03, MGI, RD, Lambert-93, UTM — are turned into WGS 84 with the feature
-  `crs` (`netex_rs::crs`), which netex2gtfs and netex-cli turn on.
+  `crs` (`netex_rs::crs`), which netex2gtfs and netex-cli turn on. The old
+  networks LV03 and MGI are mended within a metre where their registers'
+  stops stand; beyond, the Helmert transformation alone puts a position
+  within two metres.
 - **No profile-to-profile conversion.** NeTEx is written back in either
   release, not rewritten into another profile (no EPIP writer);
   `docs/PROFILE-UEBERFUEHRUNG.md` says what that would gain and lose.
@@ -353,7 +356,8 @@ invent identifiers or tokens to satisfy the other release's validator.
   in UTF-8. Entities are never expanded, DTDs never fetched; nesting depth,
   text length, attribute count and fragment size are bounded (`Limits`). Fuzz
   targets under `fuzz/` run the reader, the release rewrite, the conversion
-  and the document outline.
+  and the document outline, with a dictionary of the forms read by their
+  lexis (`fuzz/netex.dict`).
 - **A delivery is the publisher's claim.** A document is read up to its
   source's limit — 4 GiB unless set (`Source::with_max_document_bytes`), above
   the largest document of the national deliveries, Belgium's railway network
@@ -374,7 +378,7 @@ cargo test -p netex-rs --features crs
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo fmt --all --check
 RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace --all-features
-cargo +nightly fuzz run read -- -max_total_time=60
+cargo +nightly fuzz run read -- -dict="$PWD/fuzz/netex.dict" -max_total_time=60
 ```
 
 The schema tests need `xmllint` (Debian: `libxml2-utils`) on `PATH`; the
@@ -436,7 +440,8 @@ transformations — the BEV's AT_GIS_GRID (© BEV, CC BY 4.0), swisstopo's
 CHENyx06 (© swisstopo, free use) and, for the Dutch points, NSGI's
 RDNAPTRANS2018 — at the stops of the Swiss service point register
 (opentransportdata.swiss) and of the Austrian stop register (data.gv.at,
-CC BY 4.0). `tests/fixtures/README.md` records file by file what was copied,
+CC BY 4.0); the areas they hold in (`src/crs/areas.rs`) by
+`tools/crs_areas.py` from the same registers. `tests/fixtures/README.md` records file by file what was copied,
 from where, and what was left out. The borders netex2gtfs takes a delivery's
 country from (`crates/netex2gtfs/src/countries.txt`) are Natural Earth's
 Admin 0 countries at 1:10m, public domain, simplified by

@@ -182,12 +182,12 @@ fn every_transcribed_enumeration_matches_the_1x_schemas_up_to_the_table() {
             ));
             continue;
         };
+        let expected = expected_tokens(expected, xsd_type);
         let without_20: Vec<&str> = tokens
             .iter()
             .copied()
             .filter(|t| !only_20.contains(t) || expected.iter().any(|e| e == t))
             .collect();
-        let expected = expected_tokens(expected, xsd_type);
         if expected.iter().map(String::as_str).collect::<Vec<_>>() != without_20 {
             failures.push(format!("{xsd_type}:\n  1.x schema: {expected:?}\n  crate minus 2.0-only tokens: {without_20:?}"));
         }

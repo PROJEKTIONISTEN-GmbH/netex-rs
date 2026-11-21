@@ -105,6 +105,17 @@ cheap and loses nothing. What is worth having is the *accounting*: count
 references resolved only because version or class were ignored, beside the ones
 not resolved at all. Effort **S**.
 
+**Built in 0.12.0.** Of the versions of a definition valid on the day an
+index is built for (`IndexBuilder::at`), the highest answers; before, the
+one added or merged last did, so that the answer hung on the order of the
+documents and threads. Versions are ordered as one order of every two: none,
+then those written in digits alone by their number — `1` and `01` by their
+text —, then the others by their text: `9` < `10` < `2.0`. Before, `9` and
+`2.0` were compared as text and `10` and `9` as numbers, which is no order,
+and the highest of three hung on the order they were met in. Each
+identifier's versions are listed once, highest first, so that a reference
+naming `any` no longer searches the whole table.
+
 ## 2. Identifiers that mean one thing per document
 
 **Problem.** NeTEx identifiers are meant to be unique; the Linz AG delivery
@@ -266,6 +277,13 @@ and the passing time is left without one.
 with hours past 23 ever arrives: a time stated both ways, an hour past 23 and a
 day offset, is a finding. Effort **S**.
 
+**Built in 0.12.0.** A day offset is counted without overflow. A time the
+offset puts before the midnight beginning its operating day — a negative
+offset, which the schema's `xsd:integer` allows — or 2^32 seconds or more
+after it is no time, and the journey a finding
+(`Concern::TimeOutOfRange`); an offset of 106 751 991 167 301 days panicked
+in a debug build and made a wrong time in a release build.
+
 ## 6. Calls instead of passing times
 
 **Problem.** The Swiss delivery states every journey as a list of calls, each
@@ -347,6 +365,11 @@ short name (`Stop::level`); the importer does not use levels.
 **Proposal: not needed** for reading. A writer that puts sites and levels into
 documents of their own has to keep every level reference resolvable there
 (`PROFILE-UEBERFUEHRUNG.md`). Effort none.
+
+**Built in 0.12.0.** A level reference resolves as every other reference
+(§ 1): the version it names, else the highest; one to nothing is listed by
+`Index::unresolved`, where it left the quay without a level and said
+nothing, and one resolved past its version is the finding of § 1.
 
 ## 9. Train numbers
 
@@ -489,6 +512,15 @@ stops held back from the fit within 0.61 m (MGI) and 0.74 m (LV03), where the
 Helmert transformations alone are 1.37 m and 1.79 m off. Without the feature
 the index reads positions as before.
 
+**Built in 0.12.0.** A correction holds where it is fitted: in the cells of
+a tenth of a degree that hold a stop of its register (`tools/crs_areas.py`,
+1 030 cells for MGI, 521 for LV03). Beyond them the polynomial extrapolated —
+a position in Stuttgart written in LV03 landed 302.6 m from the same
+position written in LV95, in Munich 265 m, one in Venice in MGI some 120 m
+off —; there the Helmert transformation alone stands, within two metres. In
+the cells the largest correction is 1.5 m (MGI) and 2.5 m (LV03), the
+distortion of the old networks; the reference points land as before.
+
 ## 14. What a nested element is, and what it inherits
 
 **Problem.** A quay is written inside its stop place, a stop point in journey
@@ -577,6 +609,18 @@ named otherwise in the two (VOR's "Bahngasse 2", the ÖBB's "Bus") —; the 302
 park and rides of both stated otherwise (2 128 statements); no journey in
 both.
 
+**Built in 0.12.0.** From ten deliveries on, the rank is written in as many
+digits as the last takes (`01-oebb/…`), so that the tenth no longer sorts
+before the second and answers ahead of it. A journey kept once points at the
+earlier delivery's journey under the identifier the merge writes it with:
+of three deliveries, the third's journey alike with the second's, which the
+second renamed into its codespace, pointed at the first's of that
+identifier — another journey, arriving three minutes earlier — and the
+finding named it so. An object renamed takes along each identifier within
+it an earlier delivery holds — the passing times of a journey, the points of
+a pattern —, with the references to them, where they stood twice in the
+merge.
+
 ## 17. Lexical values
 
 **Problem.** An enumeration value with spaces (`bus `), a time zone on a time, a
@@ -594,6 +638,22 @@ short and malformed durations, line breaks and non-ASCII letters in an address
 (`tests/own_fragments.rs`).
 
 **Proposal: keep.** Effort none.
+
+**Built in 0.12.0.** What a value means is read by its lexis, and a form
+that is none means nothing rather than something else: a date its month
+does not have (`2026-02-30`, 29 February outside a leap year) is no day —
+read as one it was the day it overran into —, and a period bounded by it, an
+operating day or a day type assignment dated so gives no day and is a
+finding (`Concern::DateOfNoDay`); a duration is its days, then after `T` its
+hours, minutes and seconds, each at most once and in that order, a fraction
+on the seconds alone, white space around it set aside, else none — `PT1.5H`
+was an hour, `PT1H1H` two, `P999999999999999D` overflowed. A walk of such a
+duration is none (`Concern::WalkWithoutDuration`). A name in NeTEx 2.0's
+mixed form, a text beside its translations, reads, where the document was
+refused; a name stated as translations alone is the one stating no
+language, else the first (`MultilingualString::default_text`), where the
+index took the empty own text. `TransportMode` and `VehicleMode` take
+`other`, which most of their schema types list.
 
 ## 18. A point the vehicle passes through
 
@@ -1104,6 +1164,15 @@ bounds of all those read; STIB's and TEC's journeys now run, trip for trip,
 on the days of their GTFS feeds. De Lijn and SNCB state every day by a
 dated assignment and no day bit, and read the same as before.
 
+**Built in 0.12.0.** The next day only where the bound may be such a
+midnight: a whole hour in UTC (`Z`, `+00:00`) from noon on. The end of a
+day written with a zone (`T23:59:59Z`, `T23:59:59+01:00`) and a time
+written in a zone of its own (`T23:00:00+01:00`) are the day of their date;
+before, a period ending so ran a day longer. Every reader of a bound reads it
+so — operating periods, availability conditions, `ValidBetween` —, where
+conditions and validities read the date alone: a Belgian condition with day
+bits counted them from the day before a period of the same bounds.
+
 ## 34. Stop identifiers each document numbers anew
 
 **Problem.** The Czech deliveries of buses and of city transport are
@@ -1162,6 +1231,13 @@ reference names, as before; a `StopPlaceRef` naming a quay, or a `QuayRef`
 naming a stop place, is a finding that it resolved to another class
 (`Concern::ResolvedAsOtherClass`, § 1), as a `QuayRef` naming a stop place
 among a stop place's quays was already.
+
+**Built in 0.12.0.** An assignment naming a quay that does not resolve —
+in another delivery, a register missing (§ 32), mistyped — assigns the stop
+place it names beside it, and so does the end of a walk
+(`SiteConnection`), which DELFI writes both ways too; the quay stays a
+reference to nothing. Before, the stop point had no stop and the walk was
+gone, though the stop place was there.
 
 ---
 

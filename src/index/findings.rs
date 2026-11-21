@@ -157,6 +157,15 @@ pub enum Concern {
     /// beginning its operating day, or 2^32 seconds or more after it, which
     /// the index does not count: no time there.
     TimeOutOfRange,
+    /// A UIC operating period or availability condition whose day bits hold
+    /// a character other than `0` or `1`, white space aside: no day there.
+    DayBitOtherThanZeroOrOne,
+    /// An operating period or availability condition bounded by a date, an
+    /// operating day or the date of a day type assignment that is no day of
+    /// the calendar — a day its month does not have, `2026-02-30` —: no day
+    /// there; such a period gives none. A date of an assignment is a finding
+    /// about the day type it assigns.
+    DateOfNoDay,
 }
 
 impl Concern {
@@ -189,6 +198,8 @@ impl Concern {
         Concern::LinkBetweenOtherPoints,
         Concern::DaysOutsideCalendar,
         Concern::TimeOutOfRange,
+        Concern::DayBitOtherThanZeroOrOne,
+        Concern::DateOfNoDay,
     ];
 
     /// The concern's name in reports and on command lines, in lower case with
@@ -222,6 +233,8 @@ impl Concern {
             Concern::LinkBetweenOtherPoints => "link-between-other-points",
             Concern::DaysOutsideCalendar => "days-outside-calendar",
             Concern::TimeOutOfRange => "time-out-of-range",
+            Concern::DayBitOtherThanZeroOrOne => "day-bit-other-than-zero-or-one",
+            Concern::DateOfNoDay => "date-of-no-day",
         }
     }
 
@@ -291,6 +304,8 @@ impl Concern {
             Concern::TimeOutOfRange => {
                 "time before its operating day or beyond what the index counts, no time"
             }
+            Concern::DayBitOtherThanZeroOrOne => "day bit other than 0 or 1, no day there",
+            Concern::DateOfNoDay => "date that is no day of the calendar, no day there",
         }
     }
 }

@@ -7,10 +7,11 @@
 // of the Austrian register (data.gv.at, CC BY 4.0) and the Swiss register
 // (opentransportdata.swiss).
 
-use super::Correction;
+use super::{areas, Correction};
 
 /// MGI (Austria): after the Helmert transformation MGI to WGS 84 (3), against AT_GIS_GRID.
 pub(super) const MGI: Correction = Correction {
+    area: &areas::MGI,
     centre: (14.39, 47.63),
     degree: 7,
     longitude: &[
@@ -93,6 +94,7 @@ pub(super) const MGI: Correction = Correction {
 
 /// CH1903 (Switzerland, LV03): after the translation CH1903 to WGS 84 (2), against CHENyx06.
 pub(super) const CH1903: Correction = Correction {
+    area: &areas::CH1903,
     centre: (8.04, 46.89),
     degree: 7,
     longitude: &[

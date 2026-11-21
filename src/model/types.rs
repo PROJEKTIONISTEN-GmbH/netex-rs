@@ -6,7 +6,7 @@ use std::fmt;
 
 use super::{AttributeValue, Element, Leaf, Merge, Walk};
 use crate::error::Result;
-use crate::xml::{Attribute, Child, Content, Cursor, Emitter, Unprocessed};
+use crate::xml::{Attribute, Child, Cursor, Emitter, Unprocessed};
 
 /// The identifier of an entity: the `id` attribute, or the `ref` of a reference.
 ///
@@ -236,7 +236,9 @@ impl Element for Ref {
 /// In 1.x the element holds the text and, optionally, its language. In 2.0 it
 /// may instead hold a list of `<Text lang="…">` children, one per language;
 /// those are [`translations`](Self::translations), and the element's own text
-/// is then empty.
+/// is then empty. The 2.0 type is mixed content: a text beside the
+/// translations — `<Name>Hannover<Text lang="en">Hanover</Text></Name>` — is
+/// the element's own, its pieces joined and trimmed, and written before them.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MultilingualString {
     /// The text.
@@ -307,21 +309,25 @@ impl Element for MultilingualString {
             }
         }
         cursor.enter(child)?;
-        match cursor.content(child)? {
-            Content::Text(text) => this.text = text.into_owned().into(),
-            Content::Child(first) => {
-                let mut next = Some(first);
-                let mut position = 0u32;
-                while let Some(item) = next {
-                    if item.netex && item.local == "Text" {
-                        this.translations.push(Self::read(cursor, &item)?);
-                    } else {
-                        this.unprocessed.push(cursor.skip(&item, position)?);
-                    }
-                    position += 1;
-                    next = cursor.next_child()?;
+        if !child.empty {
+            let mut text = None;
+            let mut position = 0u32;
+            while let Some(item) = cursor.next_child_with_text(&mut text)? {
+                if item.netex && item.local == "Text" {
+                    this.translations.push(Self::read(cursor, &item)?);
+                } else {
+                    this.unprocessed.push(cursor.skip(&item, position)?);
                 }
+                position += 1;
             }
+            let text = text.unwrap_or_default();
+            // A text alone is kept as written; beside children, the white
+            // space laying them out is no part of it.
+            this.text = if position == 0 {
+                text.into_owned().into()
+            } else {
+                text.trim().into()
+            };
         }
         cursor.leave();
         Ok(this)
@@ -340,6 +346,7 @@ impl Element for MultilingualString {
             return;
         }
         out.start(name, &attributes, &self.extra_attributes);
+        out.text(&self.text);
         let mut merge = Merge::new(&self.unprocessed);
         for translation in &self.translations {
             merge.before_child(out);
@@ -543,7 +550,8 @@ impl DateTime {
 }
 
 impl Date {
-    /// Year, month and day, if the form is a date.
+    /// Year, month and day, if the form is a date: a day its month has —
+    /// 29 February in a leap year of the Gregorian calendar alone.
     pub fn ymd(&self) -> Option<(i32, u8, u8)> {
         let text = self.0.strip_prefix('-').unwrap_or(&self.0);
         let mut parts = text.splitn(3, '-');
@@ -553,13 +561,10 @@ impl Date {
         let day: u8 = rest[..rest.find(['Z', '+', '-']).unwrap_or(rest.len())]
             .parse()
             .ok()?;
-        (1..=12).contains(&month).then_some(())?;
-        (1..=31).contains(&day).then_some(())?;
-        Some((
-            if self.0.starts_with('-') { -year } else { year },
-            month,
-            day,
-        ))
+        let year = if self.0.starts_with('-') { -year } else { year };
+        (1..=days_in_month(year, month)?)
+            .contains(&day)
+            .then_some((year, month, day))
     }
 
     /// The date `days` after 1970-01-01, written `YYYY-MM-DD`: the inverse
@@ -598,6 +603,17 @@ impl Date {
     }
 }
 
+/// The number of days of `month` in `year`, if it is a month.
+fn days_in_month(year: i32, month: u8) -> Option<u8> {
+    let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+    match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => Some(31),
+        4 | 6 | 9 | 11 => Some(30),
+        2 => Some(if leap { 29 } else { 28 }),
+        _ => None,
+    }
+}
+
 impl Time {
     /// Seconds since midnight, if the form is a time of day. Fractions of a
     /// second and a zone offset are accepted and ignored.
@@ -632,62 +648,84 @@ impl Duration {
     }
 
     /// The duration in milliseconds, a fraction of a second read to the
-    /// millisecond, if the form is an `xsd:duration` without a year or month
-    /// part: the Dutch deliveries state run times to the tenth of a second.
+    /// millisecond — the Dutch deliveries state run times to the tenth of a
+    /// second —, if the form is an `xsd:duration` without a year or month
+    /// part, which have no fixed length: its days, then after `T` its hours,
+    /// minutes and seconds, each at most once and in that order, one of them
+    /// at least, a fraction on the seconds alone, white space around the form
+    /// set aside. Any other form is none, as is a negative duration and one
+    /// longer than a `u64` of milliseconds holds: none is made up from a form
+    /// that is not one.
     pub fn milliseconds(&self) -> Option<u64> {
-        let text = self.0.strip_prefix('P')?;
-        let (date_part, time_part) = match text.split_once('T') {
-            Some((d, t)) => (d, Some(t)),
-            None => (text, None),
-        };
+        let text = self.0.trim_matches(|c: char| c.is_ascii_whitespace());
+        let mut rest = text.strip_prefix('P')?;
         let mut total = 0u64;
-        let mut number = String::new();
-        for c in date_part.chars() {
-            match c {
-                '0'..='9' => number.push(c),
-                'D' => total += number.parse::<u64>().ok()? * 86_400_000,
-                _ => return None,
-            }
-            if !c.is_ascii_digit() {
-                number.clear();
-            }
+        let mut parts = 0;
+        if let Some((days, after)) = whole_number_before(rest, 'D') {
+            total = add_times(total, days, 86_400_000)?;
+            rest = after;
+            parts += 1;
         }
-        if !number.is_empty() {
-            return None;
-        }
-        if let Some(time_part) = time_part {
-            // The digits after the point, the first three of them: milliseconds.
-            let mut fraction: Option<String> = None;
-            for c in time_part.chars() {
-                match (c, &mut fraction) {
-                    ('0'..='9', None) => number.push(c),
-                    ('0'..='9', Some(digits)) => {
-                        if digits.len() < 3 {
-                            digits.push(c);
-                        }
-                    }
-                    ('.', None) => fraction = Some(String::new()),
-                    ('H', _) => total += number.parse::<u64>().ok()? * 3_600_000,
-                    ('M', _) => total += number.parse::<u64>().ok()? * 60_000,
-                    ('S', _) => {
-                        let thousandths = fraction.as_deref().map_or(Some(0), |digits| {
-                            format!("{digits:0<3}").parse::<u64>().ok()
-                        })?;
-                        total += number.parse::<u64>().ok()? * 1000 + thousandths;
-                    }
-                    _ => return None,
-                }
-                if !c.is_ascii_digit() && c != '.' {
-                    number.clear();
-                    fraction = None;
+        if let Some(time) = rest.strip_prefix('T') {
+            rest = time;
+            let parts_before = parts;
+            for (unit, factor) in [('H', 3_600_000), ('M', 60_000)] {
+                if let Some((number, after)) = whole_number_before(rest, unit) {
+                    total = add_times(total, number, factor)?;
+                    rest = after;
+                    parts += 1;
                 }
             }
-            if !number.is_empty() {
+            if let Some((milliseconds, after)) = seconds_in_milliseconds(rest) {
+                total = total.checked_add(milliseconds)?;
+                rest = after;
+                parts += 1;
+            }
+            if parts == parts_before {
                 return None;
             }
         }
-        Some(total)
+        (rest.is_empty() && parts > 0).then_some(total)
     }
+}
+
+/// The number written in digits at the start of `text` up to `unit`, and
+/// what follows the unit; none where `text` does not start so.
+fn whole_number_before(text: &str, unit: char) -> Option<(u64, &str)> {
+    let digits = text.bytes().take_while(u8::is_ascii_digit).count();
+    let after = text[digits..].strip_prefix(unit)?;
+    if digits == 0 {
+        return None;
+    }
+    Some((text[..digits].parse().ok()?, after))
+}
+
+/// The seconds at the start of `text` — digits, a fraction after a point
+/// where written, then `S` — in milliseconds, the fraction's digits beyond
+/// the third dropped; and what follows.
+fn seconds_in_milliseconds(text: &str) -> Option<(u64, &str)> {
+    let digits = text.bytes().take_while(u8::is_ascii_digit).count();
+    let whole: u64 = text[..digits].parse().ok()?;
+    let (fraction, after) = match text[digits..].strip_prefix('.') {
+        Some(fraction) => {
+            let length = fraction.bytes().take_while(u8::is_ascii_digit).count();
+            (length > 0).then_some(())?;
+            (&fraction[..length], &fraction[length..])
+        }
+        None => ("", &text[digits..]),
+    };
+    let after = after.strip_prefix('S')?;
+    let thousandths = fraction
+        .bytes()
+        .chain(std::iter::repeat(b'0'))
+        .take(3)
+        .fold(0, |sum, digit| sum * 10 + u64::from(digit - b'0'));
+    Some((add_times(thousandths, whole, 1000)?, after))
+}
+
+/// `total` plus `count` times `factor`, if no `u64` overflows.
+fn add_times(total: u64, count: u64, factor: u64) -> Option<u64> {
+    total.checked_add(count.checked_mul(factor)?)
 }
 
 netex_element! {

@@ -30,11 +30,16 @@
 //! lands within a metre (0.35 m at worst, MGI); at every stop of the two
 //! registers held back from fitting the corrections, within 0.61 m (MGI) and
 //! 0.74 m (LV03), where the Helmert transformations alone are 1.37 m and
-//! 1.79 m off. RD New is read by the Helmert transformation alone: at every
+//! 1.79 m off. A correction holds where it is fitted, in the cells of a tenth
+//! of a degree holding a stop of its register (`tools/crs_areas.py`); beyond
+//! them the polynomial extrapolates — some hundred metres off within a day's
+//! journey of the border —, and the Helmert transformation alone puts a
+//! position within two metres. RD New is read by the Helmert transformation alone: at every
 //! stop of the Dutch register stating a position, within 0.24 m of
 //! RDNAPTRANS2018 through its correction grid, where the register states its
 //! positions to the metre.
 
+mod areas;
 mod corrections;
 
 /// The order a position's two numbers are written in.
@@ -486,18 +491,60 @@ impl Helmert {
 /// The correction after a Helmert transformation: a polynomial in longitude
 /// and latitude, in degrees from `centre`, of the longitude and latitude to
 /// add, in degrees; its terms `u^i v^j` for `i` from 0 to the degree and `j`
-/// from 0 to the degree less `i`.
+/// from 0 to the degree less `i`. It holds in its `area`, where the stops it
+/// is fitted at stand.
 #[derive(Debug)]
 struct Correction {
+    area: &'static Area,
     centre: (f64, f64),
     degree: usize,
     longitude: &'static [f64],
     latitude: &'static [f64],
 }
 
+/// Where a correction holds: the cells of a tenth of a degree, in longitude
+/// and latitude, that hold a stop of the register it is fitted at
+/// (`tools/crs_areas.py`).
+#[derive(Debug)]
+struct Area {
+    /// The western edge of the first column, in tenths of a degree.
+    west: i64,
+    /// The southern edge of the first row, in tenths of a degree.
+    south: i64,
+    columns: u32,
+    rows: u32,
+    /// A bit for each cell, row by row from the south-west, each word's
+    /// lowest bit first: set where the cell holds a stop.
+    cells: &'static [u64],
+}
+
+impl Area {
+    /// Whether the position, in degrees, lies in a cell of the area.
+    fn contains(&self, latitude: f64, longitude: f64) -> bool {
+        if !latitude.is_finite() || !longitude.is_finite() {
+            return false;
+        }
+        // The cast saturates: a position far away lands outside all the same.
+        let column = (longitude * 10.0).floor() as i64 - self.west;
+        let row = (latitude * 10.0).floor() as i64 - self.south;
+        if !(0..i64::from(self.columns)).contains(&column)
+            || !(0..i64::from(self.rows)).contains(&row)
+        {
+            return false;
+        }
+        let bit = row * i64::from(self.columns) + column;
+        self.cells[(bit / 64) as usize] & (1 << (bit % 64)) != 0
+    }
+}
+
 impl Correction {
-    /// Latitude and longitude in degrees, corrected.
+    /// Latitude and longitude in degrees, corrected within the area; beyond
+    /// it, where the polynomial extrapolates, as they are: the Helmert
+    /// transformation alone is nearer there.
     fn apply(&self, latitude: f64, longitude: f64) -> (f64, f64) {
+        if !self.area.contains(latitude, longitude) {
+            return (latitude, longitude);
+        }
         let (u, v) = (longitude - self.centre.0, latitude - self.centre.1);
         let (mut dlon, mut dlat) = (0.0, 0.0);
         let mut term = 0;

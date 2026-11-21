@@ -145,6 +145,12 @@ impl Emitter {
         }
     }
 
+    /// Writes character data into the element started last, before its
+    /// children: the text of an element of mixed content.
+    pub fn text(&mut self, text: &str) {
+        escape(&mut self.out, text, Escaped::Text);
+    }
+
     /// Writes a fragment as it was read.
     pub fn raw(&mut self, fragment: &Unprocessed) {
         self.note_child();

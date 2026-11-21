@@ -444,8 +444,37 @@ impl<'a> Referrers<'a> {
         ObjectId(self.graph.first[Kind::StopPoint as usize] + stop_point.0)
     }
 
+    /// The line an object is, where it is a definition of a line the index
+    /// keeps.
+    pub fn line_of(&self, object: ObjectId) -> Option<LineId> {
+        let position = self.position_of(object, Kind::Line)?;
+        self.index.line_of_position.get(position).copied()
+    }
+
+    /// The journey an object is, where it is a definition of a journey the
+    /// index keeps.
+    pub fn journey_of(&self, object: ObjectId) -> Option<JourneyId> {
+        let position = self.position_of(object, Kind::Journey)?;
+        self.index
+            .journey_of_position
+            .get(position)
+            .copied()
+            .flatten()
+    }
+
+    /// The position of an object among the definitions of `kind`, where it
+    /// is one of them.
+    fn position_of(&self, object: ObjectId, kind: Kind) -> Option<usize> {
+        let first = self.graph.first[kind as usize];
+        let end = self.graph.first[kind as usize + 1];
+        (first..end)
+            .contains(&object.0)
+            .then(|| (object.0 - first) as usize)
+    }
+
     /// The objects of a line: each definition the index took it from — one,
-    /// or several that state it alike.
+    /// or several that state it alike. A pass over the definitions of lines;
+    /// an object's line is [`line_of`](Self::line_of).
     pub fn line(&self, line: LineId) -> impl Iterator<Item = ObjectId> + 'a {
         let first = self.graph.first[Kind::Line as usize];
         self.index
@@ -457,7 +486,8 @@ impl<'a> Referrers<'a> {
     }
 
     /// The objects of a journey: each definition the index took it from — one,
-    /// or several that state it alike.
+    /// or several that state it alike. A pass over the definitions of
+    /// journeys; an object's journey is [`journey_of`](Self::journey_of).
     pub fn journey(&self, journey: JourneyId) -> impl Iterator<Item = ObjectId> + 'a {
         let first = self.graph.first[Kind::Journey as usize];
         self.index

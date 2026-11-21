@@ -7,7 +7,11 @@
 //! for the release that lacks the token.
 
 netex_enum! {
-    /// A mode of transport: the schema's `AllModesEnumeration`.
+    /// A mode of transport: the schema's `AllModesEnumeration`, and `other`,
+    /// which the types most elements of a mode carry add to it
+    /// (`AllPublicTransportModesEnumeration`, in 1.x
+    /// `AllVehicleModesOfTransportEnumeration`): every token any of them
+    /// lists.
     pub enum VehicleMode as "AllModesEnumeration" {
         All = "all",
         AnyMode = "anyMode",
@@ -35,6 +39,7 @@ netex_enum! {
         Scooter = "scooter",
         Car = "car",
         Shuttle = "shuttle",
+        Other = "other",
     }
 }
 

@@ -39,7 +39,7 @@
 
 use std::ops::RangeInclusive;
 
-use crate::model::{DateTime, Order, PropertyOfDay, ValidBetween};
+use crate::model::{DateTime, Order, PropertyOfDay, Time, ValidBetween};
 
 /// The first day a calendar holds, in days since 1970-01-01: 1 January of the
 /// year 1.
@@ -67,18 +67,21 @@ impl Span {
         to: None,
     };
 
-    /// The days of an entity's own `ValidBetween` — the first it states —,
-    /// open where it states none.
-    pub fn of(valid_between: &[ValidBetween]) -> Span {
-        let day = |date: &Option<DateTime>| {
-            date.as_ref()
-                .and_then(|d| d.date())
-                .and_then(|d| d.days_since_epoch())
-        };
-        valid_between.first().map_or(Span::OPEN, |valid| Span {
-            from: day(&valid.from_date),
-            to: day(&valid.to_date),
-        })
+    /// The days of each `ValidBetween` an entity states — the schema allows
+    /// any number —, each end read as [`bound_day`] reads a bound and open
+    /// where it states none; the open span alone where it states none.
+    pub fn all_of(valid_between: &[ValidBetween]) -> Vec<Span> {
+        if valid_between.is_empty() {
+            return vec![Span::OPEN];
+        }
+        let day = |bound: &Option<DateTime>| bound.as_ref().and_then(bound_day);
+        valid_between
+            .iter()
+            .map(|valid| Span {
+                from: day(&valid.from_date),
+                to: day(&valid.to_date),
+            })
+            .collect()
     }
 }
 
@@ -104,9 +107,11 @@ impl Governed {
 }
 
 /// The days the version at `position` among the versions of one line
-/// governs: the days it is valid on, but those of every version beginning
-/// later, whatever end the earlier one states. A version without a beginning
-/// takes no day from another.
+/// governs, each version given as the spans of its validities
+/// ([`Span::all_of`]): the days each of its validities is valid on, but those
+/// of every validity of another version beginning later, whatever end the
+/// earlier one states. A validity without a beginning takes no day from
+/// another.
 ///
 /// The rule is read off the Austrian deliveries, whose journeys carry the day
 /// bits of the whole timetable year and whose lines change in versions.
@@ -114,33 +119,72 @@ impl Governed {
 /// # Panics
 ///
 /// If `position` is not a position of `versions`.
-pub fn governed(versions: &[Span], position: usize) -> Governed {
-    let own = versions[position];
-    let later: Vec<(i64, i64)> = versions
+pub fn governed(versions: &[Vec<Span>], position: usize) -> Governed {
+    let own = &versions[position];
+    let others: Vec<Span> = versions
         .iter()
-        .filter_map(|other| {
-            let from = other
-                .from
-                .filter(|from| own.from.is_none_or(|own_from| *from > own_from))?;
-            Some((from, other.to.unwrap_or(i64::MAX)))
-        })
+        .enumerate()
+        .filter(|&(version, _)| version != position)
+        .flat_map(|(_, spans)| spans.iter().copied())
         .collect();
-    if own == Span::OPEN && later.is_empty() {
+    if own.iter().all(|span| *span == Span::OPEN) && others.iter().all(|span| span.from.is_none()) {
         return Governed::Every;
     }
-    let mut spans = vec![(own.from.unwrap_or(i64::MIN), own.to.unwrap_or(i64::MAX))];
-    for (from, to) in later {
-        spans = spans
-            .into_iter()
-            .flat_map(|(first, last)| {
-                let before = (first < from).then(|| (first, last.min(from - 1)));
-                let after = (last > to).then(|| (first.max(to + 1), last));
-                before.into_iter().chain(after)
-            })
-            .filter(|(first, last)| first <= last)
-            .collect();
+    let mut governed = Vec::new();
+    for span in own {
+        let mut pieces = vec![(span.from.unwrap_or(i64::MIN), span.to.unwrap_or(i64::MAX))];
+        let later = others.iter().filter_map(|other| {
+            let from = other
+                .from
+                .filter(|from| span.from.is_none_or(|own_from| *from > own_from))?;
+            Some((from, other.to.unwrap_or(i64::MAX)))
+        });
+        for (from, to) in later {
+            pieces = pieces
+                .into_iter()
+                .flat_map(|(first, last)| {
+                    let before = (first < from).then(|| (first, last.min(from - 1)));
+                    let after = (last > to).then(|| (first.max(to + 1), last));
+                    before.into_iter().chain(after)
+                })
+                .filter(|(first, last)| first <= last)
+                .collect();
+        }
+        governed.extend(pieces);
     }
-    Governed::Spans(spans)
+    Governed::Spans(union_of_spans(governed))
+}
+
+/// Spans of days, first and last day each, made ascending and apart: those
+/// that overlap or meet joined.
+pub(crate) fn union_of_spans(mut spans: Vec<(i64, i64)>) -> Vec<(i64, i64)> {
+    spans.sort_unstable();
+    let mut joined: Vec<(i64, i64)> = Vec::with_capacity(spans.len());
+    for (first, last) in spans {
+        match joined.last_mut() {
+            Some((_, held)) if first <= held.saturating_add(1) => *held = (*held).max(last),
+            _ => joined.push((first, last)),
+        }
+    }
+    joined
+}
+
+/// The days two lists of spans, each ascending and apart, have in common.
+pub(crate) fn intersection_of_spans(a: &[(i64, i64)], b: &[(i64, i64)]) -> Vec<(i64, i64)> {
+    let (mut i, mut j) = (0, 0);
+    let mut common = Vec::new();
+    while let (Some(&(a_first, a_last)), Some(&(b_first, b_last))) = (a.get(i), b.get(j)) {
+        let (first, last) = (a_first.max(b_first), a_last.min(b_last));
+        if first <= last {
+            common.push((first, last));
+        }
+        if a_last < b_last {
+            i += 1;
+        } else {
+            j += 1;
+        }
+    }
+    common
 }
 
 /// The days an operating period gives, and what was off about it.
@@ -148,7 +192,9 @@ pub fn governed(versions: &[Span], position: usize) -> Governed {
 pub struct PeriodDays {
     /// The days, ascending.
     pub days: Vec<i64>,
-    /// What the period states that the days were read past, if anything.
+    /// What the period states that the days were read past, if anything: a
+    /// day bit other than `0` or `1` before day bits other in number than its
+    /// days, where it states both.
     pub issue: Option<PeriodIssue>,
 }
 
@@ -161,17 +207,24 @@ pub enum PeriodIssue {
     /// Day bits other in number than the days from the first to the last
     /// day: the bits are read from the first day as far as they go.
     BitsOtherThanDays {
-        /// How many bits the period states.
+        /// How many bits the period states, white space aside.
         bits: usize,
         /// How many days its first to its last day span.
         days: i64,
+    },
+    /// A day bit other than `0` or `1`, white space aside: no day there.
+    BitOtherThanZeroOrOne {
+        /// The first such bit, counted from the period's first day.
+        at: usize,
     },
 }
 
 /// The days of an operating period from `from` to `to` among the days
 /// `within`, with the bits of a UIC operating period where it states them:
 /// the days its bits name, counted from its first day, else every day from
-/// its first to its last — the first alone where it states no last.
+/// its first to its last — the first alone where it states no last. The
+/// bits are a normalized string: white space among them — a line break, an
+/// indent — is no bit.
 ///
 /// Only the days `within` are given, so that what a period costs is the days
 /// asked for: one written to the year 9999 gives a reader holding a year of
@@ -205,22 +258,22 @@ pub(crate) fn period_runs(
     let (lowest, highest) = within.into_inner();
     match bits {
         Some(bits) => {
-            let issue = to.and_then(|to| {
-                let days = to - from + 1;
-                (bits.len() as i64 != days).then_some(PeriodIssue::BitsOtherThanDays {
-                    bits: bits.len(),
-                    days,
-                })
-            });
-            let skipped = usize::try_from(lowest - from).unwrap_or(0);
+            let mut count = 0usize;
+            let mut other = None;
             let mut current: Option<(i64, i64)> = None;
-            for (offset, bit) in bits.bytes().enumerate().skip(skipped) {
-                let day = from + offset as i64;
-                if day > highest {
-                    break;
-                }
-                if bit != b'1' {
-                    continue;
+            for bit in bits
+                .chars()
+                .filter(|c| !matches!(c, ' ' | '\t' | '\n' | '\r'))
+            {
+                let day = from.saturating_add(count as i64);
+                count += 1;
+                match bit {
+                    '1' if (lowest..=highest).contains(&day) => {}
+                    '0' | '1' => continue,
+                    _ => {
+                        other.get_or_insert(count - 1);
+                        continue;
+                    }
                 }
                 current = match current {
                     Some((first, last)) if last + 1 == day => Some((first, day)),
@@ -234,7 +287,14 @@ pub(crate) fn period_runs(
             if let Some((first, last)) = current {
                 run(first, last);
             }
-            issue
+            let length = to.and_then(|to| {
+                let days = to - from + 1;
+                (count as i64 != days)
+                    .then_some(PeriodIssue::BitsOtherThanDays { bits: count, days })
+            });
+            other
+                .map(|at| PeriodIssue::BitOtherThanZeroOrOne { at })
+                .or(length)
         }
         None => {
             let last = to.unwrap_or(from).max(from).min(highest);
@@ -247,14 +307,14 @@ pub(crate) fn period_runs(
     }
 }
 
-/// Seconds since midnight from which a bound written as an instant is the
-/// midnight beginning the next day.
+/// Seconds since midnight from which a bound written as an instant in UTC
+/// may be the midnight beginning the next local day.
 const NOON: u32 = 12 * 3600;
 
-/// The day a bound of an operating period names — its `FromDate` or
-/// `ToDate`, an `xsd:dateTime` —: the day of its date; but where it is
-/// written as an instant with a zone (`Z`, `+01:00`) at noon or later, the
-/// next day.
+/// The day a bound names — the `FromDate` or `ToDate` of an operating period,
+/// an availability condition or a validity, an `xsd:dateTime` —: the day of
+/// its date; but where it is written as a whole hour in UTC (`Z`, `+00:00`)
+/// at noon or later, the next day.
 ///
 /// The bounds of a period are days. A producer writing them as instants in
 /// UTC writes the midnight beginning each local day: `2026-10-21T22:00:00Z`
@@ -262,16 +322,29 @@ const NOON: u32 = 12 * 3600;
 /// `2026-10-29T23:00:00Z` the one beginning 30 October in winter time — the
 /// Belgian deliveries' bounds, and the day bits they state count from those
 /// days. No time zone is needed to read them so: a local midnight within
-/// twelve hours of UTC is nearest the UTC midnight of its own day. A bound
-/// without a zone, or before noon, is the day of its date.
+/// twelve hours of UTC is nearest the UTC midnight of its own day. Any other
+/// bound is the day of its date: one without a zone, one before noon, the
+/// end of a day (`T23:59:59Z`), and a time written in a zone of its own
+/// (`T23:00:00+01:00`), which is that zone's time of that day.
 pub fn bound_day(bound: &DateTime) -> Option<i64> {
     let day = bound.date()?.days_since_epoch()?;
-    let next = bound.states_zone()
-        && bound
-            .time()
-            .and_then(|time| time.seconds_since_midnight())
-            .is_some_and(|seconds| seconds >= NOON);
-    Some(day + i64::from(next))
+    Some(day + i64::from(may_begin_the_next_local_day(bound)))
+}
+
+/// Whether an instant is a whole hour in UTC from noon on: the midnight
+/// beginning a local day east of Greenwich, written in UTC.
+fn may_begin_the_next_local_day(bound: &DateTime) -> bool {
+    let Some((_, time_and_zone)) = bound.as_str().split_once('T') else {
+        return false;
+    };
+    let Some(zone_at) = time_and_zone.find(['Z', '+', '-']) else {
+        return false;
+    };
+    let (time, zone) = time_and_zone.split_at(zone_at);
+    let (time, fraction) = time.split_once('.').unwrap_or((time, ""));
+    matches!(zone, "Z" | "+00:00" | "-00:00")
+        && fraction.bytes().all(|digit| digit == b'0')
+        && Time::seconds_of(time).is_some_and(|seconds| seconds >= NOON && seconds % 3600 == 0)
 }
 
 /// Days of the week, as a `DaysOfWeek` list of a property of day names them.
@@ -390,7 +463,11 @@ mod tests {
     #[test]
     fn a_later_beginning_version_takes_its_days_over_whatever_end_the_earlier_states() {
         // Version 1 from day 10 on, open; version 2 days 20 to 25; version 3 from day 30 on.
-        let versions = [valid(10, None), valid(20, Some(25)), valid(30, None)];
+        let versions = [
+            vec![valid(10, None)],
+            vec![valid(20, Some(25))],
+            vec![valid(30, None)],
+        ];
         assert_eq!(
             governed(&versions, 0),
             Governed::Spans(vec![(10, 19), (26, 29)])
@@ -473,7 +550,12 @@ mod tests {
         let next = |text| bound(text).expect("a day");
         assert_eq!(next("2026-10-21T22:00:00Z"), "2026-10-22", "summer time");
         assert_eq!(next("2026-10-29T23:00:00Z"), "2026-10-30", "winter time");
-        assert_eq!(next("2026-10-29T23:00:00-01:00"), "2026-10-30");
+        assert_eq!(next("2026-10-29T23:00:00+00:00"), "2026-10-30");
+        assert_eq!(
+            bound("2026-10-29T23:00:00-01:00").as_deref(),
+            Some("2026-10-29"),
+            "a time written in a zone of its own is that zone's, on its date"
+        );
         assert_eq!(
             bound("2026-10-21T00:00:00+01:00").as_deref(),
             Some("2026-10-21")

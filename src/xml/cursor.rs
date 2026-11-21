@@ -468,7 +468,8 @@ impl<'i> Cursor<'i> {
     /// The next child of the element being read, or `None` at its end.
     ///
     /// Whitespace between children is skipped; other character data is an
-    /// error, since no typed NeTEx element has mixed content.
+    /// error: an element of mixed content reads its children with
+    /// [`next_child_with_text`](Self::next_child_with_text).
     pub fn next_child(&mut self) -> Result<Option<Child<'i>>> {
         loop {
             let (offset, event) = self.read_event()?;
@@ -500,6 +501,45 @@ impl<'i> Cursor<'i> {
                 Event::DocType(doctype) => {
                     let name = doctype.split_whitespace().next().unwrap_or("").to_owned();
                     return Err(self.error_at(Kind::Entity { name }, offset));
+                }
+            }
+        }
+    }
+
+    /// The next child of an element of mixed content — NeTEx 2.0's
+    /// `MultilingualString`, a text in the default language beside its
+    /// translations —, or `None` at the element's end; the character data
+    /// before it, references resolved, is added to `text`.
+    pub fn next_child_with_text(
+        &mut self,
+        text: &mut Option<Cow<'i, str>>,
+    ) -> Result<Option<Child<'i>>> {
+        loop {
+            let (offset, event) = self.read_event()?;
+            match event {
+                Event::Start(start) => return self.child(start, false, offset).map(Some),
+                Event::Empty(start) => return self.child(start, true, offset).map(Some),
+                Event::End(_) => return Ok(None),
+                Event::Text(data) => {
+                    let piece = data.xml10_content();
+                    self.gather(text, piece, offset)?;
+                }
+                Event::CData(data) => {
+                    let piece = data.xml10_content();
+                    self.gather(text, piece, offset)?;
+                }
+                Event::GeneralRef(reference) => {
+                    let resolved = self.resolve_reference(&reference, offset)?;
+                    let mut buffer = [0u8; 4];
+                    let piece = Cow::Owned(resolved.encode_utf8(&mut buffer).to_owned());
+                    self.gather(text, piece, offset)?;
+                }
+                Event::Comment(_) | Event::PI(_) => {}
+                Event::Decl(_) => return Err(self.misplaced_declaration(offset)),
+                Event::DocType(_) | Event::Eof => {
+                    return Err(
+                        self.error_at(Kind::Xml("unexpected end of document".to_owned()), offset)
+                    )
                 }
             }
         }

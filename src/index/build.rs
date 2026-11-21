@@ -5,6 +5,7 @@ use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
 use std::hash::{Hash, Hasher};
 use std::ops::RangeInclusive;
+use std::sync::Arc;
 
 use rustc_hash::{FxHashMap, FxHasher};
 
@@ -14,7 +15,8 @@ use super::scope::Table;
 use super::strings::{Strings, Sym};
 use super::{CallUse, Index, PassingTime, StopId, StopKind, Unresolved};
 use crate::calendar::{
-    assignment_rank, bound_day, names_no_day, period_runs, PeriodIssue, Properties, Span,
+    assignment_rank, bound_day, intersection_of_spans, names_no_day, period_runs, union_of_spans,
+    PeriodIssue, Properties, Span,
 };
 use crate::geometry::first_position;
 use crate::model::{
@@ -61,47 +63,87 @@ pub(crate) struct Pending {
     pub(crate) origin: Sym,
 }
 
-/// The days an entity is valid, from its frame's `ValidBetween`, as days since
-/// 1970-01-01; open ends are the extremes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Validity {
-    pub(crate) from: i64,
-    pub(crate) to: i64,
-}
+/// The days an entity is valid on, as days since 1970-01-01: every day, or
+/// the days of some spans — first and last day each, ascending and apart.
+/// They are the days of each `ValidBetween` it states — an open end the
+/// extreme —, within those of its frames, each frame's stated directly or
+/// within its `validityConditions`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Validity(Option<Arc<[(i64, i64)]>>);
 
 impl Validity {
-    pub(crate) const ALWAYS: Validity = Validity {
-        from: i64::MIN,
-        to: i64::MAX,
-    };
+    pub(crate) const ALWAYS: Validity = Validity(None);
 
-    fn of(valid_between: &[ValidBetween], inherited: Validity) -> Validity {
-        let Some(first) = valid_between.first() else {
-            return inherited;
+    /// The validity of what states `valid_between`, within `inherited`: the
+    /// inherited one where it states none.
+    fn of<'v>(
+        valid_between: impl IntoIterator<Item = &'v ValidBetween>,
+        inherited: &Validity,
+    ) -> Validity {
+        let mut stated = false;
+        let mut own = Vec::new();
+        for valid in valid_between {
+            stated = true;
+            let day = |bound: &Option<DateTime>| bound.as_ref().and_then(bound_day);
+            let span = (
+                day(&valid.from_date).unwrap_or(i64::MIN),
+                day(&valid.to_date).unwrap_or(i64::MAX),
+            );
+            if span.0 <= span.1 {
+                own.push(span);
+            }
+        }
+        if !stated {
+            return inherited.clone();
+        }
+        let own = union_of_spans(own);
+        let within = match &inherited.0 {
+            Some(frames) => intersection_of_spans(&own, frames),
+            None => own,
         };
-        let day = |date: &Option<DateTime>| {
-            date.as_ref()
-                .and_then(|d| d.date())
-                .and_then(|d| d.days_since_epoch())
-        };
-        Validity {
-            from: day(&first.from_date).unwrap_or(inherited.from),
-            to: day(&first.to_date).unwrap_or(inherited.to),
+        if within == [(i64::MIN, i64::MAX)] {
+            Validity::ALWAYS
+        } else {
+            Validity(Some(within.into()))
         }
     }
 
-    /// The validity of an entity within the frames of `scope`, outermost first.
+    /// The validity of a frame stating `valid_between` and `conditions`,
+    /// within `inherited`.
+    fn of_frame(
+        valid_between: &[ValidBetween],
+        conditions: Option<&crate::model::ValidityConditions>,
+        inherited: &Validity,
+    ) -> Validity {
+        let within_conditions = conditions
+            .into_iter()
+            .flat_map(|conditions| &conditions.items)
+            .filter_map(|item| match item {
+                ValidityConditionItem::ValidBetween(valid) => Some(&**valid),
+                _ => None,
+            });
+        Validity::of(within_conditions.chain(valid_between), inherited)
+    }
+
+    /// The validity of an entity within the frames of `scope`, outermost
+    /// first; the lean stream gathers a frame's validity, directly or within
+    /// its validity conditions, in its header.
     fn within(scope: &Scope) -> Validity {
         scope
             .frames()
             .iter()
             .fold(Validity::ALWAYS, |inherited, frame| {
-                Validity::of(&frame.valid_between, inherited)
+                Validity::of(&frame.valid_between, &inherited)
             })
     }
 
     pub(crate) fn covers(&self, day: i64) -> bool {
-        self.from <= day && day <= self.to
+        match &self.0 {
+            None => true,
+            Some(spans) => spans
+                .iter()
+                .any(|&(first, last)| (first..=last).contains(&day)),
+        }
     }
 }
 
@@ -170,8 +212,9 @@ pub(crate) struct LineRecord {
     pub(crate) flexible: bool,
     /// The days the version is valid on, its frames' validity inherited.
     pub(crate) validity: Validity,
-    /// The days the version states itself valid on: what it governs.
-    pub(crate) span: Span,
+    /// The days the version states itself valid on, a span for each of its
+    /// validities: what it governs.
+    pub(crate) spans: Box<[Span]>,
 }
 
 impl LineRecord {
@@ -182,15 +225,15 @@ impl LineRecord {
             self.public_code,
             self.mode,
             self.flexible,
-            self.validity,
-            self.span,
+            &self.validity,
+            &self.spans,
         ) == (
             other.name,
             other.public_code,
             other.mode,
             other.flexible,
-            other.validity,
-            other.span,
+            &other.validity,
+            &other.spans,
         )
     }
 }
@@ -406,8 +449,9 @@ pub(crate) struct DayTypeRecord {
     pub(crate) origin: Sym,
     /// What its properties say of its days.
     pub(crate) properties: Properties,
-    /// Its own validity, first and last day, where it states both.
-    pub(crate) validity: Option<(i64, i64)>,
+    /// Its own validities, first and last day each, those stating both;
+    /// none where it states none so.
+    pub(crate) validity: Box<[(i64, i64)]>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -427,6 +471,36 @@ pub(crate) enum AssignedDaysRecord {
     Date(i64),
 }
 
+/// A bound of a period as written: none, a day ([`bound_day`]), or no day of
+/// the calendar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Bound {
+    Unstated,
+    Day(i64),
+    NoDay,
+}
+
+impl Bound {
+    fn of(bound: Option<&DateTime>) -> Bound {
+        match bound.map(bound_day) {
+            None => Bound::Unstated,
+            Some(Some(day)) => Bound::Day(day),
+            Some(None) => Bound::NoDay,
+        }
+    }
+
+    fn day(self) -> Option<i64> {
+        match self {
+            Bound::Day(day) => Some(day),
+            Bound::Unstated | Bound::NoDay => None,
+        }
+    }
+
+    fn is_no_day(self) -> bool {
+        self == Bound::NoDay
+    }
+}
+
 /// An operating period, or an availability condition, which states its days
 /// alike.
 #[derive(Debug, Clone, PartialEq)]
@@ -444,34 +518,56 @@ pub(crate) struct PeriodRecord {
     pub(crate) bits: Option<Box<str>>,
     /// Whether its days are available (`IsAvailable`); an operating period's are.
     pub(crate) available: bool,
+    /// Whether it states a bound that is no day of the calendar — a day its
+    /// month does not have —: it gives no days.
+    pub(crate) bound_of_no_day: bool,
 }
 
 impl PeriodRecord {
     /// The days of the period `within` a span, as runs of days one after the
-    /// other ([`period_runs`]), and what was off about it.
+    /// other ([`period_runs`]), and what was off about it; none of a period
+    /// bounded by no day.
     pub(crate) fn runs(
         &self,
         within: RangeInclusive<i64>,
         run: impl FnMut(i64, i64),
     ) -> Option<PeriodIssue> {
+        if self.bound_of_no_day {
+            return None;
+        }
         period_runs(self.from, self.to, self.bits.as_deref(), within, run)
     }
 
     /// The first and last day the period spans, as far as its bits go where
-    /// it states no last day; none without a first day.
+    /// it states no last day; none without a first day, or bounded by no day.
     pub(crate) fn span(&self) -> Option<(i64, i64)> {
+        if self.bound_of_no_day {
+            return None;
+        }
         let from = self.from?;
+        let bits = |bits: &str| bits.chars().filter(|c| !c.is_ascii_whitespace()).count();
         let to = self
             .to
-            .or_else(|| Some(from + self.bits.as_ref()?.len() as i64 - 1))
+            .or_else(|| Some(from + bits(self.bits.as_deref()?) as i64 - 1))
             .unwrap_or(from);
         Some((from, to.max(from)))
     }
 
     /// Whether two definitions state the same days.
     pub(crate) fn says_the_same_as(&self, other: &PeriodRecord) -> bool {
-        (self.from, self.to, &self.bits, self.available)
-            == (other.from, other.to, &other.bits, other.available)
+        (
+            self.from,
+            self.to,
+            &self.bits,
+            self.available,
+            self.bound_of_no_day,
+        ) == (
+            other.from,
+            other.to,
+            &other.bits,
+            other.available,
+            other.bound_of_no_day,
+        )
     }
 }
 
@@ -636,11 +732,6 @@ fn number_of(version: &str) -> Option<&str> {
         .then(|| version.trim_start_matches('0'))
 }
 
-/// Whether version `a` is higher than `b` ([`version_order`]).
-pub(crate) fn version_is_higher(strings: &Strings, a: Option<Sym>, b: Option<Sym>) -> bool {
-    version_order(strings, a, b) == Ordering::Greater
-}
-
 /// Builds an [`Index`] from documents, one at a time.
 ///
 /// What a document defines is gathered as it comes. A stop place, quay, stop
@@ -760,7 +851,7 @@ impl IndexBuilder {
                 .data_objects
                 .as_ref()
                 .map_or(&[][..], |f| &f.items),
-            Validity::ALWAYS,
+            &Validity::ALWAYS,
         );
     }
 
@@ -814,6 +905,7 @@ impl IndexBuilder {
                 default_system: None,
             },
             systems: FrameSystems::default(),
+            frames_validity: None,
             sink,
         };
         stream::read_with(xml, options, &mut both)
@@ -888,6 +980,10 @@ struct Both<'a, 's, S> {
     visit: Visit<'a>,
     systems: FrameSystems,
     sink: &'s mut S,
+    /// The validity of the frames the entity read last stands in, with the
+    /// count of their changes it was taken at ([`Scope::changes`]): the
+    /// entities of one frame share it.
+    frames_validity: Option<(u64, Validity)>,
 }
 
 impl<'i, S: Sink<'i>> Sink<'i> for Both<'_, '_, S> {
@@ -896,7 +992,12 @@ impl<'i, S: Sink<'i>> Sink<'i> for Both<'_, '_, S> {
         if self.visit.default_system.as_deref() != system {
             self.visit.default_system = system.map(Box::from);
         }
-        self.visit.entity(&entity, Validity::within(scope));
+        let changes = scope.changes();
+        let validity = match &mut self.frames_validity {
+            Some((taken_at, validity)) if *taken_at == changes => validity,
+            slot => &slot.insert((changes, Validity::within(scope))).1,
+        };
+        self.visit.entity(&entity, validity);
         self.sink.entity(entity, scope)
     }
 
@@ -916,7 +1017,7 @@ impl<'i, S: Sink<'i>> Sink<'i> for Both<'_, '_, S> {
 }
 
 impl Visit<'_> {
-    fn frames(&mut self, frames: &[Frame], inherited: Validity) {
+    fn frames(&mut self, frames: &[Frame], inherited: &Validity) {
         for frame in frames {
             let inherited_system = self.default_system.clone();
             if let Some(system) =
@@ -926,20 +1027,28 @@ impl Visit<'_> {
             }
             match frame {
                 Frame::Composite(composite) => {
-                    let validity = Validity::of(&composite.valid_between, inherited);
+                    let validity = Validity::of_frame(
+                        &composite.valid_between,
+                        composite.validity_conditions.as_ref(),
+                        inherited,
+                    );
                     self.conditions(composite.validity_conditions.as_ref());
                     self.conditions(composite.content_validity_conditions.as_ref());
                     if let Some(inner) = &composite.frames {
-                        self.frames(&inner.items, validity);
+                        self.frames(&inner.items, &validity);
                     }
                 }
                 Frame::Site(site) => {
-                    let validity = Validity::of(&site.valid_between, inherited);
+                    let validity = Validity::of_frame(
+                        &site.valid_between,
+                        site.validity_conditions.as_ref(),
+                        inherited,
+                    );
                     self.conditions(site.validity_conditions.as_ref());
                     self.conditions(site.content_validity_conditions.as_ref());
                     for item in site.stop_places.iter().flat_map(|s| &s.items) {
                         if let crate::model::StopPlaceItem::StopPlace(place) = item {
-                            self.stop_place(place, validity);
+                            self.stop_place(place, &validity);
                         }
                     }
                 }
@@ -947,19 +1056,23 @@ impl Visit<'_> {
                 // order the lean mode meets them in a document, so that both
                 // paths build the same index.
                 Frame::Service(service) => {
-                    let validity = Validity::of(&service.valid_between, inherited);
+                    let validity = Validity::of_frame(
+                        &service.valid_between,
+                        service.validity_conditions.as_ref(),
+                        inherited,
+                    );
                     self.conditions(service.validity_conditions.as_ref());
                     self.conditions(service.content_validity_conditions.as_ref());
                     for item in service.routes.iter().flat_map(|r| &r.items) {
                         if let crate::model::RouteItem::Route(route) = item {
-                            self.route(route, validity);
+                            self.route(route, &validity);
                         }
                     }
                     for item in service.lines.iter().flat_map(|l| &l.items) {
                         match item {
-                            crate::model::LineItem::Line(line) => self.line(line, false, validity),
+                            crate::model::LineItem::Line(line) => self.line(line, false, &validity),
                             crate::model::LineItem::FlexibleLine(line) => {
-                                self.line(line, true, validity)
+                                self.line(line, true, &validity)
                             }
                             crate::model::LineItem::Unprocessed(_) => {}
                         }
@@ -968,7 +1081,7 @@ impl Visit<'_> {
                         if let crate::model::ScheduledStopPointItem::ScheduledStopPoint(point) =
                             item
                         {
-                            self.stop_point(point, validity);
+                            self.stop_point(point, &validity);
                         }
                     }
                     for item in service.service_links.iter().flat_map(|l| &l.items) {
@@ -993,7 +1106,7 @@ impl Visit<'_> {
                         match item {
                             JourneyPatternItem::ServiceJourneyPattern(pattern)
                             | JourneyPatternItem::JourneyPattern(pattern) => {
-                                self.pattern(pattern, validity)
+                                self.pattern(pattern, &validity)
                             }
                             JourneyPatternItem::Unprocessed(_) => {}
                         }
@@ -1019,7 +1132,11 @@ impl Visit<'_> {
                     );
                 }
                 Frame::Timetable(timetable) => {
-                    let validity = Validity::of(&timetable.valid_between, inherited);
+                    let validity = Validity::of_frame(
+                        &timetable.valid_between,
+                        timetable.validity_conditions.as_ref(),
+                        inherited,
+                    );
                     self.conditions(timetable.validity_conditions.as_ref());
                     self.conditions(timetable.content_validity_conditions.as_ref());
                     self.time_demand_types(timetable.time_demand_types.as_ref());
@@ -1027,10 +1144,10 @@ impl Visit<'_> {
                         match item {
                             VehicleJourney::ServiceJourney(journey)
                             | VehicleJourney::TemplateServiceJourney(journey) => {
-                                self.journey(journey, validity)
+                                self.journey(journey, &validity)
                             }
                             VehicleJourney::DatedServiceJourney(journey) => {
-                                self.dated_journey(journey, validity)
+                                self.dated_journey(journey, &validity)
                             }
                             VehicleJourney::Unprocessed(_) => {}
                         }
@@ -1051,11 +1168,15 @@ impl Visit<'_> {
                 // The members in document order, which is the order the lean
                 // mode meets them in.
                 Frame::General(general) => {
-                    let validity = Validity::of(&general.valid_between, inherited);
+                    let validity = Validity::of_frame(
+                        &general.valid_between,
+                        general.validity_conditions.as_ref(),
+                        inherited,
+                    );
                     self.conditions(general.validity_conditions.as_ref());
                     self.conditions(general.content_validity_conditions.as_ref());
                     for member in general.members.iter().flat_map(|m| &m.items) {
-                        self.member(member, validity);
+                        self.member(member, &validity);
                     }
                 }
                 Frame::Unprocessed(_) => {}
@@ -1095,7 +1216,7 @@ impl Visit<'_> {
     }
 
     /// One entity of the lean stream, valid within `validity`.
-    fn entity(&mut self, entity: &Entity, validity: Validity) {
+    fn entity(&mut self, entity: &Entity, validity: &Validity) {
         match entity {
             Entity::StopPlace(place) => self.stop_place(place, validity),
             Entity::Quay(quay) => self.quay_on_its_own(quay, validity),
@@ -1130,7 +1251,7 @@ impl Visit<'_> {
     /// One member of a general frame of the full model, valid within
     /// `validity`: taken as [`entity`](Self::entity) takes the same entity of
     /// the lean stream.
-    fn member(&mut self, member: &GeneralFrameMember, validity: Validity) {
+    fn member(&mut self, member: &GeneralFrameMember, validity: &Validity) {
         match member {
             GeneralFrameMember::StopPlace(place) => self.stop_place(place, validity),
             GeneralFrameMember::Quay(quay) => self.quay_on_its_own(quay, validity),
@@ -1187,12 +1308,12 @@ impl Visit<'_> {
     /// place with the quays they serve, so a quay only a later definition
     /// names is a quay of the place that was kept. Whichever definition comes
     /// first, the index holds every quay of the place.
-    fn stop_place(&mut self, place: &StopPlace, inherited: Validity) {
+    fn stop_place(&mut self, place: &StopPlace, inherited: &Validity) {
         let validity = Validity::of(&place.valid_between, inherited);
         let key = self.builder.key(&place.id, &place.version);
-        let record = self.stop_place_record(place, key, validity);
+        let record = self.stop_place_record(place, key, validity.clone());
         let parent = self.gather_stop(record);
-        self.parts_of_stop_place(place, parent, validity);
+        self.parts_of_stop_place(place, parent, &validity);
     }
 
     /// Gathers a stop place or quay: a new one appended, one repeated under its
@@ -1258,7 +1379,7 @@ impl Visit<'_> {
     }
 
     /// The levels and quays of a stop place, the quays as quays of `parent`.
-    fn parts_of_stop_place(&mut self, place: &StopPlace, parent: StopId, validity: Validity) {
+    fn parts_of_stop_place(&mut self, place: &StopPlace, parent: StopId, validity: &Validity) {
         for level in place.levels.iter().flat_map(|l| &l.levels) {
             let key = self.builder.key(&level.id, &level.version);
             let name = level
@@ -1314,7 +1435,7 @@ impl Visit<'_> {
     /// A quay defined beside its stop place: its stop place is found once
     /// every document is in, as the one naming it among its quays, else the
     /// one its `SiteRef` names.
-    fn quay_on_its_own(&mut self, quay: &Quay, inherited: Validity) {
+    fn quay_on_its_own(&mut self, quay: &Quay, inherited: &Validity) {
         let site = quay.site_ref.as_ref();
         let site_id = site.and_then(|r| r.r#ref.as_ref()).map(|id| id.as_str());
         let stop = self.quay(quay, None, site_id, inherited);
@@ -1332,7 +1453,7 @@ impl Visit<'_> {
         quay: &Quay,
         parent: Option<StopId>,
         place_id: Option<&str>,
-        inherited: Validity,
+        inherited: &Validity,
     ) -> StopId {
         let validity = Validity::of(&quay.valid_between, inherited);
         let key = self.builder.key(&quay.id, &quay.version);
@@ -1377,7 +1498,7 @@ impl Visit<'_> {
         self.gather_stop(record)
     }
 
-    fn route(&mut self, route: &crate::model::Route, inherited: Validity) {
+    fn route(&mut self, route: &crate::model::Route, inherited: &Validity) {
         let validity = Validity::of(&route.valid_between, inherited);
         let key = self.builder.key(&route.id, &route.version);
         let referrer = self.referrer("Route", &route.id);
@@ -1401,7 +1522,7 @@ impl Visit<'_> {
     }
 
     /// A line, or a flexible line: a line served on demand.
-    fn line(&mut self, line: &crate::model::Line, flexible: bool, inherited: Validity) {
+    fn line(&mut self, line: &crate::model::Line, flexible: bool, inherited: &Validity) {
         let validity = Validity::of(&line.valid_between, inherited);
         let key = self.builder.key(&line.id, &line.version);
         let record = LineRecord {
@@ -1421,12 +1542,12 @@ impl Visit<'_> {
                 .map(|m| self.builder.strings.intern(m.as_str())),
             flexible,
             validity,
-            span: Span::of(&line.valid_between),
+            spans: Span::all_of(&line.valid_between).into(),
         };
         self.builder.lines.push(record);
     }
 
-    fn stop_point(&mut self, point: &crate::model::ScheduledStopPoint, inherited: Validity) {
+    fn stop_point(&mut self, point: &crate::model::ScheduledStopPoint, inherited: &Validity) {
         let validity = Validity::of(&point.valid_between, inherited);
         let key = self.builder.key(&point.id, &point.version);
         let name = point.name.as_ref().map_or("", |n| n.default_text());
@@ -1492,7 +1613,7 @@ impl Visit<'_> {
         self.builder.assignments.push((point, quay, place));
     }
 
-    fn pattern(&mut self, pattern: &ServiceJourneyPattern, inherited: Validity) {
+    fn pattern(&mut self, pattern: &ServiceJourneyPattern, inherited: &Validity) {
         let validity = Validity::of(&pattern.valid_between, inherited);
         let key = self.builder.key(&pattern.id, &pattern.version);
         let referrer = self.referrer("ServiceJourneyPattern", &pattern.id);
@@ -1635,7 +1756,7 @@ impl Visit<'_> {
         });
     }
 
-    fn journey(&mut self, journey: &ServiceJourney, inherited: Validity) {
+    fn journey(&mut self, journey: &ServiceJourney, inherited: &Validity) {
         let validity = Validity::of(&journey.valid_between, inherited);
         let key = self.builder.key(&journey.id, &journey.version);
         let referrer = self.referrer("ServiceJourney", &journey.id);
@@ -1740,7 +1861,7 @@ impl Visit<'_> {
     /// journey runs on that day, unless the dated journey is cancelled or
     /// replaced (`ServiceAlteration`), when it gives no day. Any other is a
     /// journey of its own.
-    fn dated_journey(&mut self, journey: &ServiceJourney, inherited: Validity) {
+    fn dated_journey(&mut self, journey: &ServiceJourney, inherited: &Validity) {
         let states_its_own = journey.journey_pattern_ref.is_some()
             || journey.passing_times.is_some()
             || journey.calls.is_some();
@@ -1895,20 +2016,20 @@ impl Visit<'_> {
     /// An availability condition of the document; its key.
     fn condition(&mut self, condition: &AvailabilityCondition) -> Key {
         let key = self.builder.key(&condition.id, &condition.version);
-        let day = |date: &Option<DateTime>| {
-            date.as_ref()
-                .and_then(|d| d.date())
-                .and_then(|d| d.days_since_epoch())
-        };
+        let (from, to) = (
+            Bound::of(condition.from_date.as_ref()),
+            Bound::of(condition.to_date.as_ref()),
+        );
         self.builder.conditions.push(PeriodRecord {
             key,
             origin: self.origin,
             element: "AvailabilityCondition",
-            from: day(&condition.from_date),
-            to: day(&condition.to_date),
+            from: from.day(),
+            to: to.day(),
             bounds: [None, None],
             bits: condition.valid_day_bits.clone(),
             available: condition.is_available.unwrap_or(true),
+            bound_of_no_day: from.is_no_day() || to.is_no_day(),
         });
         key
     }
@@ -1955,7 +2076,6 @@ impl Visit<'_> {
             .properties
             .as_ref()
             .map_or(&[][..], |p| &p.properties);
-        let span = Span::of(&day_type.valid_between);
         let read = crate::calendar::properties(properties);
         if matches!(read, Properties::DaysOfWeek(_)) && properties.iter().any(names_no_day) {
             self.builder.gathered.push(FindingRecord {
@@ -1970,23 +2090,37 @@ impl Visit<'_> {
             key,
             origin: self.origin,
             properties: read,
-            validity: span.from.zip(span.to),
+            validity: Span::all_of(&day_type.valid_between)
+                .into_iter()
+                .filter_map(|span| span.from.zip(span.to))
+                .collect(),
         });
     }
 
     fn operating_day(&mut self, day: &OperatingDay) {
         let key = self.builder.key(&day.id, &day.version);
-        if let Some(calendar_day) = day
-            .calendar_date
-            .as_ref()
-            .and_then(|d| d.days_since_epoch())
-        {
-            self.builder.operating_days.push(OperatingDayRecord {
+        let Some(date) = &day.calendar_date else {
+            return;
+        };
+        match date.days_since_epoch() {
+            Some(calendar_day) => self.builder.operating_days.push(OperatingDayRecord {
                 key,
                 origin: self.origin,
                 day: calendar_day,
-            });
+            }),
+            None => self.no_day("OperatingDay", key.id),
         }
+    }
+
+    /// The finding of a date that is no day of the calendar, about `entity`.
+    fn no_day(&mut self, element: &'static str, entity: Sym) {
+        self.builder.gathered.push(FindingRecord {
+            concern: Concern::DateOfNoDay,
+            element,
+            document: self.origin,
+            entity,
+            about: None,
+        });
     }
 
     /// An operating period, its first and last day given as dates — read as
@@ -1996,36 +2130,37 @@ impl Visit<'_> {
         let referrer = self.referrer(element, &period.id);
         let origin = self.origin;
         let (from, first) = match &period.start {
-            Some(PeriodStart::FromDate(start)) => (bound_day(start), None),
+            Some(PeriodStart::FromDate(start)) => (Bound::of(Some(start)), None),
             Some(PeriodStart::FromOperatingDayRef(r)) => (
-                None,
+                Bound::Unstated,
                 Some(
                     self.builder
                         .pending(r, "FromOperatingDayRef", referrer, origin),
                 ),
             ),
-            None => (None, None),
+            None => (Bound::Unstated, None),
         };
         let (to, last) = match &period.end {
-            Some(PeriodEnd::ToDate(end)) => (bound_day(end), None),
+            Some(PeriodEnd::ToDate(end)) => (Bound::of(Some(end)), None),
             Some(PeriodEnd::ToOperatingDayRef(r)) => (
-                None,
+                Bound::Unstated,
                 Some(
                     self.builder
                         .pending(r, "ToOperatingDayRef", referrer, origin),
                 ),
             ),
-            None => (None, None),
+            None => (Bound::Unstated, None),
         };
         self.builder.periods.push(PeriodRecord {
             key,
             origin,
             element,
-            from,
-            to,
+            from: from.day(),
+            to: to.day(),
             bounds: [first, last],
             bits: period.valid_day_bits.clone(),
             available: true,
+            bound_of_no_day: from.is_no_day() || to.is_no_day(),
         });
     }
 
@@ -2052,7 +2187,10 @@ impl Visit<'_> {
             ),
             Some(AssignedDays::Date(date)) => match date.days_since_epoch() {
                 Some(day) => AssignedDaysRecord::Date(day),
-                None => return,
+                None => {
+                    self.no_day("DayTypeAssignment", day_type.key.id);
+                    return;
+                }
             },
             None => return,
         };

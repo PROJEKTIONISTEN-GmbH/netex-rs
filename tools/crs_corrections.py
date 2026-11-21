@@ -103,6 +103,7 @@ def rust_table(name, doc, centre, dlon, dlat):
 
     return f"""{doc}
 pub(super) const {name}: Correction = Correction {{
+    area: &areas::{name},
     centre: ({centre[0]!r}, {centre[1]!r}),
     degree: {DEGREE},
     longitude: &[
@@ -171,7 +172,7 @@ def main():
 // of the Austrian register (data.gv.at, CC BY 4.0) and the Swiss register
 // (opentransportdata.swiss).
 
-use super::Correction;
+use super::{areas, Correction};
 """
     tables = [
         rust_table("MGI", "/// MGI (Austria): after the Helmert transformation MGI to WGS 84 (3), against AT_GIS_GRID.", *mgi[:3]),
