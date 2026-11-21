@@ -1,5 +1,127 @@
 # Changelog
 
+## 0.12.0 — unreleased
+
+The index and the merge answer alike whatever order the documents come in
+and whatever form the schema allows a value: no journey kept once points at
+another, no name stated in NeTEx 2.0's forms is empty, no day offset or
+duration overflows, no date, bound or day bit is read a day off. Breaking,
+and so the next minor version: the calendar functions take every validity of
+an entity, and the interfaces named below change. Every national delivery at
+hand — 21, of ten countries — reads to the same statistics as with 0.11.0,
+and the feeds of seven — Austria's VOR, Belgium's railways, Czechia's
+trains, Sweden, Norway, Switzerland, Germany — are the same bytes.
+
+- **index**: of the versions valid on the day an index is built for
+  (`IndexBuilder::at`), the highest answers; the one added or merged last
+  did. Versions are ordered as one order of every two — none, then those
+  in digits by their number (`1` and `01` by their text), then the others
+  by their text: `9` < `10` < `2.0` —, where `9` and `2.0` compared as text
+  and `10` and `9` as numbers, and the highest of three hung on the order
+  they were met in. Each identifier's versions are listed once, highest
+  first: a reference naming `any` no longer searches the whole table.
+- **index**: a stop assignment and the end of a walk (`SiteConnection`)
+  naming a quay that does not resolve take the stop place they name beside
+  it — DELFI names both —; the quay stays a reference to nothing. The stop
+  point had no stop and the walk was gone. A level reference resolves as
+  every reference: one to nothing is listed by `Index::unresolved`, where
+  it said nothing, and one past its version is a finding of
+  `resolved-ignoring-version`. Of several stops of one DHID and of one
+  identifier and version, the document named first answers, and walks
+  alike but for their direction are listed in one order, where both hung
+  on the order the documents came in; so walks stated twice alike lie side
+  by side and are kept once — Germany's index holds 4 930 fewer, its feed
+  the same bytes, netex2gtfs's count of `walk-stated-twice` 11 103 where it
+  was 16 033.
+- **index**: a day offset is counted without overflow; a time before the
+  midnight beginning its operating day — a negative offset — or 2^32
+  seconds or more after it is no time, and a finding about its journey, a
+  new concern (`Concern::TimeOutOfRange`, `time-out-of-range`): an offset of
+  106 751 991 167 301 days panicked in a debug build and gave a wrong time in
+  a release build. The 31 negative offsets of Czechia's trains, in five
+  journeys, were no time before as well; the five are a finding now.
+- **index**, the validity of an entity (what `at` resolves by): every
+  `ValidBetween` it states counts, within its frames' validity — it
+  replaced it —, and a frame's includes what its `validityConditions` state
+  (`stream::FrameHeader::valid_between` holds them too). Of the 2 498 738
+  `ValidBetween` of the deliveries at hand none follows another; 253 stand
+  in a frame's validity conditions, all of them Norway's.
+- **calendar** (breaking): `Span::all_of` reads every `ValidBetween` of an
+  entity, where `Span::of` read the first; `governed` takes each version as
+  its validities (`&[Vec<Span>]`), so that a line valid in two seasons
+  governs the second too; a day type's validity is each of them. Bounds —
+  of periods, conditions and validities alike — name the next day only as a
+  whole hour in UTC from noon on (`bound_day`): the end of a day written
+  with a zone (`T23:59:59Z`, `T23:59:59+01:00`) and a time in a zone of its
+  own (`T23:00:00+01:00`) are the day of their date, where a period ending
+  so ran a day longer; conditions and validities read the date alone, a day
+  before a period of the same bound. Belgium's 123 630 bounds at UTC
+  midnights read as before, and so do the only two others written with a
+  zone from noon on, Norwegian conditions ending `2030-01-10T14:45:00.000Z`,
+  on the day of their date.
+- **calendar**, day bits: white space among them is no bit; a bit other
+  than `0` or `1` is no day (`PeriodIssue::BitOtherThanZeroOrOne`, a new
+  concern `day-bit-other-than-zero-or-one`). A day of a period without a
+  bit is available, as the schema says ("If bit is missing, assume
+  available"), where the crate read it as not; a bit past the period's last
+  day gives no day. Counted over the deliveries at hand, all 520 726
+  periods with day bits state one bit for each day, none with white space
+  or another character: the schema's reading changes none of their days.
+- **model**: `Date` checks the length of its month: `2026-02-30` was
+  2 March. A period bounded by such a date, an operating day and a day type
+  assignment dated so give no day, a finding of a new concern
+  (`Concern::DateOfNoDay`, `date-of-no-day`); none of the 10 600 576 dates
+  of the deliveries at hand is one. `Duration` reads its days, then after
+  `T` its hours, minutes and seconds, each at most once and in that order, a
+  fraction on the seconds alone, white space around it set aside, without
+  overflow, else none: `PT1.5H` was an hour, `PT1H1H` two,
+  `P999999999999999D` overflowed. None of the 3 085 870 durations at hand is
+  such a form.
+- **model**: `MultilingualString::default_text`, the text where no language
+  is asked for — its own, else the translation stating no language, else
+  the first —, which the index and netex2gtfs read names by: a NeTEx 2.0
+  name stated as `Text` elements alone was empty. A text beside the
+  translations, which 2.0's mixed content allows, reads and writes
+  (`xml::Cursor::next_child_with_text`, `xml::Emitter::text`), where the
+  document was refused. `VehicleMode::Other`: the types of most elements of
+  a mode list `other`, which read as `Unrecognised` (13 886 in Sweden's
+  delivery).
+- **crs**: the corrections of MGI and LV03 hold in the cells of a tenth of a
+  degree holding a stop of their registers (`src/crs/areas.rs`, written by
+  `tools/crs_areas.py`); beyond, the polynomial extrapolated — a position
+  in Stuttgart in LV03 landed 302.6 m from itself in LV95 — and the Helmert
+  transformation alone stands, within two metres. No delivery at hand
+  writes either system.
+- **merge**: a journey kept once points at the earlier delivery's journey
+  under the identifier the merge writes it with, and the finding names it
+  so: one alike with a journey the delivery before renamed pointed at the
+  other journey of the old identifier. An object renamed takes along each
+  identifier within it an earlier delivery holds — the passing times of a
+  journey, the points of a pattern —, with its references, where it stood
+  twice in the merge. From ten deliveries on the rank is written in as many
+  digits as the last takes (`01-oebb/…`), so that the tenth no longer sorts
+  before the second and answers ahead of it.
+- **referrers**: `Referrers::journey_of` and `line_of`, the journey and line
+  an object is, in constant time.
+- **fuzz**: a dictionary of the forms read by their lexis
+  (`fuzz/netex.dict`), which CI passes to every target.
+
+### netex2gtfs 0.6.0
+
+Built on netex-rs 0.12.0. Names of lines, levels, numbers for advertisement
+and data sources are read by `MultilingualString::default_text`, so that a
+NeTEx 2.0 name stated as translations alone is not empty.
+
+### netex-cli 0.7.0
+
+Built on netex-rs 0.12.0 and netex2gtfs 0.6.0. `netex validate` takes each
+object's journey from `Referrers::journey_of`, where it searched every
+definition for each journey: Austria's VOR in 7.9 s where it took 158 s (on
+eight threads, before and after in turn), Switzerland in 81 s and Germany in
+118 s, which did not finish within twenty minutes before. The report's schema lists the classes
+`time-out-of-range`, `day-bit-other-than-zero-or-one` and `date-of-no-day`
+(layout version 1, unchanged).
+
 ## 0.11.0 — unreleased
 
 A delivery is read as its publisher's claim: no member is written outside a
