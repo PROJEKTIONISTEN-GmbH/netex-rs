@@ -484,3 +484,94 @@ fn a_member_named_outside_its_archive_is_written_nowhere_outside_the_merge() {
         .collect();
     assert!(beside.is_empty(), "written outside the merge: {beside:?}");
 }
+
+/// Three deliveries of the Austrian example: the second states journey
+/// 100-v1 arriving three minutes later, so it is renamed into the second
+/// delivery's codespace; the third states that later journey under another
+/// identifier, with a dated journey of it. The third's journey is the
+/// second's, kept once.
+fn the_later_journey_in_three_deliveries(at: &Path) -> (tempfile::TempDir, Report) {
+    let later = |name: &str, text: String| {
+        if name.contains("_100_") {
+            text.replace(
+                "<ArrivalTime>08:12:00</ArrivalTime>",
+                "<ArrivalTime>08:15:00</ArrivalTime>",
+            )
+        } else {
+            text
+        }
+    };
+    let second = altered(at, later);
+    let third = altered(at, |name, text| {
+        if name.contains("_100_") {
+            later(name, text)
+                .replace("ServiceJourney:100-v1\"", "ServiceJourney:100-K\"")
+                .replace(
+                    "TimetabledPassingTime:100-v1-",
+                    "TimetabledPassingTime:100-K-",
+                )
+                .replacen(
+                    "</vehicleJourneys>",
+                    concat!(
+                        r#"<DatedServiceJourney id="at:ex:DatedServiceJourney:K" version="1">"#,
+                        r#"<ServiceJourneyRef ref="at:ex:ServiceJourney:100-K" version="1"/>"#,
+                        "</DatedServiceJourney></vehicleJourneys>"
+                    ),
+                    1,
+                )
+        } else {
+            text
+        }
+    });
+    merged(&[("a", at), ("b", second.path()), ("c", third.path())])
+}
+
+#[test]
+fn a_journey_kept_once_points_at_the_journey_it_matches_under_the_identifier_it_is_written_under() {
+    let Some(at) = austrian() else {
+        return;
+    };
+    // The dated journey of the third delivery must name the journey it is
+    // kept as, as the merge writes it.
+    let (to, _) = the_later_journey_in_three_deliveries(&at);
+
+    let written = std::fs::read_dir(to.path().join("3-c"))
+        .expect("the third delivery's documents")
+        .map(|entry| std::fs::read_to_string(entry.expect("a document").path()).expect("a text"))
+        .find(|text| text.contains("DatedServiceJourney"))
+        .expect("the dated journey is written");
+    let named = written
+        .split(r#"<ServiceJourneyRef ref=""#)
+        .nth(1)
+        .and_then(|rest| rest.split('"').next())
+        .expect("the dated journey names a journey");
+    let read = index(to.path());
+    let journey = read
+        .journey_by_id(named)
+        .expect("the journey named is in the merge");
+    let arrives = 8 * 3600 + 15 * 60;
+    assert!(
+        read.journey(journey)
+            .passing_times
+            .iter()
+            .any(|time| time.arrival == Some(arrives)),
+        "{named} is not the journey arriving at 08:15"
+    );
+}
+
+#[test]
+fn a_journey_kept_once_is_reported_beside_the_journey_as_written() {
+    let Some(at) = austrian() else {
+        return;
+    };
+    let (_, report) = the_later_journey_in_three_deliveries(&at);
+    let in_both = report
+        .findings
+        .iter()
+        .find(|finding| finding.class == "journey-in-both")
+        .expect("the third delivery's journey is kept once");
+    assert_eq!(
+        in_both.examples,
+        ["at:ex:ServiceJourney:100-K (c) = b:at:ex:ServiceJourney:100-v1 (b)"]
+    );
+}
