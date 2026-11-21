@@ -48,8 +48,9 @@ pub enum Concern {
     /// An operating period stating no first day: it gives no days.
     PeriodWithoutFirstDay,
     /// A UIC operating period with other day bits in number than days from
-    /// its first to its last day: the bits are read from its first day as far
-    /// as they go.
+    /// its first to its last day: the bits are read from its first day, a day
+    /// without one is available, as the schema says, and a bit past the last
+    /// day gives none.
     DayBitsLengthDiffers,
     /// A journey whose day types and availability conditions give it no
     /// operating day: kept, running on none.
@@ -258,7 +259,7 @@ impl Concern {
             Concern::TooFewTimedCalls => "journey without two timed calls, left out",
             Concern::PeriodWithoutFirstDay => "operating period without a first day, no days",
             Concern::DayBitsLengthDiffers => {
-                "day bits other than the period's days, read from its first day"
+                "day bits other in number than the period's days, a day without one available"
             }
             Concern::JourneyWithoutDays => "journey without an operating day",
             Concern::DaysOutsideLineVersion => "days its line version does not govern, taken away",

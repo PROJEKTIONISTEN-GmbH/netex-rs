@@ -213,6 +213,20 @@ its period, a journey's conditions beside its day types) as findings rather
 than silent drops. *Writing* a calendar as UIC bits is what a writer of EPIP
 needs (`PROFILE-UEBERFUEHRUNG.md`). Effort **M**.
 
+**Built in 0.12.0.** A day of a UIC period without a bit is available, as
+the schema says, where the crate read it as not; a bit past the period's last
+day gives no day, where it gave one; either way the period stays a finding
+(`Concern::DayBitsLengthDiffers`). White space among the bits — a line
+broken, an indent — is no bit, where it moved every day after it; a bit other
+than `0` or `1` is no day and a finding (`Concern::DayBitOtherThanZeroOrOne`).
+Counted over the 21 national deliveries at hand (Germany, Switzerland, the
+nine Austrian Verbünde, Belgium's four, Sweden, Norway, Denmark, Luxembourg,
+South Tyrol, Czechia's trains; 110 030 documents): all 520 726 periods with
+day bits — 434 671 UIC periods, 86 055 availability conditions — state one
+bit for each day, none holds white space or another character, and no date
+of theirs is one its month does not have. The schema's reading changes no
+journey of them.
+
 ## 4. Versions of a line, and what they govern
 
 **Problem.** The Austrian deliveries write a line in versions with a validity
@@ -253,6 +267,18 @@ none. Counted as the importer counts them, to the journey: 35 499 journeys of th
 Linz AG and 70 561 of Kärnten with days taken away
 (`Concern::DaysOutsideLineVersion`), 5 127 of Kärnten left out
 (`Concern::JourneyOutsideLineVersion`).
+
+**Built in 0.12.0** (`calendar::Span::all_of`, `calendar::governed`): every
+`ValidBetween` an entity states counts — the schema allows any number —,
+where the first alone did, so that a line valid in two seasons governs the
+second too, and a day type's validity is each of them. A version is its
+validities, each losing what a validity of another version beginning later
+is valid on. An entity's validity lies within its frames', and a frame's
+includes what its `validityConditions` state, where it replaced them and
+read the frame's direct `ValidBetween` alone. Of the 2 498 738 `ValidBetween`
+of the 21 deliveries at hand none follows another; 253 stand in the
+validity conditions of a frame, all of them Norway's, which the index reads
+by day where built for one (`IndexBuilder::at`).
 
 ## 5. Times after midnight
 

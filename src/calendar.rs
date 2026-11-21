@@ -9,13 +9,15 @@
 //!   [`LAST_DAY`]); a delivery naming days before or after names none of
 //!   them.
 //! - An operating period gives the days its bits name, counted from its first
-//!   day, or every day from its first to its last where it states no bits
-//!   ([`period_days`]), as far as they are asked for: a period reaching the
-//!   year 9999 gives the days of the span a reader holds, not millions of
-//!   others. Its first and last day are the dates of its bounds;
-//!   a bound written as an instant with a zone from noon on — the midnight
-//!   beginning a local day, written in UTC as the Belgian deliveries write
-//!   it — names the next day ([`bound_day`]).
+//!   day — a day without a bit available, as the schema says —, or every day
+//!   from its first to its last where it states no bits ([`period_days`]), as
+//!   far as they are asked for: a period reaching the year 9999 gives the
+//!   days of the span a reader holds, not millions of others. Its first and
+//!   last day are the dates of its bounds; a bound written as a whole hour in
+//!   UTC from noon on — the midnight beginning a local day, as the Belgian
+//!   deliveries write it — names the next day ([`bound_day`]). A validity
+//!   (`ValidBetween`) is read so too, every one an entity states
+//!   ([`Span::all_of`]).
 //! - Day type assignments apply in the order of their `order`, those stating
 //!   none last, the document's order between equals; a later assignment
 //!   overrides an earlier one, adding its days or, where it is not available,
@@ -205,7 +207,8 @@ pub enum PeriodIssue {
     /// No first day: the period gives no days.
     NoFirstDay,
     /// Day bits other in number than the days from the first to the last
-    /// day: the bits are read from the first day as far as they go.
+    /// day: the bits are read from the first day, a day without one is
+    /// available, as the schema says, and a bit past the last day gives none.
     BitsOtherThanDays {
         /// How many bits the period states, white space aside.
         bits: usize,
@@ -221,10 +224,11 @@ pub enum PeriodIssue {
 
 /// The days of an operating period from `from` to `to` among the days
 /// `within`, with the bits of a UIC operating period where it states them:
-/// the days its bits name, counted from its first day, else every day from
-/// its first to its last — the first alone where it states no last. The
-/// bits are a normalized string: white space among them — a line break, an
-/// indent — is no bit.
+/// the days its bits name, counted from its first day — a day to its last
+/// without a bit available ("If bit is missing, assume available"), a bit
+/// past its last day none —, else every day from its first to its last — the
+/// first alone where it states no last. The bits are a normalized string:
+/// white space among them — a line break, an indent — is no bit.
 ///
 /// Only the days `within` are given, so that what a period costs is the days
 /// asked for: one written to the year 9999 gives a reader holding a year of
@@ -258,9 +262,10 @@ pub(crate) fn period_runs(
     let (lowest, highest) = within.into_inner();
     match bits {
         Some(bits) => {
+            let last_day = to.unwrap_or(i64::MAX);
             let mut count = 0usize;
             let mut other = None;
-            let mut current: Option<(i64, i64)> = None;
+            let mut runs = Runs::within(lowest, highest.min(last_day));
             for bit in bits
                 .chars()
                 .filter(|c| !matches!(c, ' ' | '\t' | '\n' | '\r'))
@@ -268,27 +273,21 @@ pub(crate) fn period_runs(
                 let day = from.saturating_add(count as i64);
                 count += 1;
                 match bit {
-                    '1' if (lowest..=highest).contains(&day) => {}
-                    '0' | '1' => continue,
+                    '1' => runs.add(day, day, &mut run),
+                    '0' => {}
                     _ => {
                         other.get_or_insert(count - 1);
-                        continue;
                     }
                 }
-                current = match current {
-                    Some((first, last)) if last + 1 == day => Some((first, day)),
-                    Some((first, last)) => {
-                        run(first, last);
-                        Some((day, day))
-                    }
-                    None => Some((day, day)),
-                };
             }
-            if let Some((first, last)) = current {
-                run(first, last);
+            let days = to.map(|to| to - from + 1);
+            // A day of the period without a bit is available: "If bit is
+            // missing, assume available" (the schema's `ValidDayBits`).
+            if let Some(days) = days.filter(|&days| (count as i64) < days) {
+                runs.add(from + count as i64, from + days - 1, &mut run);
             }
-            let length = to.and_then(|to| {
-                let days = to - from + 1;
+            runs.finish(&mut run);
+            let length = days.and_then(|days| {
                 (count as i64 != days)
                     .then_some(PeriodIssue::BitsOtherThanDays { bits: count, days })
             });
@@ -303,6 +302,48 @@ pub(crate) fn period_runs(
                 run(first, last);
             }
             None
+        }
+    }
+}
+
+/// Days gathered into runs of days one after the other, within a span, each
+/// run handed on once it ends.
+struct Runs {
+    lowest: i64,
+    highest: i64,
+    current: Option<(i64, i64)>,
+}
+
+impl Runs {
+    fn within(lowest: i64, highest: i64) -> Runs {
+        Runs {
+            lowest,
+            highest,
+            current: None,
+        }
+    }
+
+    /// Adds the days from `first` to `last`, ascending after those added
+    /// before, as far as they lie within the span.
+    fn add(&mut self, first: i64, last: i64, run: &mut impl FnMut(i64, i64)) {
+        let (first, last) = (first.max(self.lowest), last.min(self.highest));
+        if first > last {
+            return;
+        }
+        self.current = match self.current {
+            Some((held, end)) if end + 1 >= first => Some((held, end.max(last))),
+            Some((held, end)) => {
+                run(held, end);
+                Some((first, last))
+            }
+            None => Some((first, last)),
+        };
+    }
+
+    /// Hands on the run still open.
+    fn finish(self, run: &mut impl FnMut(i64, i64)) {
+        if let Some((first, last)) = self.current {
+            run(first, last);
         }
     }
 }
