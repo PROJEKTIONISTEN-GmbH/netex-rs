@@ -29,6 +29,34 @@
 #[doc = include_str!("../README.md")]
 struct ReadmeExample;
 
+// What a caller cannot rely on, so that the crate may grow without breaking
+// it, compiled — and failing to — with the documentation tests.
+/// The profiles a delivery is read in grow with the deliveries converted, and
+/// the choices of stop identifiers may: both are matched with a wildcard arm
+/// outside the crate.
+///
+/// ```compile_fail,E0004
+/// use netex2gtfs::Profile;
+/// fn german(profile: Profile) -> bool {
+///     match profile {
+///         Profile::Delfi => true,
+///         Profile::Austria | Profile::Switzerland | Profile::Epip | Profile::Other => false,
+///     }
+/// }
+/// ```
+///
+/// ```compile_fail,E0004
+/// use netex2gtfs::StopIds;
+/// fn global(ids: StopIds) -> bool {
+///     match ids {
+///         StopIds::Global => true,
+///         StopIds::Netex => false,
+///     }
+/// }
+/// ```
+#[cfg(doctest)]
+struct InterfaceThatGrows;
+
 mod convert;
 mod country;
 mod delivery;

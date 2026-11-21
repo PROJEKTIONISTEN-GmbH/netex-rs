@@ -118,6 +118,108 @@ pub mod xml;
 #[doc = include_str!("../README.md")]
 struct ReadmeExamples;
 
+// What a caller cannot rely on, so that the crate may grow without breaking
+// it, compiled — and failing to — with the documentation tests.
+/// An enum that grows as NeTEx and the crate grow is matched with a wildcard
+/// arm outside the crate:
+///
+/// ```compile_fail,E0004
+/// fn number(release: netex_rs::Release) -> u8 {
+///     match release {
+///         netex_rs::Release::V1 => 1,
+///         netex_rs::Release::V2 => 2,
+///     }
+/// }
+/// ```
+///
+/// ```compile_fail,E0004
+/// use netex_rs::index::StopKind;
+/// fn quay(kind: StopKind) -> bool {
+///     match kind {
+///         StopKind::StopPlace => false,
+///         StopKind::Quay => true,
+///     }
+/// }
+/// ```
+///
+/// ```compile_fail,E0004
+/// use netex_rs::geometry::AxisOrder;
+/// fn told(order: AxisOrder) -> bool {
+///     match order {
+///         AxisOrder::LatitudeFirst | AxisOrder::LongitudeFirst => true,
+///         AxisOrder::Undecided => false,
+///     }
+/// }
+/// ```
+///
+/// ```compile_fail,E0004
+/// use netex_rs::version::Item;
+/// fn element(item: &Item) -> bool {
+///     match item {
+///         Item::Element { .. } => true,
+///         Item::Attribute { .. } | Item::Token { .. } => false,
+///     }
+/// }
+/// ```
+///
+/// ```compile_fail,E0004
+/// use netex_rs::findings::Error;
+/// fn written(error: &Error) -> bool {
+///     match error {
+///         Error::Write { .. } => true,
+///         Error::Read(_) | Error::Document { .. } => false,
+///     }
+/// }
+/// ```
+///
+/// ```compile_fail,E0004
+/// use netex_rs::calendar::PeriodIssue;
+/// fn first(issue: PeriodIssue) -> bool {
+///     match issue {
+///         PeriodIssue::NoFirstDay => true,
+///         PeriodIssue::BitsOtherThanDays { .. } => false,
+///     }
+/// }
+/// ```
+///
+/// An entity of a container is matched so too: the model types more of them
+/// release by release, each carried through untyped before.
+///
+/// ```compile_fail,E0004
+/// use netex_rs::model::StopPlaceItem;
+/// fn typed(item: &StopPlaceItem) -> bool {
+///     match item {
+///         StopPlaceItem::StopPlace(_) => true,
+///         StopPlaceItem::Unprocessed(_) => false,
+///     }
+/// }
+/// ```
+///
+/// No type of the XML tokenizer is part of the interface: a child element
+/// is its names, its place and its attributes.
+///
+/// ```compile_fail,E0609
+/// fn tag(child: &netex_rs::xml::Child<'_>) {
+///     let _ = &child.start;
+/// }
+/// ```
+#[cfg_attr(
+    feature = "crs",
+    doc = r#"
+```compile_fail,E0004
+use netex_rs::crs::Axes;
+fn easting_first(axes: Axes) -> bool {
+    match axes {
+        Axes::EastingNorthing | Axes::LongitudeLatitude => true,
+        Axes::NorthingEasting | Axes::LatitudeLongitude => false,
+    }
+}
+```
+"#
+)]
+#[cfg(doctest)]
+struct InterfaceThatGrows;
+
 pub use error::{Error, Kind, Result};
 pub use version::{Release, Report, Written};
 pub use xml::{Attribute, Limits, Unprocessed};
