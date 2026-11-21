@@ -306,12 +306,21 @@ fn every_delfi_fixture_round_trips_and_adds_no_defect() {
     );
 }
 
-/// A validator complaint without the line number in front, which writing changes.
+/// A validator complaint without the line number in front, which writing
+/// changes, and without the element libxml2 2.9 names after it
+/// (`104: element PassengerCapacity: Schemas validity error : …`) and libxml2
+/// 2.15 does not (`104: Schemas validity error : …`): the message names the
+/// element in both.
 fn strip_line_number(line: &str) -> String {
-    match line.split_once(": element ") {
-        Some((_, rest)) => format!("element {rest}"),
-        None => line.to_owned(),
-    }
+    let message = line
+        .split_once(": ")
+        .filter(|(number, _)| !number.is_empty() && number.bytes().all(|b| b.is_ascii_digit()))
+        .map_or(line, |(_, message)| message);
+    message
+        .strip_prefix("element ")
+        .and_then(|named| named.split_once(": "))
+        .map_or(message, |(_, message)| message)
+        .to_owned()
 }
 
 /// libxml2 2.9 (Debian 12, Ubuntu 24.04) names the element before a schema
