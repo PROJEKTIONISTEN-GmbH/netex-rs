@@ -91,6 +91,27 @@ pub fn first_position(geometry: &str) -> Option<(f64, f64)> {
     }
 }
 
+/// The reference system a GML geometry names: the `srsName` of the geometry,
+/// or of its first position list or position, if one names a system. Only
+/// the tags before the first that names one are read, none of the numbers.
+pub fn srs_name(geometry: &str) -> Option<String> {
+    let mut reader = Reader::from_str(geometry);
+    loop {
+        match reader.read_event().ok()? {
+            Event::Start(element) | Event::Empty(element) => {
+                for attribute in element.attributes().flatten() {
+                    if attribute.key.local_name().as_ref() == "srsName" {
+                        let value = attribute.normalized_value(XmlVersion::Explicit1_0).ok()?;
+                        return Some(value.into_owned());
+                    }
+                }
+            }
+            Event::Eof => return None,
+            _ => {}
+        }
+    }
+}
+
 /// A GML geometry as written: the reference system it names, and its
 /// positions, each of `dimension` numbers.
 #[derive(Debug, Clone, PartialEq)]
@@ -211,6 +232,19 @@ mod tests {
             None
         );
         assert_eq!(geometry("<LineString/>"), None);
+    }
+
+    #[test]
+    fn the_system_is_the_first_a_geometry_or_its_positions_name() {
+        let on_the_line = r#"<gml:LineString xmlns:gml="http://www.opengis.net/gml/3.2" srsName="EPSG:2056"><gml:posList srsName="EPSG:4326">x</gml:posList></gml:LineString>"#;
+        assert_eq!(srs_name(on_the_line).as_deref(), Some("EPSG:2056"));
+        let on_the_list =
+            r#"<LineString><posList srsName="EPSG:31287">1 2 3</posList></LineString>"#;
+        assert_eq!(srs_name(on_the_list).as_deref(), Some("EPSG:31287"));
+        assert_eq!(
+            srs_name("<LineString><posList>1 2</posList></LineString>"),
+            None
+        );
     }
 
     #[test]

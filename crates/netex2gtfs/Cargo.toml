@@ -29,6 +29,10 @@ serde = { version = "1", features = ["derive"] }
 flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 crc32fast = "1"
 rayon = "1.10"
+# The rules of the time zones, to write the times of an agency in another
+# zone than the feed's at the same instants; the database bundled, so that a
+# feed is the same on every system.
+jiff = { version = "0.2", default-features = false, features = ["std", "tzdb-bundle-always"] }
 
 [dev-dependencies]
 # The tests read the feeds written back, as a consumer would.

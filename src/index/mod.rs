@@ -352,9 +352,9 @@ impl Index {
     /// of its own; the builders are merged and resolved once every document
     /// is in. No document model is held; peak memory is the builders'.
     ///
-    /// A document that fails to read fails the build, named in the error;
-    /// when several fail, which one is named depends on the order the
-    /// workers reached them.
+    /// A document that fails to read fails the build, named in the error,
+    /// and no worker reads another; when several fail, the error is that of
+    /// the one read first ([`Source::try_read_entries_with`]).
     pub fn build(source: &Source, options: &ReadOptions) -> Result<Index> {
         Self::build_from(source, source.entries()?, options)
     }
@@ -367,27 +367,11 @@ impl Index {
         entries: Vec<Entry>,
         options: &ReadOptions,
     ) -> Result<Index> {
-        let workers = source.read_entries_with(
-            entries,
-            || (IndexBuilder::new(), None),
-            |(builder, failure): &mut (IndexBuilder, Option<crate::Error>), entry, text| {
-                if failure.is_some() {
-                    return;
-                }
-                if let Err(error) =
-                    text.and_then(|xml| builder.add_streamed(xml, options, &entry.name))
-                {
-                    *failure = Some(error.in_document(&entry.name));
-                }
-            },
-        )?;
-        let mut builders = Vec::with_capacity(workers.len());
-        for (builder, failure) in workers {
-            if let Some(error) = failure {
-                return Err(error);
-            }
-            builders.push(builder);
-        }
+        let builders =
+            source.try_read_entries_with(entries, IndexBuilder::new, |builder, entry, text| {
+                text.and_then(|xml| builder.add_streamed(xml, options, &entry.name))
+                    .map_err(|error| error.in_document(&entry.name))
+            })?;
         Ok(IndexBuilder::merge_all(builders).finish())
     }
 

@@ -15,10 +15,10 @@ pub use emitter::Emitter;
 
 /// The document without its leading byte-order marks.
 ///
-/// The tokenizer skips one mark but reports offsets as if it were one byte
-/// long, so every slice taken by offset would then fall inside it; the
-/// scanners and the cursor therefore work on the text behind the marks — all
-/// of them, so that none is left for the tokenizer to skip.
+/// The tokenizer skips one mark and counts its offsets from behind it, so
+/// that every slice of the text taken by an offset would fall three bytes
+/// short; the scanners and the cursor therefore work on the text behind the
+/// marks — all of them: a second mark is a character to the tokenizer.
 pub(crate) fn without_bom(mut xml: &str) -> &str {
     while let Some(rest) = xml.strip_prefix('\u{feff}') {
         xml = rest;

@@ -103,7 +103,7 @@ pub(crate) fn readings(
 ) -> Result<[(f64, f64); 2], String> {
     #[cfg(feature = "crs")]
     {
-        let named = crate::geometry::geometry(geometry).and_then(|g| g.srs_name);
+        let named = crate::geometry::srs_name(geometry);
         let system =
             crate::crs::system_of(named.as_deref(), default_system).map_err(|unknown| unknown.0)?;
         Ok([

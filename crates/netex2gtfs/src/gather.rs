@@ -558,10 +558,13 @@ impl Gather {
                 .as_ref()
                 .map(|n| n.default_text())
                 .or(level.short_name.as_ref().map(|n| n.default_text()));
+            // A number GTFS takes for a level's index: a finite one — `NaN`
+            // and `inf` read as numbers, and are none.
             let index = level
                 .public_code
                 .as_deref()
                 .and_then(|code| code.trim().parse::<f64>().ok())
+                .filter(|index| index.is_finite())
                 .or(level.relative_level_order.map(|order| order as f64));
             let facts = LevelFacts {
                 document: self.document,

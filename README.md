@@ -187,8 +187,8 @@ Reading a single document into the typed model and writing it back, for
 either release, is the first example of the [crate documentation](https://docs.rs/netex-rs);
 a delivery as a GTFS feed from code is [netex2gtfs](crates/netex2gtfs/README.md)'s.
 `Source::manifest` fingerprints a delivery from the archive's central directory
-and `Manifest::diff` says which files are new, changed or gone since the last
-one.
+— a directory's files read through a buffer — and `Manifest::diff` says which
+files are new, changed or gone since the last one.
 
 ## Profiles
 
@@ -363,10 +363,12 @@ invent identifiers or tokens to satisfy the other release's validator.
   the largest document of the national deliveries, Belgium's railway network
   at 1.08 GB —, whatever size the archive states for it. A member named other
   than as a path of plain parts within the source — climbing out of it,
-  rooted, two members of one name — is listed and refused when loaded, so
-  that a merge or an extract writes nothing outside its directory. A
-  directory reached through a link is read once. The calendar holds the
-  years 1 to 9999.
+  rooted — is listed and refused when loaded, so that a merge or an extract
+  writes nothing outside its directory. Of members an archive gives one name,
+  the first is read and the name reported (`Source::names_given_twice`). A
+  directory reached through a link is read once, and none of its files is read
+  before its document is. A reader that fails stops the others
+  (`Source::try_read_each_with`). The calendar holds the years 1 to 9999.
 - **Unix and Windows.** The archives are read by position, through the
   positioned reads of the two; other targets are not built.
 

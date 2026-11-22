@@ -8,7 +8,8 @@
 //!
 //! let source = Source::open("netex.zip")?;
 //! let delivery = Delivery::read(&source, Reading { geometry: true, ..Reading::default() })?;
-//! let options = Options { shapes: true, ..Options::default() };
+//! let mut options = Options::default();
+//! options.shapes = true;
 //! let report = convert(&delivery, &options, output::at("gtfs.zip")?)?;
 //! for decision in &report.decisions {
 //!     eprintln!("{} × {}: {}", decision.count, decision.code, decision.what);

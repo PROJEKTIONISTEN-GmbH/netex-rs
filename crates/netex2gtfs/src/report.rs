@@ -26,6 +26,7 @@ pub enum Profile {
 /// A decision the conversion took, counted: what it is (`code`), what it
 /// means, how often it was taken, and one example.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
 pub struct Decision {
     /// The decision's name: `call-without-place`, `trip-without-two-calls`, …
     pub code: &'static str,
@@ -51,6 +52,7 @@ pub struct NotCarried {
 
 /// The report of a conversion.
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[non_exhaustive]
 pub struct Report {
     /// The profile the delivery was read as.
     pub profile: Profile,

@@ -332,15 +332,14 @@ fn run(command: Command) -> Result<u8, String> {
                     url,
                     language: language.clone(),
                 });
-            let options = Options {
-                stop_ids: match stop_ids {
-                    StopIdChoice::Netex => StopIds::Netex,
-                    StopIdChoice::Global => StopIds::Global,
-                },
-                publisher,
-                time_zone,
-                shapes,
+            let mut options = Options::default();
+            options.stop_ids = match stop_ids {
+                StopIdChoice::Netex => StopIds::Netex,
+                StopIdChoice::Global => StopIds::Global,
             };
+            options.publisher = publisher;
+            options.time_zone = time_zone;
+            options.shapes = shapes;
             let out = netex2gtfs::output::at(&output)
                 .map_err(|e| format!("{}: {e}", output.display()))?;
             let converted =
@@ -512,26 +511,13 @@ fn name_of(path: &Path) -> String {
 fn build_with_referrers(source: &Source) -> netex_rs::Result<netex_rs::index::Index> {
     // The routing entities and the service links, whose geometry's axis order is checked.
     let options = ReadOptions::new(Selection::routing().with(netex_rs::stream::Kind::ServiceLink));
-    let workers = source.read_each_with(
-        || (IndexBuilder::new().with_referrers(), None),
-        |(builder, failure): &mut (IndexBuilder, Option<netex_rs::Error>), entry, text| {
-            if failure.is_some() {
-                return;
-            }
-            if let Err(error) =
-                text.and_then(|xml| builder.add_streamed(xml, &options, &entry.name))
-            {
-                *failure = Some(error.in_document(&entry.name));
-            }
+    let builders = source.try_read_each_with(
+        || IndexBuilder::new().with_referrers(),
+        |builder, entry, text| {
+            text.and_then(|xml| builder.add_streamed(xml, &options, &entry.name))
+                .map_err(|error| error.in_document(&entry.name))
         },
     )?;
-    let mut builders = Vec::with_capacity(workers.len());
-    for (builder, failure) in workers {
-        if let Some(error) = failure {
-            return Err(error);
-        }
-        builders.push(builder);
-    }
     Ok(IndexBuilder::merge_all(builders).finish())
 }
 

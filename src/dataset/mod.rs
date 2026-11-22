@@ -13,15 +13,20 @@
 //! Documents are handed out largest first: a worker that picks the 95 MB file
 //! of the delivery last would finish long after the others, so the size order
 //! is what keeps every worker busy to the end. Sizes come from the archive's
-//! central directory, which is read once.
+//! central directory, which is read once, or from a directory's listing: no
+//! file is read before it is read.
+//!
+//! A reader that fails stops the others ([`Source::try_read_entries_with`]):
+//! no document is loaded once one has failed, but those being read.
 //!
 //! A [`Manifest`] fingerprints every entry from the archive's central
-//! directory, and its [`diff`](Manifest::diff) against the manifest of a
-//! previous delivery says which files are new, changed or gone — without
-//! inflating any of them — so that an importer reads only those. How much that
-//! saves depends on the publisher: the German delivery is regenerated every
-//! week, down to renumbered identifiers inside the files, and no file of one
-//! week is the same as in the week before.
+//! directory — of a directory, by reading each file through a buffer —, and
+//! its [`diff`](Manifest::diff) against the manifest of a previous delivery
+//! says which files are new, changed or gone — without inflating any of them
+//! — so that an importer reads only those. How much that saves depends on the
+//! publisher: the German delivery is regenerated every week, down to
+//! renumbered identifiers inside the files, and no file of one week is the
+//! same as in the week before.
 //!
 //! A delivery may name what another publication defines: the Nordic
 //! deliveries name the quays of a stop register published apart from them.
@@ -33,14 +38,17 @@
 //! ([`Kind::DocumentName`]); a document larger than the source's limit is
 //! refused, whatever size the archive claims for it
 //! ([`Source::with_max_document_bytes`]). Either is an error of that document,
-//! handed over in its place; the others are read.
+//! handed over in its place; the others are read. Of members an archive gives
+//! one name, the first is read and the name reported
+//! ([`Source::names_given_twice`]).
 
 mod manifest;
 
+use std::convert::Infallible;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 
 pub use manifest::{Changes, Fingerprint, Manifest};
@@ -75,8 +83,9 @@ enum SourceKind {
     Zip {
         path: PathBuf,
         archive: zip::ZipArchive<SharedFile>,
-        /// The names the central directory gives more than one member.
-        given_twice: Arc<FxHashSet<Box<[u8]>>>,
+        /// The first member of each name the central directory gives more
+        /// than one, where it gives any ([`first_members`]).
+        firsts: Option<zip::ZipArchive<Overlay>>,
     },
     /// A directory; the documents are the `.xml` files under it, at any depth.
     Directory(PathBuf),
@@ -92,6 +101,16 @@ struct Part {
     /// The name its documents are named under; none for the first part.
     name: Option<String>,
     source: Source,
+}
+
+impl Part {
+    /// The name of its document `name` among the documents of every part.
+    fn named(&self, name: &str) -> String {
+        match &self.name {
+            Some(part) => format!("{part}/{name}"),
+            None => name.to_owned(),
+        }
+    }
 }
 
 /// A file read by position, so that clones — one per worker — share one
@@ -167,6 +186,53 @@ impl Seek for SharedFile {
     }
 }
 
+/// An archive's file read with another central directory than its own: its
+/// bytes up to where its own central directory starts, then `directory`.
+#[derive(Debug, Clone)]
+pub(crate) struct Overlay {
+    file: SharedFile,
+    /// Where the archive's own central directory starts.
+    cut: u64,
+    directory: Arc<[u8]>,
+    position: u64,
+}
+
+impl Read for Overlay {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let read = if self.position < self.cut {
+            let room = usize::try_from(self.cut - self.position).unwrap_or(usize::MAX);
+            let wanted = buf.len().min(room);
+            self.file.read_at(&mut buf[..wanted], self.position)?
+        } else {
+            let at = usize::try_from(self.position - self.cut).unwrap_or(usize::MAX);
+            let rest = self.directory.get(at..).unwrap_or_default();
+            let read = buf.len().min(rest.len());
+            buf[..read].copy_from_slice(&rest[..read]);
+            read
+        };
+        self.position += read as u64;
+        Ok(read)
+    }
+}
+
+impl Seek for Overlay {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        let end = self.cut + self.directory.len() as u64;
+        let position = match pos {
+            SeekFrom::Start(offset) => Some(offset),
+            SeekFrom::End(offset) => end.checked_add_signed(offset),
+            SeekFrom::Current(offset) => self.position.checked_add_signed(offset),
+        };
+        self.position = position.ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "seek before the start of the file",
+            )
+        })?;
+        Ok(self.position)
+    }
+}
+
 /// One document of a dataset, not yet read.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Entry {
@@ -181,27 +247,16 @@ pub struct Entry {
     /// joins the name of a document that loaded, never that of an entry
     /// alone.
     pub name: String,
-    /// Its size in bytes, inflated.
+    /// Its size in bytes, inflated: as the archive's central directory or
+    /// the directory's listing states it. Its fingerprint, with the CRC-32
+    /// of its bytes, is the [`Source::manifest`]'s.
     pub size: u64,
-    /// The CRC-32 of its bytes: the archive's, or computed for a file.
-    pub crc32: u32,
     /// Its position in the archive, or among the files.
     index: usize,
     /// The part of a combined source it is from; 0 for any other source.
     part: usize,
     /// Why the document is refused rather than loaded, if it is.
     refused: Option<&'static str>,
-}
-
-impl Entry {
-    /// The entry's fingerprint.
-    pub fn fingerprint(&self) -> Fingerprint {
-        Fingerprint {
-            name: self.name.clone(),
-            size: self.size,
-            crc32: self.crc32,
-        }
-    }
 }
 
 /// One document of a dataset, loaded.
@@ -237,11 +292,11 @@ impl Source {
         } else {
             let file = SharedFile::open(path)?;
             let archive = zip::ZipArchive::new(file.clone()).map_err(|e| failed(&e))?;
-            let given_twice = names_given_twice(&file, &archive).map_err(|e| failed(&e))?;
+            let firsts = first_members(&file, &archive).map_err(|e| failed(&e))?;
             SourceKind::Zip {
                 path: path.to_path_buf(),
                 archive,
-                given_twice: Arc::new(given_twice),
+                firsts,
             }
         };
         Ok(Source {
@@ -327,83 +382,30 @@ impl Source {
 
     /// The documents, in the archive's or the directory's order.
     ///
-    /// Size and fingerprint come from the archive's central directory, which
-    /// is read once; for a directory, each file is read once to fingerprint it.
-    /// Every document is listed, under its name as the source states it,
-    /// those refused when loaded too ([`Entry::name`]).
+    /// Sizes come from the archive's central directory, which is read once,
+    /// or from the directory's listing: no document is read. Every document
+    /// is listed, under its name as the source states it, those refused when
+    /// loaded too ([`Entry::name`]); a name an archive gives several members
+    /// once, for the first ([`names_given_twice`](Self::names_given_twice)).
     pub fn entries(&self) -> Result<Vec<Entry>> {
         match &self.kind {
             SourceKind::Zip {
                 path,
                 archive,
-                given_twice,
-            } => {
-                let mut archive = archive.clone();
-                let mut entries = Vec::new();
-                for index in 0..archive.len() {
-                    let file = archive
-                        .by_index_raw(index)
-                        .map_err(|e| Error::new(Kind::Io(format!("{}: {e}", path.display()))))?;
-                    if !file.name().to_ascii_lowercase().ends_with(".xml") {
-                        continue;
-                    }
-                    let refused = if given_twice.contains(file.name_raw()) {
-                        Some("the archive gives two of its members this name")
-                    } else {
-                        refusal(file.name())
-                    };
-                    entries.push(Entry {
-                        name: file.name().to_owned(),
-                        size: file.size(),
-                        crc32: file.crc32(),
-                        index,
-                        part: 0,
-                        refused,
-                    });
-                }
-                Ok(entries)
-            }
-            SourceKind::Directory(path) => {
-                let mut files = Vec::new();
-                collect_xml(path, &mut FxHashSet::default(), &mut files)?;
-                files.sort();
-                files
-                    .into_iter()
-                    .enumerate()
-                    .map(|(index, file)| {
-                        let (size, crc32) = fingerprint(&file).map_err(|e| {
-                            Error::new(Kind::Io(format!("{}: {e}", file.display())))
-                        })?;
-                        let relative = file.strip_prefix(path).unwrap_or(&file);
-                        let (name, refused) = match relative.to_str() {
-                            Some(name) => {
-                                let name = name.replace(std::path::MAIN_SEPARATOR, "/");
-                                let refused = refusal(&name);
-                                (name, refused)
-                            }
-                            None => (
-                                relative.to_string_lossy().into_owned(),
-                                Some("its file name is not UTF-8"),
-                            ),
-                        };
-                        Ok(Entry {
-                            name,
-                            size,
-                            crc32,
-                            index,
-                            part: 0,
-                            refused,
-                        })
-                    })
-                    .collect()
-            }
+                firsts,
+            } => Ok(archive_members(path, archive, firsts.as_ref())?
+                .into_iter()
+                .map(|(entry, _)| entry)
+                .collect()),
+            SourceKind::Directory(path) => Ok(directory_files(path)?
+                .into_iter()
+                .map(|(_, entry)| entry)
+                .collect()),
             SourceKind::Combined(parts) => {
                 let mut entries = Vec::new();
                 for (position, part) in parts.iter().enumerate() {
                     for mut entry in part.source.entries()? {
-                        if let Some(name) = &part.name {
-                            entry.name = format!("{name}/{}", entry.name);
-                        }
+                        entry.name = part.named(&entry.name);
                         entry.part = position;
                         entries.push(entry);
                     }
@@ -413,12 +415,79 @@ impl Source {
         }
     }
 
-    /// The fingerprints of every document, from the central directory alone:
-    /// nothing is inflated.
+    /// The names an archive gives more than one of its members, as
+    /// [`entries`](Self::entries) lists them: of each, the first member is
+    /// read and the others left out — a finding the caller may count. Names
+    /// alike only once read count too: `ä` written in UTF-8 and in code page
+    /// 437. None for a directory, whose files each have a name of their own.
+    pub fn names_given_twice(&self) -> Vec<String> {
+        match &self.kind {
+            SourceKind::Zip {
+                archive, firsts, ..
+            } => match firsts {
+                // In the order the archive lists its documents.
+                Some(firsts) => archive
+                    .file_names()
+                    .filter(|name| name.to_ascii_lowercase().ends_with(".xml"))
+                    .filter(|name| firsts.index_for_name(name).is_some())
+                    .map(str::to_owned)
+                    .collect(),
+                None => Vec::new(),
+            },
+            SourceKind::Directory(_) => Vec::new(),
+            SourceKind::Combined(parts) => parts
+                .iter()
+                .flat_map(|part| {
+                    part.source
+                        .names_given_twice()
+                        .into_iter()
+                        .map(|name| part.named(&name))
+                })
+                .collect(),
+        }
+    }
+
+    /// The fingerprints of every document: of an archive, from its central
+    /// directory alone — nothing is inflated —; of a directory, each file read
+    /// through a buffer of its own, on every thread of the current rayon pool.
     pub fn manifest(&self) -> Result<Manifest> {
-        Ok(Manifest {
-            entries: self.entries()?.iter().map(Entry::fingerprint).collect(),
-        })
+        let entries = match &self.kind {
+            SourceKind::Zip {
+                path,
+                archive,
+                firsts,
+            } => archive_members(path, archive, firsts.as_ref())?
+                .into_iter()
+                .map(|(entry, crc32)| Fingerprint {
+                    name: entry.name,
+                    size: entry.size,
+                    crc32,
+                })
+                .collect(),
+            SourceKind::Directory(path) => directory_files(path)?
+                .into_par_iter()
+                .map(|(file, entry)| {
+                    let (size, crc32) = fingerprint(&file)
+                        .map_err(|e| Error::new(Kind::Io(format!("{}: {e}", file.display()))))?;
+                    Ok(Fingerprint {
+                        name: entry.name,
+                        size,
+                        crc32,
+                    })
+                })
+                .collect::<Result<_>>()?,
+            SourceKind::Combined(parts) => {
+                let mut entries = Vec::new();
+                for part in parts {
+                    for mut fingerprint in part.source.manifest()?.entries {
+                        fingerprint.name = part.named(&fingerprint.name);
+                        entries.push(fingerprint);
+                    }
+                }
+                entries
+            }
+        };
+        Ok(Manifest { entries })
     }
 
     /// Loads one document.
@@ -495,7 +564,7 @@ impl Source {
     /// they are given: they are read largest first.
     pub fn read_entries_with<S, I, F>(
         &self,
-        mut entries: Vec<Entry>,
+        entries: Vec<Entry>,
         init: I,
         each: F,
     ) -> Result<Vec<S>>
@@ -504,24 +573,101 @@ impl Source {
         I: Fn() -> S + Sync,
         F: Fn(&mut S, &Entry, Result<&str>) + Sync,
     {
+        let read = self.try_read_entries_with(entries, init, |state, entry, text| {
+            each(state, entry, text);
+            Ok::<(), Infallible>(())
+        });
+        match read {
+            Ok(states) => Ok(states),
+            Err(never) => match never {},
+        }
+    }
+
+    /// Like [`read_each_with`](Self::read_each_with), for a reader that may
+    /// fail: once `each` returns an error, no worker loads another document,
+    /// and that error is returned ([`try_read_entries_with`](Self::try_read_entries_with)).
+    pub fn try_read_each_with<S, E, I, F>(&self, init: I, each: F) -> std::result::Result<Vec<S>, E>
+    where
+        S: Send,
+        E: Send + From<Error>,
+        I: Fn() -> S + Sync,
+        F: Fn(&mut S, &Entry, Result<&str>) -> std::result::Result<(), E> + Sync,
+    {
+        self.try_read_entries_with(self.entries()?, init, each)
+    }
+
+    /// Like [`read_entries_with`](Self::read_entries_with), for a reader that
+    /// may fail: once `each` returns an error, no worker loads another
+    /// document — those being read are read to their end —, and the states
+    /// are dropped.
+    ///
+    /// The error returned is that of the document first in the reading order
+    /// (largest first) whose reading failed: every document before it was
+    /// taken from the queue before it, and is read to its end. Where `each`
+    /// fails on a document whatever worker reads it, that is the same
+    /// document on any number of threads.
+    pub fn try_read_entries_with<S, E, I, F>(
+        &self,
+        mut entries: Vec<Entry>,
+        init: I,
+        each: F,
+    ) -> std::result::Result<Vec<S>, E>
+    where
+        S: Send,
+        E: Send,
+        I: Fn() -> S + Sync,
+        F: Fn(&mut S, &Entry, Result<&str>) -> std::result::Result<(), E> + Sync,
+    {
         largest_first(&mut entries);
         let next = AtomicUsize::new(0);
+        let stopped = AtomicBool::new(false);
         let max = self.max_document_bytes;
-        let states = rayon::broadcast(|_| {
+        let workers = rayon::broadcast(|_| {
             let mut state = init();
             let mut reader = self.reader();
             let mut buffer = Vec::new();
-            while let Some(entry) = entries.get(next.fetch_add(1, Ordering::Relaxed)) {
-                each(&mut state, entry, reader.load_into(entry, &mut buffer, max));
+            // A document once taken is read whatever happens meanwhile, so
+            // that every document before a failed one is read.
+            while !stopped.load(Ordering::Relaxed) {
+                let at = next.fetch_add(1, Ordering::Relaxed);
+                let Some(entry) = entries.get(at) else {
+                    break;
+                };
+                if let Err(error) =
+                    each(&mut state, entry, reader.load_into(entry, &mut buffer, max))
+                {
+                    stopped.store(true, Ordering::Relaxed);
+                    return Err((at, error));
+                }
             }
-            state
+            Ok(state)
         });
-        Ok(states)
+        let mut states = Vec::with_capacity(workers.len());
+        let mut failed: Option<(usize, E)> = None;
+        for worker in workers {
+            match worker {
+                Ok(state) => states.push(state),
+                Err((at, error)) => {
+                    if failed.as_ref().is_none_or(|(first, _)| at < *first) {
+                        failed = Some((at, error));
+                    }
+                }
+            }
+        }
+        match failed {
+            Some((_, error)) => Err(error),
+            None => Ok(states),
+        }
     }
 
     fn reader(&self) -> Reader {
         match &self.kind {
-            SourceKind::Zip { archive, .. } => Reader::Archive(archive.clone()),
+            SourceKind::Zip {
+                archive, firsts, ..
+            } => Reader::Archive {
+                archive: archive.clone(),
+                firsts: firsts.clone(),
+            },
             SourceKind::Directory(path) => Reader::Directory(path.clone()),
             SourceKind::Combined(parts) => {
                 let parts = parts.iter().map(|part| {
@@ -566,33 +712,173 @@ fn refusal(name: &str) -> Option<&'static str> {
     }
 }
 
-/// The names the central directory of `archive` gives more than one member,
-/// byte for byte. The zip reader keeps the last member of a name alone; the
-/// documents of such a name are refused rather than one of them read as if
-/// it were the only one.
-fn names_given_twice(
+/// The `.xml` members of `archive`, at `path`, each with the CRC-32 the
+/// central directory states: of a name given several members, the first
+/// member's, from `firsts`.
+fn archive_members(
+    path: &Path,
+    archive: &zip::ZipArchive<SharedFile>,
+    firsts: Option<&zip::ZipArchive<Overlay>>,
+) -> Result<Vec<(Entry, u32)>> {
+    let failed =
+        |e: zip::result::ZipError| Error::new(Kind::Io(format!("{}: {e}", path.display())));
+    let mut archive = archive.clone();
+    let mut firsts = firsts.cloned();
+    let mut members = Vec::new();
+    for index in 0..archive.len() {
+        let file = archive.by_index_raw(index).map_err(failed)?;
+        if !file.name().to_ascii_lowercase().ends_with(".xml") {
+            continue;
+        }
+        let first = match firsts.as_mut() {
+            Some(firsts) => match firsts.index_for_name(file.name()) {
+                Some(at) => Some(firsts.by_index_raw(at).map_err(failed)?),
+                None => None,
+            },
+            None => None,
+        };
+        let (size, crc32) = match &first {
+            Some(first) => (first.size(), first.crc32()),
+            None => (file.size(), file.crc32()),
+        };
+        let entry = Entry {
+            name: file.name().to_owned(),
+            size,
+            index,
+            part: 0,
+            refused: refusal(file.name()),
+        };
+        members.push((entry, crc32));
+    }
+    Ok(members)
+}
+
+/// The first member of each name the central directory of `archive` gives
+/// more than one, as an archive of their own; none where every member has a
+/// name of its own.
+///
+/// The zip reader keeps the last member of a name, and reads names as the
+/// archive flags them — UTF-8 or code page 437 —, so that names alike only
+/// once read are one name too. The members it leaves out are found in the
+/// central directory itself, and their headers written, the last first, into
+/// a central directory of their own after the archive's members: read with
+/// it, the zip reader keeps the first member of each name.
+fn first_members(
     file: &SharedFile,
     archive: &zip::ZipArchive<SharedFile>,
-) -> std::io::Result<FxHashSet<Box<[u8]>>> {
+) -> zip::result::ZipResult<Option<zip::ZipArchive<Overlay>>> {
     const CENTRAL_HEADER: [u8; 4] = 0x0201_4b50_u32.to_le_bytes();
     // The fixed part of a central directory header, before its name.
     const FIXED: usize = 46;
-    let directory = file.tail(archive.central_directory_start())?;
+    let mut kept = FxHashSet::default();
+    let mut listed = archive.clone();
+    for index in 0..listed.len() {
+        kept.insert(listed.by_index_raw(index)?.central_header_start());
+    }
+    let cut = archive.central_directory_start();
+    let directory = file.tail(cut)?;
     let length = |at: usize| usize::from(u16::from_le_bytes([directory[at], directory[at + 1]]));
-    let mut names: FxHashSet<&[u8]> = FxHashSet::default();
-    let mut twice = FxHashSet::default();
+    let mut left_out = Vec::new();
     let mut at = 0;
     while directory.get(at..at + 4) == Some(&CENTRAL_HEADER) && at + FIXED <= directory.len() {
-        let (name, extra, comment) = (length(at + 28), length(at + 30), length(at + 32));
-        let Some(named) = directory.get(at + FIXED..at + FIXED + name) else {
+        let end = at + FIXED + length(at + 28) + length(at + 30) + length(at + 32);
+        let Some(header) = directory.get(at..end) else {
             break;
         };
-        if !names.insert(named) {
-            twice.insert(named.into());
+        if !kept.contains(&(cut + at as u64)) {
+            left_out.push(header);
         }
-        at += FIXED + name + extra + comment;
+        at = end;
     }
-    Ok(twice)
+    if left_out.is_empty() {
+        return Ok(None);
+    }
+    left_out.reverse();
+    let headers = left_out.concat();
+    let overlay = Overlay {
+        file: file.clone(),
+        cut,
+        directory: end_of_central_directory(headers, left_out.len(), cut - archive.offset()).into(),
+        position: 0,
+    };
+    let config = zip::read::Config {
+        archive_offset: zip::read::ArchiveOffset::Known(archive.offset()),
+    };
+    zip::ZipArchive::with_config(config, overlay).map(Some)
+}
+
+/// `headers` — `count` central directory headers to be read from `start`,
+/// relative to the archive — ended as a central directory is: in the zip64
+/// form, which holds any count and offset.
+fn end_of_central_directory(mut headers: Vec<u8>, count: usize, start: u64) -> Vec<u8> {
+    let size = headers.len() as u64;
+    let count = count as u64;
+    // Where the zip64 end record begins, relative to the archive.
+    let end = start + size;
+    // The zip64 end of central directory record: its size after the first
+    // twelve bytes, versions, disks, counts, size and start of the directory.
+    headers.extend_from_slice(&0x0606_4b50_u32.to_le_bytes());
+    headers.extend_from_slice(&44_u64.to_le_bytes());
+    headers.extend_from_slice(&45_u16.to_le_bytes());
+    headers.extend_from_slice(&45_u16.to_le_bytes());
+    headers.extend_from_slice(&[0; 8]);
+    headers.extend_from_slice(&count.to_le_bytes());
+    headers.extend_from_slice(&count.to_le_bytes());
+    headers.extend_from_slice(&size.to_le_bytes());
+    headers.extend_from_slice(&start.to_le_bytes());
+    // Its locator: the disk, where the record begins, the disks.
+    headers.extend_from_slice(&0x0706_4b50_u32.to_le_bytes());
+    headers.extend_from_slice(&0_u32.to_le_bytes());
+    headers.extend_from_slice(&end.to_le_bytes());
+    headers.extend_from_slice(&1_u32.to_le_bytes());
+    // The end of central directory record, its counts and offset deferring
+    // to the zip64 record's.
+    headers.extend_from_slice(&0x0605_4b50_u32.to_le_bytes());
+    headers.extend_from_slice(&[0; 4]);
+    headers.extend_from_slice(&u16::MAX.to_le_bytes());
+    headers.extend_from_slice(&u16::MAX.to_le_bytes());
+    headers.extend_from_slice(&u32::MAX.to_le_bytes());
+    headers.extend_from_slice(&u32::MAX.to_le_bytes());
+    headers.extend_from_slice(&0_u16.to_le_bytes());
+    headers
+}
+
+/// The `.xml` files under the directory at `root`, in the order of their
+/// paths, each with its entry: its name, and its size as the directory
+/// lists it. No file is read.
+fn directory_files(root: &Path) -> Result<Vec<(PathBuf, Entry)>> {
+    let mut files = Vec::new();
+    collect_xml(root, &mut FxHashSet::default(), &mut files)?;
+    files.sort();
+    files
+        .into_iter()
+        .enumerate()
+        .map(|(index, file)| {
+            let size = std::fs::metadata(&file)
+                .map_err(|e| Error::new(Kind::Io(format!("{}: {e}", file.display()))))?
+                .len();
+            let relative = file.strip_prefix(root).unwrap_or(&file);
+            let (name, refused) = match relative.to_str() {
+                Some(name) => {
+                    let name = name.replace(std::path::MAIN_SEPARATOR, "/");
+                    let refused = refusal(&name);
+                    (name, refused)
+                }
+                None => (
+                    relative.to_string_lossy().into_owned(),
+                    Some("its file name is not UTF-8"),
+                ),
+            };
+            let entry = Entry {
+                name,
+                size,
+                index,
+                part: 0,
+                refused,
+            };
+            Ok((file, entry))
+        })
+        .collect()
 }
 
 /// The size and CRC-32 of a file, read through a buffer of its own.
@@ -641,7 +927,11 @@ fn collect_xml(dir: &Path, read: &mut FxHashSet<PathBuf>, out: &mut Vec<PathBuf>
 
 /// One worker's way of loading documents.
 enum Reader {
-    Archive(zip::ZipArchive<SharedFile>),
+    /// An archive, with the first member of each name it gives several.
+    Archive {
+        archive: zip::ZipArchive<SharedFile>,
+        firsts: Option<zip::ZipArchive<Overlay>>,
+    },
     Directory(PathBuf),
     /// One reader for each part of a combined source, with the name its
     /// documents are named under, `/` and all; none for the first part.
@@ -706,17 +996,30 @@ impl Reader {
             )))
         };
         match self {
-            Reader::Archive(archive) => {
+            Reader::Archive { archive, firsts } => {
                 let failed = |e: &dyn std::fmt::Display| {
                     Error::new(Kind::Io(format!("{}: {e}", entry.name)))
                 };
-                let file = archive.by_index(entry.index).map_err(|e| failed(&e))?;
-                if file.name() != name {
+                let named = archive.name_for_index(entry.index);
+                if named != Some(name) {
                     return Err(another());
                 }
-                file.take(max.saturating_add(1))
-                    .read_to_end(bytes)
-                    .map_err(|e| failed(&e))
+                let first = firsts
+                    .as_mut()
+                    .and_then(|firsts| Some((firsts.index_for_name(name)?, firsts)));
+                let read = match first {
+                    Some((at, firsts)) => firsts
+                        .by_index(at)
+                        .map_err(|e| failed(&e))?
+                        .take(max.saturating_add(1))
+                        .read_to_end(bytes),
+                    None => archive
+                        .by_index(entry.index)
+                        .map_err(|e| failed(&e))?
+                        .take(max.saturating_add(1))
+                        .read_to_end(bytes),
+                };
+                read.map_err(|e| failed(&e))
             }
             Reader::Directory(root) => {
                 let path = root.join(name);

@@ -169,145 +169,93 @@ pub enum Concern {
     DateOfNoDay,
 }
 
-impl Concern {
-    /// Every concern, in the order of their `Ord`.
-    pub const ALL: &'static [Concern] = &[
-        Concern::Unresolved,
-        Concern::RedefinedOtherwise,
-        Concern::PassedThrough,
-        Concern::UntimedEnds,
-        Concern::TooFewTimedCalls,
-        Concern::PeriodWithoutFirstDay,
-        Concern::DayBitsLengthDiffers,
-        Concern::JourneyWithoutDays,
-        Concern::DaysOutsideLineVersion,
-        Concern::JourneyOutsideLineVersion,
-        Concern::FlexibleLineJourney,
-        Concern::HeadwayGroupWithoutRuns,
-        Concern::AxisOrderSwapped,
-        Concern::AxisOrderUndecided,
-        Concern::ResolvedIgnoringVersion,
-        Concern::ResolvedAsOtherClass,
-        Concern::UnknownReferenceSystem,
-        Concern::QuayOfTwoStopPlaces,
-        Concern::PassingTimesOtherThanPoints,
-        Concern::PropertiesOfDayUnread,
-        Concern::WalkWithoutDuration,
-        Concern::LocalIdentifier,
-        Concern::LinkWithoutRunTime,
-        Concern::PropertyOfDayWithoutDays,
-        Concern::LinkBetweenOtherPoints,
-        Concern::DaysOutsideCalendar,
-        Concern::TimeOutOfRange,
-        Concern::DayBitOtherThanZeroOrOne,
-        Concern::DateOfNoDay,
-    ];
+/// [`Concern::ALL`], [`Concern::code`] and what a finding of each concern
+/// says, made of one table in the order the concerns are declared: its
+/// `match`es name every concern, so that a concern added to the enum and not
+/// to the table fails to compile, and none is left out of `ALL`.
+macro_rules! concerns {
+    ($($concern:ident => $code:literal, $says:literal;)*) => {
+        impl Concern {
+            /// Every concern, in the order of their `Ord`.
+            pub const ALL: &'static [Concern] = &[$(Concern::$concern),*];
 
-    /// The concern's name in reports and on command lines, in lower case with
-    /// hyphens: `unresolved`, `redefined-otherwise`, `passed-through`, …
-    pub fn code(self) -> &'static str {
-        match self {
-            Concern::Unresolved => "unresolved",
-            Concern::RedefinedOtherwise => "redefined-otherwise",
-            Concern::PassedThrough => "passed-through",
-            Concern::UntimedEnds => "untimed-ends",
-            Concern::TooFewTimedCalls => "too-few-timed-calls",
-            Concern::PeriodWithoutFirstDay => "period-without-first-day",
-            Concern::DayBitsLengthDiffers => "day-bits-length-differs",
-            Concern::JourneyWithoutDays => "journey-without-days",
-            Concern::DaysOutsideLineVersion => "days-outside-line-version",
-            Concern::JourneyOutsideLineVersion => "journey-outside-line-version",
-            Concern::FlexibleLineJourney => "flexible-line-journey",
-            Concern::HeadwayGroupWithoutRuns => "headway-group-without-runs",
-            Concern::AxisOrderSwapped => "axis-order-swapped",
-            Concern::AxisOrderUndecided => "axis-order-undecided",
-            Concern::ResolvedIgnoringVersion => "resolved-ignoring-version",
-            Concern::ResolvedAsOtherClass => "resolved-as-other-class",
-            Concern::UnknownReferenceSystem => "unknown-reference-system",
-            Concern::QuayOfTwoStopPlaces => "quay-of-two-stop-places",
-            Concern::PassingTimesOtherThanPoints => "passing-times-other-than-points",
-            Concern::PropertiesOfDayUnread => "properties-of-day-unread",
-            Concern::WalkWithoutDuration => "walk-without-duration",
-            Concern::LocalIdentifier => "local-identifier",
-            Concern::LinkWithoutRunTime => "link-without-run-time",
-            Concern::PropertyOfDayWithoutDays => "property-of-day-without-days",
-            Concern::LinkBetweenOtherPoints => "link-between-other-points",
-            Concern::DaysOutsideCalendar => "days-outside-calendar",
-            Concern::TimeOutOfRange => "time-out-of-range",
-            Concern::DayBitOtherThanZeroOrOne => "day-bit-other-than-zero-or-one",
-            Concern::DateOfNoDay => "date-of-no-day",
+            /// The concern's name in reports and on command lines, in lower case with
+            /// hyphens: `unresolved`, `redefined-otherwise`, `passed-through`, …
+            pub fn code(self) -> &'static str {
+                match self {
+                    $(Concern::$concern => $code),*
+                }
+            }
+
+            /// What a finding of this concern says, before what it is about.
+            fn says(self) -> &'static str {
+                match self {
+                    $(Concern::$concern => $says),*
+                }
+            }
         }
-    }
+    };
+}
 
+concerns! {
+    Unresolved => "unresolved", "reference to nothing";
+    RedefinedOtherwise => "redefined-otherwise", "redefined with other content";
+    PassedThrough => "passed-through", "point passed through, no call";
+    UntimedEnds => "untimed-ends",
+        "pattern points before its first or after its last passing time, no calls";
+    TooFewTimedCalls => "too-few-timed-calls", "journey without two timed calls, left out";
+    PeriodWithoutFirstDay => "period-without-first-day",
+        "operating period without a first day, no days";
+    DayBitsLengthDiffers => "day-bits-length-differs",
+        "day bits other in number than the period's days, a day without one available";
+    JourneyWithoutDays => "journey-without-days", "journey without an operating day";
+    DaysOutsideLineVersion => "days-outside-line-version",
+        "days its line version does not govern, taken away";
+    JourneyOutsideLineVersion => "journey-outside-line-version",
+        "no day its line version governs, left out";
+    FlexibleLineJourney => "flexible-line-journey",
+        "journey of a flexible line, not runs at fixed times: left out";
+    HeadwayGroupWithoutRuns => "headway-group-without-runs",
+        "headway group without a last departure or an interval, no runs";
+    AxisOrderSwapped => "axis-order-swapped", "link geometry written longitude first";
+    AxisOrderUndecided => "axis-order-undecided", "link geometry whose axis order cannot be told";
+    ResolvedIgnoringVersion => "resolved-ignoring-version",
+        "reference resolved only by ignoring the version it names";
+    ResolvedAsOtherClass => "resolved-as-other-class",
+        "reference resolved to another class than it names";
+    UnknownReferenceSystem => "unknown-reference-system",
+        "position in a reference system the crate does not know, left without a position";
+    QuayOfTwoStopPlaces => "quay-of-two-stop-places",
+        "quay two stop places claim, kept with the first";
+    PassingTimesOtherThanPoints => "passing-times-other-than-points",
+        "passing times naming no point, other in number than the pattern's points";
+    PropertiesOfDayUnread => "properties-of-day-unread",
+        "day type whose properties name more than days of the week, its assignments' days alone";
+    WalkWithoutDuration => "walk-without-duration", "walk stating no duration, no transfer";
+    LocalIdentifier => "local-identifier",
+        "identifier naming another stop than in another document, a stop of its own";
+    LinkWithoutRunTime => "link-without-run-time",
+        "timing link of the pattern without a run time, the calls after it untimed";
+    PropertyOfDayWithoutDays => "property-of-day-without-days",
+        "day type whose property of day names no day, read as every day";
+    LinkBetweenOtherPoints => "link-between-other-points",
+        "service link a pattern names from or to a stop point not its own";
+    DaysOutsideCalendar => "days-outside-calendar",
+        "days before the year 1 or after the year 9999, which no calendar holds";
+    TimeOutOfRange => "time-out-of-range",
+        "time before its operating day or beyond what the index counts, no time";
+    DayBitOtherThanZeroOrOne => "day-bit-other-than-zero-or-one",
+        "day bit other than 0 or 1, no day there";
+    DateOfNoDay => "date-of-no-day", "date that is no day of the calendar, no day there";
+}
+
+impl Concern {
     /// The concern named `code` ([`code`](Self::code)).
     pub fn from_code(code: &str) -> Option<Concern> {
         Concern::ALL
             .iter()
             .copied()
             .find(|concern| concern.code() == code)
-    }
-
-    /// What a finding of this concern says, before what it is about.
-    fn says(self) -> &'static str {
-        match self {
-            Concern::Unresolved => "reference to nothing",
-            Concern::RedefinedOtherwise => "redefined with other content",
-            Concern::PassedThrough => "point passed through, no call",
-            Concern::UntimedEnds => {
-                "pattern points before its first or after its last passing time, no calls"
-            }
-            Concern::TooFewTimedCalls => "journey without two timed calls, left out",
-            Concern::PeriodWithoutFirstDay => "operating period without a first day, no days",
-            Concern::DayBitsLengthDiffers => {
-                "day bits other in number than the period's days, a day without one available"
-            }
-            Concern::JourneyWithoutDays => "journey without an operating day",
-            Concern::DaysOutsideLineVersion => "days its line version does not govern, taken away",
-            Concern::JourneyOutsideLineVersion => "no day its line version governs, left out",
-            Concern::FlexibleLineJourney => {
-                "journey of a flexible line, not runs at fixed times: left out"
-            }
-            Concern::HeadwayGroupWithoutRuns => {
-                "headway group without a last departure or an interval, no runs"
-            }
-            Concern::AxisOrderSwapped => "link geometry written longitude first",
-            Concern::AxisOrderUndecided => "link geometry whose axis order cannot be told",
-            Concern::ResolvedIgnoringVersion => {
-                "reference resolved only by ignoring the version it names"
-            }
-            Concern::ResolvedAsOtherClass => "reference resolved to another class than it names",
-            Concern::UnknownReferenceSystem => {
-                "position in a reference system the crate does not know, left without a position"
-            }
-            Concern::QuayOfTwoStopPlaces => "quay two stop places claim, kept with the first",
-            Concern::PassingTimesOtherThanPoints => {
-                "passing times naming no point, other in number than the pattern's points"
-            }
-            Concern::PropertiesOfDayUnread => {
-                "day type whose properties name more than days of the week, its assignments' days alone"
-            }
-            Concern::WalkWithoutDuration => "walk stating no duration, no transfer",
-            Concern::LocalIdentifier => {
-                "identifier naming another stop than in another document, a stop of its own"
-            }
-            Concern::LinkWithoutRunTime => {
-                "timing link of the pattern without a run time, the calls after it untimed"
-            }
-            Concern::PropertyOfDayWithoutDays => {
-                "day type whose property of day names no day, read as every day"
-            }
-            Concern::LinkBetweenOtherPoints => {
-                "service link a pattern names from or to a stop point not its own"
-            }
-            Concern::DaysOutsideCalendar => {
-                "days before the year 1 or after the year 9999, which no calendar holds"
-            }
-            Concern::TimeOutOfRange => {
-                "time before its operating day or beyond what the index counts, no time"
-            }
-            Concern::DayBitOtherThanZeroOrOne => "day bit other than 0 or 1, no day there",
-            Concern::DateOfNoDay => "date that is no day of the calendar, no day there",
-        }
     }
 }
 
@@ -478,3 +426,18 @@ impl fmt::Display for Refusal {
 }
 
 impl std::error::Error for Refusal {}
+
+#[cfg(test)]
+mod tests {
+    use super::Concern;
+
+    #[test]
+    fn all_lists_every_concern_once_in_the_order_they_are_declared() {
+        // A concern's discriminant is its place in the declaration: `ALL`
+        // holding each at its own place holds each once, in order. That none
+        // is missing, the table's `match`es make the compiler check.
+        for (place, &concern) in Concern::ALL.iter().enumerate() {
+            assert_eq!(concern as usize, place, "{concern:?}");
+        }
+    }
+}

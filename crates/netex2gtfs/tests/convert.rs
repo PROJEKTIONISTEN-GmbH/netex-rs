@@ -2298,3 +2298,30 @@ fn a_level_numbered_by_no_finite_number_has_no_number() {
         Some((1, "sw:Quay:seehof-1".to_owned()))
     );
 }
+
+#[test]
+fn a_day_beyond_the_reach_of_the_time_zone_rules_is_left_out_and_said() {
+    // The rules reach instants up to 9999-12-30: noon of the last day of
+    // the calendar in New York is beyond them.
+    let delivery = uferweg_in(&[("uferweg-sued.xml", "America/New_York")], |name, xml| {
+        if name == "uferweg-sued.xml" {
+            xml.replace("2026-10-12T00:00:00", "9999-12-29T00:00:00")
+                .replace("2026-10-16T00:00:00", "9999-12-31T00:00:00")
+                .replace(
+                    "<ValidDayBits>11111</ValidDayBits>",
+                    "<ValidDayBits>111</ValidDayBits>",
+                )
+        } else {
+            xml.to_owned()
+        }
+    });
+    let (feed, report) = convert_to_directory(delivery.path(), &Options::default());
+    assert_eq!(
+        trip_days(feed.path())["uw:ServiceJourney:S-0815"],
+        ["99991229", "99991230"]
+    );
+    assert_eq!(
+        decision(&report, "trip-days-beyond-zone-rules"),
+        Some((1, "uw:ServiceJourney:S-0815".to_owned()))
+    );
+}

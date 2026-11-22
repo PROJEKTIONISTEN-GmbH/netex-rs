@@ -634,7 +634,13 @@ fn should_fail_examples_are_found_by_the_library() {
                 continue;
             }
         };
-        let findings = netex_rs::check::duplicate_ids(&document);
+        let findings = match netex_rs::check::duplicate_ids(&document) {
+            Ok(findings) => findings,
+            Err(error) => {
+                failures.push(format!("{}: cannot check: {error}", fixture.name));
+                continue;
+            }
+        };
         if findings.is_empty() {
             failures.push(format!("{}: no duplicate identifier found", fixture.name));
         } else {

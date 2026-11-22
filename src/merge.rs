@@ -474,12 +474,13 @@ pub fn merge(inputs: &[Input], to: &Path) -> Result<Report, Error> {
 /// The documents of a source, sorted by name.
 fn load(source: &Source) -> Result<Vec<(String, String)>, Error> {
     let mut documents: Vec<(String, String)> = source
-        .read_each_with(Vec::new, |documents, entry, text| {
-            documents.push(text.map(|text| (entry.name.clone(), text.to_owned())));
+        .try_read_each_with(Vec::new, |documents, entry, text| {
+            documents.push((entry.name.clone(), text?.to_owned()));
+            Ok::<(), Error>(())
         })?
         .into_iter()
         .flatten()
-        .collect::<Result<_, _>>()?;
+        .collect();
     documents.sort_by(|a, b| a.0.cmp(&b.0));
     Ok(documents)
 }

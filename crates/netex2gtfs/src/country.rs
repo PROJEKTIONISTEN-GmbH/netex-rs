@@ -70,7 +70,7 @@ impl Country {
 }
 
 /// Every country of the table, in the order of their codes.
-fn countries() -> &'static [Country] {
+pub(crate) fn countries() -> &'static [Country] {
     static COUNTRIES: OnceLock<Vec<Country>> = OnceLock::new();
     COUNTRIES.get_or_init(|| read(BORDERS))
 }

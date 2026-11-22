@@ -1,7 +1,6 @@
 //! A delivery read once: the index, and what a feed needs beyond it.
 
 use std::hash::Hash;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 use netex_rs::dataset::Source;
 use netex_rs::index::{Index, IndexBuilder, JourneyId, LineId};
@@ -147,52 +146,28 @@ impl Delivery {
     /// Reads `source` on every thread of the current rayon pool: the index,
     /// and what a feed needs beyond it, in one walk of each document.
     ///
-    /// A document that does not read fails the delivery: no thread reads a
-    /// document after it, and of the documents found failing the one whose
-    /// name sorts first is the error — which are found depends on the order
-    /// the threads took the documents in.
+    /// A document that does not read fails the delivery: no thread loads a
+    /// document after it, and of several failing the one read first — the
+    /// largest — is the error, on any number of threads
+    /// ([`Source::try_read_each_with`]).
     pub fn read(source: &Source, reading: Reading) -> netex_rs::Result<Delivery> {
         let options = ReadOptions::new(selection(reading));
-        let failed = AtomicBool::new(false);
-        let workers = source.read_each_with(
+        let workers = source.try_read_each_with(
             || {
                 let builder = if reading.referrers {
                     IndexBuilder::new().with_referrers()
                 } else {
                     IndexBuilder::new()
                 };
-                (builder, Gather::new(reading.geometry), None)
+                (builder, Gather::new(reading.geometry))
             },
-            |(builder, gather, failure): &mut (
-                IndexBuilder,
-                Gather,
-                Option<(String, netex_rs::Error)>,
-            ),
-             entry,
-             text| {
-                if failed.load(Ordering::Relaxed) {
-                    return;
-                }
+            |(builder, gather): &mut (IndexBuilder, Gather), entry, text| {
                 gather.begin(&entry.name);
-                let read = text
-                    .and_then(|xml| builder.add_streamed_with(xml, &options, &entry.name, gather));
-                if let Err(error) = read {
-                    *failure = Some((entry.name.clone(), error.in_document(&entry.name)));
-                    failed.store(true, Ordering::Relaxed);
-                }
+                text.and_then(|xml| builder.add_streamed_with(xml, &options, &entry.name, gather))
+                    .map_err(|error| error.in_document(&entry.name))
             },
         )?;
-        let mut builders = Vec::with_capacity(workers.len());
-        let mut gathers = Vec::with_capacity(workers.len());
-        let mut failures = Vec::new();
-        for (builder, gather, failure) in workers {
-            failures.extend(failure);
-            builders.push(builder);
-            gathers.push(gather);
-        }
-        if let Some((_, error)) = failures.into_iter().min_by(|a, b| a.0.cmp(&b.0)) {
-            return Err(error);
-        }
+        let (builders, mut gathers): (Vec<IndexBuilder>, Vec<Gather>) = workers.into_iter().unzip();
         let index = IndexBuilder::merge_all(builders).finish();
         gathers.sort_by_key(|gather| std::cmp::Reverse(gather.names.len()));
         let mut gathers = gathers.into_iter();

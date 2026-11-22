@@ -213,7 +213,7 @@ fn a_directory_lists_its_documents_without_reading_them() {
         .iter()
         .map(|entry| (entry.name.as_str(), entry.size))
         .collect();
-    assert_eq!(sizes, [("closed.xml", 56), ("open.xml", 22)]);
+    assert_eq!(sizes, [("closed.xml", 58), ("open.xml", 22)]);
     let read = Mutex::new(BTreeMap::new());
     source
         .read_each(|entry, text| {
@@ -276,7 +276,10 @@ fn a_failing_document_stops_every_reader_from_reading_another() {
         )
     });
     let error = outcome.expect_err("the first document fails the read");
-    assert_eq!(error.to_string(), "0.xml fails");
+    assert_eq!(
+        error.kind,
+        netex_rs::error::Kind::Io("0.xml fails".to_owned())
+    );
     assert_eq!(
         handed.into_inner(),
         1,
@@ -287,6 +290,7 @@ fn a_failing_document_stops_every_reader_from_reading_another() {
 #[test]
 fn of_several_failing_documents_the_one_read_first_is_the_error_on_any_number_of_threads() {
     let source = documents_largest_first("sources-stopped-first", 40);
+    let entries = source.entries().expect("the directory lists its documents");
     for threads in [1, 2, 8] {
         let pool = rayon::ThreadPoolBuilder::new()
             .num_threads(threads)
@@ -294,7 +298,8 @@ fn of_several_failing_documents_the_one_read_first_is_the_error_on_any_number_of
             .expect("a pool");
         for _ in 0..20 {
             let outcome: Result<Vec<()>, String> = pool.install(|| {
-                source.try_read_each_with(
+                source.try_read_entries_with(
+                    entries.clone(),
                     || (),
                     |(), entry, text| {
                         text.map_err(|error| error.to_string())?;

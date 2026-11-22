@@ -136,12 +136,10 @@ pub fn extract(
     let mut taken = Taken::default();
     let mut wanted = Wanted::default();
     let documents_read = loop {
-        let answers: Vec<Result<Answer, Error>> = source
-            .read_each_with(Vec::new, |answers, entry, text| {
-                answers.push(
-                    text.map_err(Error::Read)
-                        .and_then(|text| take(&entry.name, text, &chosen, &taken, &wanted)),
-                );
+        let answers: Vec<Answer> = source
+            .try_read_each_with(Vec::new, |answers, entry, text| {
+                answers.push(take(&entry.name, text?, &chosen, &taken, &wanted)?);
+                Ok::<(), Error>(())
             })?
             .into_iter()
             .flatten()
@@ -150,7 +148,6 @@ pub fn extract(
         let mut changed = false;
         let mut definers: FxHashMap<String, String> = FxHashMap::default();
         for answer in answers {
-            let answer = answer?;
             for id in answer.external {
                 if let Entry::Vacant(slot) = wanted.entry(id) {
                     slot.insert(None);
@@ -196,22 +193,20 @@ pub fn extract(
 
     // Write the documents holding something taken.
     let cut = selection.area.is_some() && selection.leaving == Leaving::Cut;
-    let written: Vec<Result<Written, Error>> = source
-        .read_each_with(Vec::new, |written, entry, text| {
+    let written: Vec<Written> = source
+        .try_read_each_with(Vec::new, |written, entry, text| {
             let Some(kept) = taken.get(&entry.name) else {
-                return;
+                return Ok(());
             };
-            written.push(text.map_err(Error::Read).and_then(|text| {
-                let chosen = chosen.get(&entry.name);
-                write(
-                    &entry.name,
-                    text,
-                    kept,
-                    chosen,
-                    cut.then_some(&inside as &dyn Fn(&str) -> bool),
-                    to,
-                )
-            }));
+            written.push(write(
+                &entry.name,
+                text?,
+                kept,
+                chosen.get(&entry.name),
+                cut.then_some(&inside as &dyn Fn(&str) -> bool),
+                to,
+            )?);
+            Ok::<(), Error>(())
         })?
         .into_iter()
         .flatten()
@@ -222,7 +217,6 @@ pub fn extract(
         ..Counts::default()
     };
     for document in written {
-        let document = document?;
         counts.documents_written += 1;
         counts.journeys_written += document.journeys;
         counts.objects_written += document.objects;
