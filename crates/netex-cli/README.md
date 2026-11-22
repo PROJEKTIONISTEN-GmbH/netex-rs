@@ -105,7 +105,8 @@ report as JSON with `--report`. `--stop-ids global` gives stops their `GlobalID`
 (DHID) or, without one, their Swiss `SLOID`, numbered `#2`, `#3` where stops
 share one; `--time-zone` names the feed's time zone — GTFS has one for all its
 agencies — where no document of the delivery names one by its name in the time
-zone database (`Europe/Zurich`; an abbreviation as `CEST` names none). Without
+zone database (`Europe/Zurich`; an abbreviation as `CEST` names none, nor does
+a name the database does not hold, and the conversion fails on one). Without
 it, such a delivery takes the zone of the country its
 journeys' identifiers show (`at:` Europe/Vienna, as Austria's national
 deliveries), else of the country most of its stops lie in (Europe/Brussels for

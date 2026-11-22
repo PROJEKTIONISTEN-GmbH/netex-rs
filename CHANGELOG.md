@@ -1,5 +1,105 @@
 # Changelog
 
+## 0.13.0 — unreleased
+
+A source reads only what it reads, and a reader that fails stops the others;
+of members an archive gives one name the first is read and the name
+reported; the check of duplicate identifiers keys them as the schemas do.
+netex2gtfs writes the trips of an agency in another time zone than the
+feed's at their instants, and takes positions off the earth, web addresses
+without a scheme and levels numbered by no number as none. Breaking, and so
+the next minor version: the interfaces named below change.
+
+Of the 21 national deliveries at hand, read before and after, `netex stats`
+answers the same bytes for all; of their feeds, those of 18 are the same
+bytes. Denmark's writes the 106 trips of Greenland's buses three hours later,
+in Copenhagen's zone, and gives 49 stations `stop_timezone` America/Nuuk;
+Sweden's places four quays at their stop places, three of them stated at
+latitudes such as 56162332, one at 0, 0 — the GTFS validator's four errors
+are gone, and the rules on positions it skipped for them run —; Austria's
+VOR gives an operator stated with `www.…` the publisher's web address.
+
+- **dataset**: a directory lists its documents by their sizes alone
+  (`metadata().len()`); it read every file whole, before every read of the
+  source, only for a CRC no read needs — an extract read the delivery so in
+  each of its passes, a merge twice. The CRC is the manifest's (`Source::manifest`),
+  read through a buffer on every thread. **Breaking**: `Entry` no longer
+  carries `crc32`, and `Entry::fingerprint` is gone; a document's
+  fingerprint is its manifest's.
+- **dataset**: `Source::try_read_each_with` and `try_read_entries_with` read
+  with a reader that may fail: once it returns an error, no worker loads
+  another document — those being read are read to their end —, and the
+  error returned is that of the document first in the reading order
+  (largest first), on any number of threads. `read_each_with` and
+  `read_entries_with` read through them. The index (`Index::build`) and the
+  merge stop at the first document that fails, where every document was
+  loaded and read past.
+- **dataset**: of members an archive gives one name, the first is read —
+  names alike only once decoded too, `ä` in UTF-8 and in code page 437 —,
+  and `Source::names_given_twice` lists the names, for a caller to count.
+  Both were refused; names alike only once decoded read the last member as
+  if it were the only one.
+- **check**: `duplicate_ids_in` keys identifiers by element type in the NeTEx
+  namespace, as the schemas' constraints select them, leaves out an element
+  without a version, as `xsd:unique` does, and compares identifiers and
+  versions as read (`a&amp;b` is `a&#38;b`); a `StopPlace` and a `Quay` of
+  one identifier and version, a GML element of the identifier of another,
+  were findings. **Breaking**: `duplicate_ids` and `duplicate_ids_in` return
+  a `Result`, an error where the document is not well-formed — they stopped
+  there and answered what they had —, and `DuplicateId::version` is a
+  `String`.
+- **geometry**: `srs_name` reads the reference system a geometry names from
+  its tags; the index read a link's system by parsing every number of its
+  geometry, and lost it where one number was none.
+- **index**: `Concern::ALL`, `Concern::code` and what a finding says are made
+  of one table whose `match`es the compiler checks: a concern cannot be left
+  out of `ALL`.
+- The comment on the byte-order mark says what the tokenizer does: it skips
+  one mark and counts from behind it; a test holds it to that.
+
+### netex2gtfs 0.8.0
+
+Built on netex-rs 0.13.0. A new minor version: `Options`, `Report` and
+`Decision` are non-exhaustive — options are made from their default, a field
+set at a time —, and `Error` has a variant more.
+
+- The trips of an agency whose document names another time zone than the
+  feed's are written in the feed's zone at their instants: as much later as
+  noon of their day is later in their agency's zone than in the feed's, a
+  GTFS time counting from twelve hours before noon; on the day before where
+  a trip would begin before its day (`trip-times-in-feed-zone`). Where the
+  difference changes over a trip's days — the zones keeping summer time on
+  other days —, the trip is a trip for each set of days of one difference,
+  `<id>#<n>`, each with days of its own, `c<n>-<k>`, and a planned
+  interchange holds for each (`trip-split-by-offset`). Its stops' station,
+  or the stop where it stands under none, has its zone as `stop_timezone`,
+  where every trip calling there is in that zone
+  (`stop-time-zone-ambiguous` otherwise). Days beyond the instants the rules
+  reach, after 9999-12-30, are left out (`trip-days-beyond-zone-rules`). The
+  rules are those of the time zone database bundled with jiff, so that a
+  feed is the same on every system.
+- A zone is a name the time zone database holds: `Europe/Nowhere` in a
+  document names none (`time-zone-not-a-name`), and one given in the
+  options that it does not hold fails the conversion
+  (`Error::UnknownTimeZone`); a name written in other case is written as
+  the database writes it.
+- A position off the earth — a latitude beyond ±90°, a longitude beyond
+  ±180° — or at 0, 0 is taken as none (`position-off-the-earth`,
+  `position-at-zero-zero`), a stretch of a shape holding one is left out
+  (`shape-off-the-earth`). A web address without its scheme — `www.…`,
+  `//…` — is none (`url-without-scheme`): an agency takes the publisher's,
+  a data source publishes no feed. A level's `PublicCode` that is no finite
+  number — `NaN`, `inf` — gives no `level_index`.
+- Once a document does not read, no thread loads another, and of several
+  failing the one read first is the error, on any number of threads.
+
+### netex-cli 0.9.0
+
+Built on netex-rs 0.13.0 and netex2gtfs 0.8.0: `netex convert` writes the
+feed as netex2gtfs 0.8.0 does and fails on a `--time-zone` the time zone
+database does not hold; every command stops reading at the first document
+that does not read.
+
 ## 0.12.2 — unreleased
 
 The tests and the CI; the code is that of 0.12.1. The CI's job "build and
