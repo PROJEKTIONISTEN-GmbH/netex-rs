@@ -186,3 +186,152 @@ fn an_entry_of_another_source_is_refused_rather_than_read_as_another_document() 
         "an entry of a part this source does not have"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn a_directory_lists_its_documents_without_reading_them() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = support::scratch_dir("sources-listed-unread");
+    std::fs::write(dir.join("open.xml"), "<PublicationDelivery/>").expect("written");
+    let closed = dir.join("closed.xml");
+    std::fs::write(
+        &closed,
+        "<PublicationDelivery><!-- closed --></PublicationDelivery>",
+    )
+    .expect("written");
+    std::fs::set_permissions(&closed, std::fs::Permissions::from_mode(0o000))
+        .expect("the file is closed");
+    if std::fs::read(&closed).is_ok() {
+        // A reader that may read any file cannot show what is not read.
+        return;
+    }
+    let source = Source::open(&dir).expect("the directory opens");
+    let entries = source
+        .entries()
+        .expect("listing a directory reads none of its files");
+    let sizes: Vec<(&str, u64)> = entries
+        .iter()
+        .map(|entry| (entry.name.as_str(), entry.size))
+        .collect();
+    assert_eq!(sizes, [("closed.xml", 56), ("open.xml", 22)]);
+    let read = Mutex::new(BTreeMap::new());
+    source
+        .read_each(|entry, text| {
+            read.lock()
+                .expect("not poisoned")
+                .insert(entry.name.clone(), text.is_ok());
+        })
+        .expect("the directory lists its documents");
+    assert_eq!(
+        read.into_inner().expect("not poisoned"),
+        BTreeMap::from([
+            ("closed.xml".to_owned(), false),
+            ("open.xml".to_owned(), true)
+        ]),
+        "the file that cannot be read is that document's error, the others are read"
+    );
+    let error = source
+        .manifest()
+        .expect_err("a fingerprint reads the file it is of");
+    assert!(error.to_string().contains("closed.xml"), "{error}");
+}
+
+/// A directory of `count` documents, each larger than the next: `0.xml` the
+/// largest, read first.
+fn documents_largest_first(test: &str, count: usize) -> Source {
+    let dir = support::scratch_dir(test);
+    for number in 0..count {
+        let padding = " ".repeat(10 * (count - number));
+        std::fs::write(
+            dir.join(format!("{number}.xml")),
+            format!("<PublicationDelivery/>{padding}"),
+        )
+        .expect("written");
+    }
+    Source::open(&dir).expect("the directory opens")
+}
+
+#[test]
+fn a_failing_document_stops_every_reader_from_reading_another() {
+    let source = documents_largest_first("sources-stopped", 40);
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(1)
+        .build()
+        .expect("a pool");
+    let handed = std::sync::atomic::AtomicUsize::new(0);
+    let outcome = pool.install(|| {
+        source.try_read_each_with(
+            || (),
+            |(), entry, text| {
+                handed.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                text?;
+                if entry.name == "0.xml" {
+                    return Err(netex_rs::Error::new(netex_rs::error::Kind::Io(format!(
+                        "{} fails",
+                        entry.name
+                    ))));
+                }
+                Ok(())
+            },
+        )
+    });
+    let error = outcome.expect_err("the first document fails the read");
+    assert_eq!(error.to_string(), "0.xml fails");
+    assert_eq!(
+        handed.into_inner(),
+        1,
+        "no document is loaded or handed over after the one that failed"
+    );
+}
+
+#[test]
+fn of_several_failing_documents_the_one_read_first_is_the_error_on_any_number_of_threads() {
+    let source = documents_largest_first("sources-stopped-first", 40);
+    for threads in [1, 2, 8] {
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(threads)
+            .build()
+            .expect("a pool");
+        for _ in 0..20 {
+            let outcome: Result<Vec<()>, String> = pool.install(|| {
+                source.try_read_each_with(
+                    || (),
+                    |(), entry, text| {
+                        text.map_err(|error| error.to_string())?;
+                        // Every document but the largest fails.
+                        if entry.name == "0.xml" {
+                            Ok(())
+                        } else {
+                            Err(entry.name.clone())
+                        }
+                    },
+                )
+            });
+            assert_eq!(
+                outcome,
+                Err("1.xml".to_owned()),
+                "{threads} threads: the second largest document is the first to fail"
+            );
+        }
+    }
+}
+
+#[test]
+fn readers_that_do_not_fail_return_their_states_and_every_document() {
+    let source = documents_largest_first("sources-not-stopped", 12);
+    let states = source
+        .try_read_each_with(Vec::new, |names: &mut Vec<String>, entry, text| {
+            text?;
+            names.push(entry.name.clone());
+            Ok::<(), netex_rs::Error>(())
+        })
+        .expect("nothing fails");
+    let mut names: Vec<String> = states.into_iter().flatten().collect();
+    names.sort_by_key(|name| {
+        name.trim_end_matches(".xml")
+            .parse::<u32>()
+            .expect("a number")
+    });
+    let expected: Vec<String> = (0..12).map(|number| format!("{number}.xml")).collect();
+    assert_eq!(names, expected);
+}

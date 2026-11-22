@@ -93,3 +93,21 @@ impl Unprocessed {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use quick_xml::Reader;
+
+    #[test]
+    fn the_tokenizer_skips_one_byte_order_mark_and_counts_from_behind_it() {
+        // What `without_bom` and the scanners of written documents rely on.
+        for (xml, end) in [
+            ("\u{feff}<a/>", 4),
+            ("\u{feff}<?xml version=\"1.0\"?><a/>", 21),
+        ] {
+            let mut reader = Reader::from_str(xml);
+            reader.read_event().expect("an event");
+            assert_eq!(reader.buffer_position(), end, "{xml:?}");
+        }
+    }
+}

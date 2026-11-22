@@ -9,6 +9,9 @@ pub struct Member<'a> {
     /// The inflated size the central directory claims, in a zip64 field; the
     /// member's own size where none is given.
     pub claimed: Option<u64>,
+    /// Whether its name is flagged as UTF-8; else a reader takes it as code
+    /// page 437.
+    pub utf8: bool,
 }
 
 impl<'a> Member<'a> {
@@ -17,6 +20,7 @@ impl<'a> Member<'a> {
             name: name.as_bytes(),
             text,
             claimed: None,
+            utf8: false,
         }
     }
 
@@ -26,7 +30,14 @@ impl<'a> Member<'a> {
             name,
             text,
             claimed: None,
+            utf8: false,
         }
+    }
+
+    /// The same member, its name flagged as UTF-8.
+    pub fn in_utf8(mut self) -> Self {
+        self.utf8 = true;
+        self
     }
 
     /// The same member, its central directory claiming `size` bytes inflated.
@@ -47,10 +58,13 @@ pub fn stored(members: &[Member<'_>]) -> Vec<u8> {
         let offset = u32::try_from(local.len()).expect("a small archive");
         // Version needed: 4.5 where a zip64 field states the size, else 2.0.
         let version: u16 = if member.claimed.is_some() { 45 } else { 20 };
+        // General purpose bit 11: the name is UTF-8.
+        let flags: u16 = if member.utf8 { 1 << 11 } else { 0 };
 
         local.extend_from_slice(&0x0403_4b50_u32.to_le_bytes());
         local.extend_from_slice(&version.to_le_bytes());
-        local.extend_from_slice(&[0; 8]); // flags, stored, time, date
+        local.extend_from_slice(&flags.to_le_bytes());
+        local.extend_from_slice(&[0; 6]); // stored, time, date
         local.extend_from_slice(&crc.to_le_bytes());
         local.extend_from_slice(&size.to_le_bytes());
         local.extend_from_slice(&size.to_le_bytes());
@@ -69,7 +83,8 @@ pub fn stored(members: &[Member<'_>]) -> Vec<u8> {
         central.extend_from_slice(&0x0201_4b50_u32.to_le_bytes());
         central.extend_from_slice(&version.to_le_bytes()); // made by
         central.extend_from_slice(&version.to_le_bytes()); // needed
-        central.extend_from_slice(&[0; 8]); // flags, stored, time, date
+        central.extend_from_slice(&flags.to_le_bytes());
+        central.extend_from_slice(&[0; 6]); // stored, time, date
         central.extend_from_slice(&crc.to_le_bytes());
         central.extend_from_slice(&size.to_le_bytes()); // compressed
         let uncompressed = if member.claimed.is_some() {

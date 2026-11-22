@@ -117,3 +117,21 @@ pub(crate) fn readings(
         Ok([first, (first.1, first.0)])
     }
 }
+
+#[cfg(all(test, feature = "crs"))]
+mod tests {
+    use super::readings;
+
+    #[test]
+    fn a_geometry_is_read_in_the_system_it_names_whatever_numbers_follow() {
+        // The origin of the Swiss LV95, the old observatory of Bern, followed
+        // by a position no number can be made of.
+        let geometry = r#"<gml:LineString xmlns:gml="http://www.opengis.net/gml/3.2" gml:id="l" srsName="EPSG:2056"><gml:posList>2600000 1200000 2600100 x</gml:posList></gml:LineString>"#;
+        let [stated, _] =
+            readings((2_600_000.0, 1_200_000.0), geometry, None).expect("a system the crate knows");
+        assert!(
+            (stated.0 - 46.951).abs() < 0.001 && (stated.1 - 7.439).abs() < 0.001,
+            "{stated:?}"
+        );
+    }
+}

@@ -1,7 +1,8 @@
 //! A member's name is the publisher's text, not a path: a document is
 //! listed under it as written, and loads only where the name is a path of
 //! plain parts within its source — what a caller writing documents under
-//! their names may join to a directory of its own.
+//! their names may join to a directory of its own. Of members the archive
+//! gives one name, the first is read and the name reported.
 
 mod support;
 
@@ -77,21 +78,100 @@ fn a_name_with_a_control_character_is_refused_when_loaded() {
     );
 }
 
+/// The text each document of the archive of `members` loads, by name, with
+/// the names the archive gives more than one member.
+fn texts(members: &[Member<'_>]) -> (Vec<(String, String)>, Vec<String>) {
+    let directory = tempfile::tempdir().expect("a directory");
+    let path = directory.path().join("delivery.zip");
+    std::fs::write(&path, stored(members)).expect("the archive is written");
+    let source = Source::open(&path).expect("the archive opens");
+    let texts = source
+        .entries()
+        .expect("the archive lists its documents")
+        .iter()
+        .map(|entry| {
+            let text = source.load(entry).xml.expect("the document loads");
+            assert_eq!(entry.size, text.len() as u64, "{}", entry.name);
+            (entry.name.clone(), text)
+        })
+        .collect();
+    (texts, source.names_given_twice())
+}
+
+const SECOND: &[u8] = b"<PublicationDelivery><!-- the second --></PublicationDelivery>";
+const THIRD: &[u8] =
+    b"<PublicationDelivery><!-- the third, longer than the others --></PublicationDelivery>";
+
 #[test]
-fn two_members_of_one_name_are_both_refused_rather_than_one_read_as_the_only_one() {
-    let outcomes = loaded(&[
+fn of_two_members_of_one_name_the_first_is_read_and_the_name_counted() {
+    let (texts, twice) = texts(&[
         Member::new("same.xml", TEXT),
-        Member::new("other.xml", TEXT),
-        Member::new(
-            "same.xml",
-            b"<PublicationDelivery><!-- the second --></PublicationDelivery>",
-        ),
+        Member::new("other.xml", SECOND),
+        Member::new("same.xml", SECOND),
+        Member::new("same.xml", THIRD),
     ]);
     assert_eq!(
-        outcomes,
+        texts,
         [
-            ("same.xml".to_owned(), Err("same.xml".to_owned())),
-            ("other.xml".to_owned(), Ok(())),
+            ("same.xml".to_owned(), "<PublicationDelivery/>".to_owned()),
+            (
+                "other.xml".to_owned(),
+                String::from_utf8(SECOND.to_vec()).expect("text")
+            ),
         ]
+    );
+    assert_eq!(twice, ["same.xml"]);
+}
+
+#[test]
+fn names_alike_once_read_are_one_name_given_twice() {
+    // `ä` written in UTF-8 and flagged so, and in code page 437, where it is
+    // the byte 0x84: two names in bytes, one once read.
+    let (texts, twice) = texts(&[
+        Member::new("ä.xml", TEXT).in_utf8(),
+        Member::named_by_bytes(b"\x84.xml", SECOND),
+    ]);
+    assert_eq!(
+        texts,
+        [("ä.xml".to_owned(), "<PublicationDelivery/>".to_owned())]
+    );
+    assert_eq!(twice, ["ä.xml"]);
+}
+
+#[test]
+fn an_archive_giving_every_member_a_name_of_its_own_names_none_twice() {
+    let (texts, twice) = texts(&[Member::new("a.xml", TEXT), Member::new("b.xml", SECOND)]);
+    assert_eq!(texts.len(), 2);
+    assert!(twice.is_empty(), "{twice:?}");
+}
+
+#[test]
+fn a_name_given_twice_in_a_source_read_along_is_named_under_that_source() {
+    let directory = tempfile::tempdir().expect("a directory");
+    let delivery = directory.path().join("delivery");
+    std::fs::create_dir(&delivery).expect("a directory");
+    std::fs::write(delivery.join("line.xml"), TEXT).expect("written");
+    let register = directory.path().join("register.zip");
+    std::fs::write(
+        &register,
+        stored(&[
+            Member::new("stops.xml", TEXT),
+            Member::new("stops.xml", SECOND),
+        ]),
+    )
+    .expect("the archive is written");
+    let source = Source::open(&delivery)
+        .and_then(|source| source.with(Source::open(&register)?))
+        .expect("the sources open");
+    assert_eq!(source.names_given_twice(), ["register.zip/stops.xml"]);
+    let stops = source
+        .entries()
+        .expect("the sources list their documents")
+        .into_iter()
+        .find(|entry| entry.name == "register.zip/stops.xml")
+        .expect("listed once");
+    assert_eq!(
+        source.load(&stops).xml.expect("the document loads"),
+        "<PublicationDelivery/>"
     );
 }
